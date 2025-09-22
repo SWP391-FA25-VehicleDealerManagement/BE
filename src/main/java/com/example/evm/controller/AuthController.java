@@ -28,7 +28,7 @@ public class AuthController {
         String token = authService.login(request.getUsername(), request.getPassword());
         return ResponseEntity.ok(new LoginResponse(token, "Login successful"));
     }
-
+    // Logout endpoint
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {

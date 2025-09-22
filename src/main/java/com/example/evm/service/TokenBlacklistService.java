@@ -1,8 +1,9 @@
 package com.example.evm.service;
 
-import org.springframework.stereotype.Service;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.stereotype.Service;
 
 @Service
 public class TokenBlacklistService {
@@ -18,7 +19,6 @@ public class TokenBlacklistService {
 
     public void removeExpiredTokens() {
         // Có thể thêm logic để xóa token hết hạn khỏi blacklist
-        // Để đơn giản, chúng ta sẽ giữ tất cả token trong blacklist
-        // Trong thực tế, nên có cơ chế cleanup định kỳ
+        
     }
 }
