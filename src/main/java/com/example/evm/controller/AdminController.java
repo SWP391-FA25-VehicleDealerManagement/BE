@@ -1,7 +1,10 @@
 package com.example.evm.controller;
 
+import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,7 +23,8 @@ public class AdminController {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public AdminController(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
+    public AdminController(UserRepository userRepository, RoleRepository roleRepository,
+            PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -32,44 +36,45 @@ public class AdminController {
     }
 
     @PostMapping("/admin/create-admin")
-    public String createAdmin() {
+    public ResponseEntity<Map<String, String>> createAdmin() {
         try {
-            // Tạo role ADMIN nếu chưa có
             Role adminRole = roleRepository.findByRoleName("ADMIN")
-                    .orElseGet(() -> {
-                        Role role = new Role("ADMIN", "Administrator role");
-                        return roleRepository.save(role);
-                    });
+                    .orElseGet(() -> roleRepository.save(new Role("ADMIN", "Administrator role")));
 
-            // Kiểm tra user admin1 đã tồn tại chưa
             Optional<User> existingUser = userRepository.findByUsername("admin1");
             if (existingUser.isPresent()) {
-                return "User admin1 already exists. " ; // Sửa lại code không nên để lộ password
+                return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Admin user already exists"));
             }
 
-            // Tạo user admin1
-            String encodedPassword = passwordEncoder.encode("123456");
+            String encodedPassword = passwordEncoder.encode("123456"); // có thể lấy từ config
             User adminUser = new User("admin1", encodedPassword, adminRole);
             userRepository.save(adminUser);
 
-            return "Admin user created successfully. Username: admin1, Password: 123456, Encoded: " + encodedPassword;
+            return ResponseEntity.ok(Map.of("message", "Admin user created successfully"));
         } catch (Exception e) {
-            return "Error creating admin user: " + e.getMessage();
+            e.printStackTrace(); // log stack trace để debug
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "error", "Failed to create admin user",
+                    "details", e.getMessage()
+                ));
         }
     }
 
+
+    // Trả về thông tin đối tượng người dùng theo json 
     @GetMapping("/admin/check-user/{username}")
-    public String checkUser(@PathVariable String username) {
-        try {
-            Optional<User> user = userRepository.findByUsername(username);
-            if (user.isPresent()) {
-                return "User found: " + username + ", Password Hash: " + user.get().getPasswordHash() + 
-                    ", Role: " + user.get().getRole().getRoleName();
-            } else {
-                return "User not found: " + username;
-            }
-        } catch (Exception e) {
-            return "Error checking user: " + e.getMessage();
+    public ResponseEntity<Map<String, Object>> checkUser(@PathVariable String username) {
+        Optional<User> user = userRepository.findByUsername(username);
+        if (user.isPresent()) {
+            return ResponseEntity.ok(Map.of(
+                    "username", user.get().getUsername(),
+                    "role", user.get().getRole().getRoleName(),
+                    "userId", user.get().getUserId()));
         }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "User not found"));
     }
+
 }

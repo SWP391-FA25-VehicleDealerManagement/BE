@@ -1,5 +1,6 @@
 
 package com.example.evm.controller;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,6 +20,7 @@ import lombok.Setter;
 public class AuthController {
 
     private final AuthService authService;
+
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
@@ -28,6 +30,7 @@ public class AuthController {
         String token = authService.login(request.getUsername(), request.getPassword());
         return ResponseEntity.ok(new LoginResponse(token, "Login successful"));
     }
+
     // Logout endpoint
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
@@ -40,19 +43,28 @@ public class AuthController {
     }
 }
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 class LoginRequest {
     private String username;
     private String password;
 }
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 class LoginResponse {
     private String token;
     private String message;
 }
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 class LogoutResponse {
     private String message;
 }
