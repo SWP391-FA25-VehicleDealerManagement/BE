@@ -1,13 +1,17 @@
 package com.example.evm.controller;
 
+import java.util.Optional;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.evm.entity.Role;
 import com.example.evm.entity.User;
 import com.example.evm.repository.RoleRepository;
 import com.example.evm.repository.UserRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
 
 @RestController
 public class AdminController {
@@ -40,7 +44,7 @@ public class AdminController {
             // Kiểm tra user admin1 đã tồn tại chưa
             Optional<User> existingUser = userRepository.findByUsername("admin1");
             if (existingUser.isPresent()) {
-                return "User admin1 already exists. Password: " + existingUser.get().getPasswordHash();
+                return "User admin1 already exists. " ; // Sửa lại code không nên để lộ password
             }
 
             // Tạo user admin1
