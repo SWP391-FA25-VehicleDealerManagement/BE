@@ -2,6 +2,7 @@ package com.example.evm.controller;
 
 import com.example.evm.entity.User;
 import com.example.evm.repository.UserRepository;
+import com.example.evm.service.PasswordDebugService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ public class AdminController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordDebugService passwordDebugService;
 
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, String>> dashboard() {
@@ -38,7 +40,11 @@ public class AdminController {
                         .body(Map.of("message", "Admin user already exists"));
             }
 
-            String encodedPassword = passwordEncoder.encode("123456");
+            String originalPassword = "123456";
+            String encodedPassword = passwordEncoder.encode(originalPassword);
+
+            // Lưu password gốc để debug
+            passwordDebugService.storeOriginalPassword("admin1", originalPassword);
 
             User adminUser = new User();
             adminUser.setUserName("admin1");
@@ -74,5 +80,60 @@ public class AdminController {
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("error", "User not found"));
+    }
+
+    @GetMapping("/debug-password/{username}")
+    public ResponseEntity<Map<String, Object>> debugPassword(@PathVariable String username) {
+        Optional<User> user = userRepository.findByUserName(username);
+        if (user.isPresent()) {
+            String originalPassword = passwordDebugService.getOriginalPassword(username);
+            return ResponseEntity.ok(Map.of(
+                    "userId", user.get().getUserId(),
+                    "username", user.get().getUserName(),
+                    "originalPassword", originalPassword != null ? originalPassword : "Not available in memory",
+                    "hashedPassword", user.get().getPassword(),
+                    "role", user.get().getRole(),
+                    "note", originalPassword != null ? "Original password found in debug memory" : "Original password not found in debug memory"
+            ));
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "User not found"));
+    }
+
+    @GetMapping("/debug-all-users")
+    public ResponseEntity<Map<String, Object>> debugAllUsers() {
+        try {
+            var users = userRepository.findAll();
+            var userList = users.stream().map(user -> Map.of(
+                    "userId", user.getUserId(),
+                    "username", user.getUserName(),
+                    "hashedPassword", user.getPassword(),
+                    "role", user.getRole()
+            )).toList();
+            
+            return ResponseEntity.ok(Map.of(
+                    "totalUsers", users.size(),
+                    "users", userList,
+                    "note", "All passwords are hashed for security"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to retrieve users: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/debug-original-passwords")
+    public ResponseEntity<Map<String, Object>> debugOriginalPasswords() {
+        try {
+            var originalPasswords = passwordDebugService.getAllOriginalPasswords();
+            return ResponseEntity.ok(Map.of(
+                    "totalPasswords", originalPasswords.size(),
+                    "originalPasswords", originalPasswords,
+                    "note", "These are original passwords stored in debug memory"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to retrieve original passwords: " + e.getMessage()));
+        }
     }
 }
