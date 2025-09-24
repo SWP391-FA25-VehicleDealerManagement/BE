@@ -1,63 +1,57 @@
 package com.example.evm.entity;
 
-import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "Users")
+@Table(name = "[User]")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "UserID")
-    private Long userId;
+    @Column(name = "user_id")
+    private Integer userId;
 
-    @Column(name = "Username", nullable = false, unique = true)
-    private String username;
+    @Column(name = "userName", nullable = false, length = 100)
+    private String userName;
 
-    @Column(name = "PasswordHash", nullable = false)
-    private String passwordHash;
+    @Column(name = "password", nullable = false, length = 255)
+    private String password;
 
-    @ManyToOne
-    @JoinColumn(name = "RoleID", nullable = false)
-    private Role role;  // dùng entity Role của bạn
+    @Column(name = "phone", length = 50)
+    private String phone;
 
-    public User() {}
+    @Column(name = "email", length = 255)
+    private String email;
 
-    public User(String username, String passwordHash, Role role) {
-        this.username = username;
-        this.passwordHash = passwordHash;
-        this.role = role;
-    }
+    @Column(name = "role", length = 50)
+    private String role;
 
-    public Long getUserId() {
-        return userId;
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "dealer_id")
+    private Dealer dealer;
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
+    @Column(name = "createddate")
+    private LocalDateTime createdDate;
 
-    public String getUsername() {
-        return username;
-    }
+    @Column(name = "datemodified")
+    private LocalDateTime dateModified;
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
-
-    public Role getRole() {
-        return role;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-    }
+    @Column(name = "refreshtokenexpirydime")
+    private LocalDateTime refreshTokenExpiryTime;
 }

@@ -15,11 +15,11 @@ public class PasswordHashRunner {
     public CommandLineRunner encodeExistingPasswords(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         return args -> {
             userRepository.findAll().forEach(user -> {
-                String raw = user.getPasswordHash();
+                String raw = user.getPassword();
                 if (!raw.startsWith("$2a$")) {
-                    user.setPasswordHash(passwordEncoder.encode(raw));
+                    user.setPassword(passwordEncoder.encode(raw));
                     userRepository.save(user);
-                    System.out.println("Password hashed for user: " + user.getUsername());
+                    System.out.println("Password hashed for user: " + user.getUserName());
                 }
             });
         };
