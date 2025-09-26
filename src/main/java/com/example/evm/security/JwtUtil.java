@@ -1,34 +1,30 @@
 package com.example.evm.security;
 
-import java.security.Key;
-import java.util.Date;
-
+import com.example.evm.service.auth.TokenBlacklistService;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.example.evm.service.TokenBlacklistService;
-
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.JwtParser;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import lombok.extern.slf4j.Slf4j;
+import java.security.Key;
+import java.util.*;
 
 @Slf4j
 @Component
 public class JwtUtil {
 
     private final Key key;
-    private final long expiration;
-    private final TokenBlacklistService tokenBlacklistService;
+    private final long expirationMs;
+    private final TokenBlacklistService blacklistService;
     private final JwtParser parser;
 
-    public JwtUtil(TokenBlacklistService tokenBlacklistService,
-                   @Value("${jwt.secret}") String secretKey,
-                   @Value("${jwt.expiration}") long expiration) {
-        this.tokenBlacklistService = tokenBlacklistService;
-        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
-        this.expiration = expiration;
+    public JwtUtil(TokenBlacklistService blacklistService,
+                   @Value("${jwt.secret}") String secret,
+                   @Value("${jwt.expiration}") long expirationMs) {
+        this.blacklistService = blacklistService;
+        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+        this.expirationMs = expirationMs;
         this.parser = Jwts.parserBuilder().setSigningKey(key).build();
     }
 
@@ -37,7 +33,7 @@ public class JwtUtil {
                 .setSubject(username)
                 .claim("role", role)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(key)
                 .compact();
     }
@@ -46,21 +42,21 @@ public class JwtUtil {
         try {
             return parser.parseClaimsJws(token).getBody().getSubject();
         } catch (JwtException e) {
-            log.warn("Failed to extract username from token: {}", e.getMessage());
+            log.warn("Cannot extract username: {}", e.getMessage());
             return null;
         }
     }
 
     public boolean validateToken(String token) {
+        if (blacklistService.isTokenBlacklisted(token)) {
+            log.info("Token is blacklisted");
+            return false;
+        }
         try {
-            if (tokenBlacklistService.isTokenBlacklisted(token)) {
-                log.info("Token is blacklisted: {}", token);
-                return false;
-            }
             parser.parseClaimsJws(token);
             return true;
         } catch (JwtException e) {
-            log.warn("Token is invalid: {}", e.getMessage());
+            log.warn("Invalid token: {}", e.getMessage());
             return false;
         }
     }
@@ -69,18 +65,16 @@ public class JwtUtil {
         try {
             return parser.parseClaimsJws(token).getBody().getExpiration();
         } catch (JwtException e) {
-            log.warn("Failed to get expiration date: {}", e.getMessage());
-            return new Date(System.currentTimeMillis() + expiration);
+            log.warn("Cannot get expiration: {}", e.getMessage());
+            return new Date(System.currentTimeMillis() + expirationMs);
         }
     }
 
     public long getRemainingTime(String token) {
-        try {
-            Date expirationDate = getExpirationDate(token);
-            return expirationDate.getTime() - System.currentTimeMillis();
-        } catch (Exception e) {
-            log.warn("Failed to calculate remaining time: {}", e.getMessage());
-            return expiration;
-        }
+        return getExpirationDate(token).getTime() - System.currentTimeMillis();
+    }
+
+    public long getExpirationInSeconds() {
+        return expirationMs / 1000;
     }
 }

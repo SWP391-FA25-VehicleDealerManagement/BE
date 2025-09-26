@@ -15,14 +15,13 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "Dealer")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class Dealer {
 
     @Id
@@ -30,27 +29,25 @@ public class Dealer {
     @Column(name = "dealer_id")
     private Integer dealerId;
 
-    @Column(name = "dealerName", nullable = false)
-    @NotBlank(message = "Dealer name is required")
-    @Size(max = 255, message = "Dealer name must not exceed 255 characters")
+    @Column(name = "dealerName", nullable = false, length = 255)
+    @NotBlank @Size(max = 255)
     private String dealerName;
 
-    @Column(name = "phone")
-    @Size(max = 50, message = "Phone number must not exceed 50 characters")
+    @Column(length = 50)
+    @Size(max = 50)
     private String phone;
 
-    @Column(name = "address")
-    @Size(max = 500, message = "Address must not exceed 500 characters")
+    @Column(length = 500)
+    @Size(max = 500)
     private String address;
 
-    @Column(name = "createdby")
-    @Size(max = 100, message = "Created by must not exceed 100 characters")
+    @Column(length = 100)
+    @Size(max = 100)
     private String createdBy;
 
-    @Column(name = "createddate")
     private LocalDateTime createdDate;
 
-    // Một Dealer có thể có nhiều User
+    // ONE‑TO‑MANY Users
     @OneToMany(mappedBy = "dealer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<User> users;
 }

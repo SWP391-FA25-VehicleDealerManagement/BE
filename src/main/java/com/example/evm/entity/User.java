@@ -15,14 +15,13 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Table(name = "[User]")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Table(name = "`User`")   // escape the reserved word
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class User {
 
     @Id
@@ -31,38 +30,30 @@ public class User {
     private Integer userId;
 
     @Column(name = "userName", nullable = false, length = 100)
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 100, message = "Username must be between 3 and 100 characters")
+    @NotBlank @Size(min = 3, max = 100)
     private String userName;
 
-    @Column(name = "password", nullable = false, length = 255)
-    @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters")
-    private String password;
+    @Column(nullable = false, length = 255)
+    @NotBlank @Size(min = 6)
+    private String password;      // BCrypt hash
 
-    @Column(name = "phone", length = 50)
-    @Size(max = 50, message = "Phone number must not exceed 50 characters")
+    @Column(length = 50)
+    @Size(max = 50)
     private String phone;
 
-    @Column(name = "email", length = 255)
-    @Email(message = "Email should be valid")
-    @Size(max = 255, message = "Email must not exceed 255 characters")
+    @Column(length = 255)
+    @Email @Size(max = 255)
     private String email;
 
-    @Column(name = "role", length = 50)
-    @NotBlank(message = "Role is required")
-    private String role;
+    @Column(length = 50, nullable = false)
+    @NotBlank
+    private String role;          // ADMIN, DEALER, MANAGER, EVM
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id")
-    private Dealer dealer;
+    private Dealer dealer;    // nullable for admin/EVM
 
-    @Column(name = "createddate")
     private LocalDateTime createdDate;
-
-    @Column(name = "datemodified")
     private LocalDateTime dateModified;
-
-    @Column(name = "refreshtokenexpirytime")
     private LocalDateTime refreshTokenExpiryTime;
 }

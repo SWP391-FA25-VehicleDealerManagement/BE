@@ -1,80 +1,77 @@
+package com.example.evm.security;
 
-    package com.example.evm.security;
+import java.io.IOException;
 
-    import jakarta.servlet.*;
-    import jakarta.servlet.http.*;
-    import lombok.extern.slf4j.Slf4j;
-    import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-    import org.springframework.security.core.context.SecurityContextHolder;
-    import org.springframework.security.core.userdetails.*;
-    import org.springframework.stereotype.Component;
-    import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 
-    import java.io.IOException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 
-    @Slf4j
-    @Component
-    public class JwtAuthenticationFilter extends OncePerRequestFilter {
+@Slf4j
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-        private final JwtUtil jwtUtil;
-        private final CustomUserDetailsService userDetailsService;
+    private final JwtUtil jwtUtil;
+    private final CustomUserDetailsService userDetailsService;
 
-        public JwtAuthenticationFilter(JwtUtil jwtUtil, CustomUserDetailsService userDetailsService) {
-            this.jwtUtil = jwtUtil;
-            this.userDetailsService = userDetailsService;
-        }
-
-        @Override
-        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                        FilterChain filterChain) throws ServletException, IOException {
-        
-            String requestPath = request.getRequestURI();
-            String method = request.getMethod();
-        
-            log.info("🔐 Processing request: {} {}", method, requestPath);
-        
-            // Bỏ qua JWT filter cho các endpoint không cần authentication
-            if (shouldSkipFilter(requestPath)) {
-                log.info("⏭️ Skipping JWT filter for: {}", requestPath);
-                filterChain.doFilter(request, response);
-                return;
-            }
-        
-            String authHeader = request.getHeader("Authorization");
-        
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String jwt = authHeader.substring(7);
-                log.info("🧾 Found Authorization header. Validating token...");
-        
-                try {
-                    String username = jwtUtil.extractUsername(jwt);
-                    if (username == null) {
-                        log.warn("⚠️ Failed to extract username from token.");
-                    } else if (SecurityContextHolder.getContext().getAuthentication() != null) {
-                        log.info("🔒 SecurityContext already set. Skipping authentication for user: {}", username);
-                    } else if (!jwtUtil.validateToken(jwt)) {
-                        log.warn("❌ Token validation failed for user: {}", username);
-                    } else {
-                        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                        UsernamePasswordAuthenticationToken auth =
-                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                        SecurityContextHolder.getContext().setAuthentication(auth);
-                        log.info("✅ Successfully authenticated user: {}", username);
-                    }
-                } catch (Exception e) {
-                    log.error("🔥 JWT authentication error: {}", e.getMessage());
-                }
-            } else {
-                log.info("🚫 No valid Authorization header found for: {}", requestPath);
-            }
-        
-            filterChain.doFilter(request, response);
-        }   
-        private boolean shouldSkipFilter(String requestPath) {
-            return requestPath.startsWith("/api/auth/") || 
-                requestPath.startsWith("/api/test/") ||
-                requestPath.equals("/") ||
-                requestPath.startsWith("/static/") ||
-                requestPath.startsWith("/public/");
-        }
+    public JwtAuthenticationFilter(JwtUtil jwtUtil,
+                                   CustomUserDetailsService userDetailsService) {
+        this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
     }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+
+        String path = request.getRequestURI();
+        String method = request.getMethod();
+        log.info("🔐 JWT filter - {} {}", method, path);
+
+        // Skip auth‑free endpoints
+        if (shouldSkip(path)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            log.debug("Found JWT token, validating...");
+            try {
+                String username = jwtUtil.extractUsername(token);
+                if (username != null && SecurityContextHolder.getContext().getAuthentication() == null
+                        && jwtUtil.validateToken(token)) {
+
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities());
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    log.info("✅ Authenticated user {}", username);
+                }
+            } catch (Exception e) {
+                log.error("Jwt authentication error: {}", e.getMessage());
+            }
+        } else {
+            log.debug("No JWT token supplied for {}", path);
+        }
+        filterChain.doFilter(request, response);
+    }
+
+    private boolean shouldSkip(String path) {
+        return path.startsWith("/api/auth/") ||
+               path.startsWith("/api/test/") ||
+               path.equals("/") ||
+               path.startsWith("/static/") ||
+               path.startsWith("/public/");
+    }
+}
