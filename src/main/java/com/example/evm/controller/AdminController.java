@@ -32,14 +32,14 @@ public class AdminController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // 🟢 Kiểm tra quyền ADMIN
+    //  Kiểm tra quyền ADMIN
     private boolean isAdmin(Authentication authentication) {
         return authentication != null &&
             authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 
-    // ✅ Dashboard chỉ cho ADMIN
+    //  Dashboard chỉ cho ADMIN
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, String>> dashboard(Authentication authentication) {
         if (!isAdmin(authentication)) {
@@ -49,7 +49,7 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "Welcome to Admin Dashboard!"));
     }
 
-    // ✅ Tạo admin mới
+    //  Tạo admin mới
     @PostMapping("/create-admin")
     public ResponseEntity<Map<String, String>> createAdmin(@RequestBody Map<String, String> request,
                                                            Authentication authentication) {
@@ -90,7 +90,7 @@ public class AdminController {
         }
     }
 
-    // ✅ Check user
+    //  Check user
     @GetMapping("/check-user/{username}")
     public ResponseEntity<Map<String, Object>> checkUser(@PathVariable String username,
                                                          Authentication authentication) {
@@ -117,7 +117,7 @@ public class AdminController {
         }
     }
 
-    // ✅ Danh sách user
+    //  Danh sách user
     @GetMapping("/all-users")
     public ResponseEntity<Map<String, Object>> getAllUsers(Authentication authentication) {
         if (!isAdmin(authentication)) {
