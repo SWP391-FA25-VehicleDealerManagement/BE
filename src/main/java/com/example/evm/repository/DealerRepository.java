@@ -4,4 +4,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.example.evm.entity.Dealer;
 
-public interface DealerRepository extends JpaRepository<Dealer, Integer> {}
+public interface DealerRepository extends JpaRepository<Dealer, Integer> {
+        
+}

@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
 
-    // ----- 400 – bad request (ví dụ: IllegalArgumentException) --------------------
+    // ----- 400 – bad request 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadRequest(IllegalArgumentException ex) {
         log.warn("Bad request: {}", ex.getMessage());
@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    // ----- 401 – authentication error (BadCredentials) ----------------------------
+    // ----- 401= authentication error (BadCredentials) ----------------------------
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex) {
         log.warn("Authentication failed: {}", ex.getMessage());
@@ -46,13 +46,13 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
     }
 
-    // ----- 500 – any other unexpected exception ------------------------------------
+    // ----- 500-any other unexpected exception ------------------------------------
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleAll(Exception ex) {
         log.error("Unexpected error", ex);
         ApiResponse<Void> body = new ApiResponse<>(false,
                 "Internal server error. Please contact support.", null);
-        // Thêm thông tin thời gian để debug nhanh (không bị expose trong production)
+        
         body.setData(null);
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }

@@ -34,7 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
         String method = request.getMethod();
-        log.info("🔐 JWT filter - {} {}", method, path);
+        log.info(" JWT filter - {} {}", method, path);
 
         // Skip auth‑free endpoints
         if (shouldSkip(path)) {
@@ -56,7 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             new UsernamePasswordAuthenticationToken(
                                     userDetails, null, userDetails.getAuthorities());
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    log.info("✅ Authenticated user {}", username);
+                    log.info(" Authenticated user {}", username);
                 }
             } catch (Exception e) {
                 log.error("Jwt authentication error: {}", e.getMessage());
