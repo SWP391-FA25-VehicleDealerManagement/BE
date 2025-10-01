@@ -1,4 +1,4 @@
-package com.example.evm.model.inventory;
+package com.example.evm.entity.inventory;
 
 import jakarta.persistence.*;
 import lombok.*;
