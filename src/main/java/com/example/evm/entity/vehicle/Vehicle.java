@@ -1,11 +1,11 @@
-package com.example.evm.model.vehicle;
+package com.example.evm.entity.vehicle;
 
-import com.example.evm.model.dealer.Dealer;
-import com.example.evm.model.inventory.InventoryStock;
-import com.example.evm.model.promotion.PromotionVehicle;
-import com.example.evm.model.inventory.VehicleModel;
-import com.example.evm.model.inventory.VehicleVariant;
-import com.example.evm.model.order.OrderDetail;
+import com.example.evm.entity.dealer.Dealer;
+import com.example.evm.entity.inventory.InventoryStock;
+import com.example.evm.entity.promotion.PromotionVehicle;
+import com.example.evm.entity.inventory.VehicleModel;
+import com.example.evm.entity.inventory.VehicleVariant;
+import com.example.evm.entity.order.OrderDetail;
 
 import jakarta.persistence.*;
 import lombok.*;
