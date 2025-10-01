@@ -1,6 +1,6 @@
-package com.example.evm.model.promotion;
+package com.example.evm.entity.promotion;
 
-import com.example.evm.model.vehicle.Vehicle;
+import com.example.evm.entity.vehicle.Vehicle;
 
 import jakarta.persistence.*;
 import lombok.*;
