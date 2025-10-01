@@ -1,7 +1,7 @@
-package com.example.evm.model.inventory;
+package com.example.evm.entity.inventory;
 
-import com.example.evm.model.vehicle.Vehicle;
-import com.example.evm.model.order.SalePrice;
+import com.example.evm.entity.vehicle.Vehicle;
+import com.example.evm.entity.order.SalePrice;
 
 import jakarta.persistence.*;
 import lombok.*;
