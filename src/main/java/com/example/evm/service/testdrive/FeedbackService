@@ -1,0 +1,44 @@
+package com.example.evm.service.testdrive;
+import com.example.evm.entity.Feedback;
+import com.example.evm.repository.FeedbackRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class FeedbackService {
+
+    @Autowired
+    private FeedbackRepository feedbackRepository;
+
+    public List<Feedback> getAllFeedbacks() {
+        return feedbackRepository.findAll();
+    }
+
+    public Optional<Feedback> getFeedbackById(Integer id) {
+        return feedbackRepository.findById(id);
+    }
+
+    public Feedback createFeedback(Feedback feedback) {
+        return feedbackRepository.save(feedback);
+    }
+
+    public Feedback updateFeedback(Integer id, Feedback detail) {
+        return feedbackRepository.findById(id)
+                .map(f -> {
+                    f.setTestdriveid(detail.getTestdriveid());
+                    f.setDescription(detail.getDescription());
+                    f.setFeedbackType(detail.getFeedbackType());
+                    f.setContent(detail.getContent());
+                    f.setStatus(detail.getStatus());
+                    return feedbackRepository.save(f);
+                })
+                .orElseThrow(() -> new RuntimeException("Feedback not found with id " + id));
+    }
+
+    public void deleteFeedback(Integer id) {
+        feedbackRepository.deleteById(id);
+    }
+}
