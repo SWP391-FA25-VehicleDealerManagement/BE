@@ -1,7 +1,7 @@
-package com.example.evm.model.order;
+package com.example.evm.entity.order;
 
-import com.example.evm.model.vehicle.Vehicle;
-import com.example.evm.model.promotion.Promotions;
+import com.example.evm.entity.vehicle.Vehicle;
+import com.example.evm.entity.promotion.Promotions;
 
 import jakarta.persistence.*;
 import lombok.*;
