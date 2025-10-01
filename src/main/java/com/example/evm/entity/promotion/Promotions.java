@@ -1,7 +1,7 @@
-package com.example.evm.model.promotion;
+package com.example.evm.entity.promotion;
 
-import com.example.evm.model.dealer.Dealer;
-import com.example.evm.model.order.OrderDetail;
+import com.example.evm.entity.dealer.Dealer;
+import com.example.evm.entity.order.OrderDetail;
 
 import jakarta.persistence.*;
 import lombok.*;
