@@ -41,6 +41,29 @@ public class JwtUtil {
     public String extractUsername(String token) {
         try {
             return parser.parseClaimsJws(token).getBody().getSubject();
+    
+    // >>> PHƯƠNG THỨC MỚI: Lấy Claims (Bắt buộc cho Filter)
+    public Claims getClaims(String token) {
+        try {
+            return parser.parseClaimsJws(token).getBody();
+        } catch (JwtException e) {
+            log.warn("Cannot extract claims: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    // >>> PHƯƠNG THỨC MỚI: Lấy Role (Bắt buộc cho Filter)
+    public String getRole(String token) {
+        Claims claims = getClaims(token);
+        if (claims != null && claims.containsKey("role")) {
+            return claims.get("role", String.class);
+        }
+        return null;
+    }
+
+    public String extractUsername(String token) {
+        try {
+            return getClaims(token).getSubject(); // Sử dụng phương thức getClaims
         } catch (JwtException e) {
             log.warn("Cannot extract username: {}", e.getMessage());
             return null;
@@ -64,6 +87,7 @@ public class JwtUtil {
     public Date getExpirationDate(String token) {
         try {
             return parser.parseClaimsJws(token).getBody().getExpiration();
+            return getClaims(token).getExpiration(); // Sử dụng phương thức getClaims
         } catch (JwtException e) {
             log.warn("Cannot get expiration: {}", e.getMessage());
             return new Date(System.currentTimeMillis() + expirationMs);
@@ -77,4 +101,5 @@ public class JwtUtil {
     public long getExpirationInSeconds() {
         return expirationMs / 1000;
     }
+}
 }

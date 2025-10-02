@@ -32,9 +32,13 @@ public class CustomUserDetailsService implements UserDetailsService {
                     log.error("User not found: {}", username);
                     return new UsernameNotFoundException("User not found");
                 });
-
+                
         List<GrantedAuthority> authorities = List.of(
                 new SimpleGrantedAuthority("ROLE_" + user.getRole().toUpperCase())
+        String normalizedRole = user.getRole().toUpperCase().replace(" ", "_");        
+
+        List<GrantedAuthority> authorities = List.of(
+            new SimpleGrantedAuthority("ROLE_" + normalizedRole)
         );
 
         return org.springframework.security.core.userdetails.User.builder()

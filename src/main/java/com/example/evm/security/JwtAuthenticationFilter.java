@@ -6,6 +6,12 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import java.util.List;
+import org.springframework.lang.NonNull;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -26,6 +32,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                    CustomUserDetailsService userDetailsService) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+    
+    // Đã loại bỏ dependency userDetailsService vì không cần truy vấn DB trong Filter
+    // private final CustomUserDetailsService userDetailsService; 
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
     }
 
     @Override
@@ -58,6 +70,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     userDetails, null, userDetails.getAuthorities());
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                     log.info(" Authenticated user {}", username);
+            
+            try {
+                String username = jwtUtil.extractUsername(token);
+                
+                // Lấy vai trò (role) từ JWT Claim
+                String role = jwtUtil.getRole(token); 
+                
+                if (username != null 
+                    && SecurityContextHolder.getContext().getAuthentication() == null
+                    && jwtUtil.validateToken(token) 
+                    && role != null) {
+
+                    // 1. Chuẩn hóa tên vai trò: chuyển thành chữ HOA và thay thế khoảng trắng bằng gạch dưới.
+                    // VD: "Dealer Staff" -> "ROLE_DEALER_STAFF"
+                    String normalizedRole = role.toUpperCase().replace(" ", "_");
+                    
+                    // 2. Tạo GrantedAuthorities: Sử dụng ROLE_ chuẩn của Spring Security.
+                    List<GrantedAuthority> authorities = List.of(
+                        new SimpleGrantedAuthority("ROLE_" + normalizedRole)
+                    );
+
+                    // 3. Thiết lập Authentication trực tiếp bằng thông tin từ Token
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(username, null, authorities);
+                    
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    log.info(" Authenticated user {} with role {}", username, normalizedRole);
+                    
                 }
             } catch (Exception e) {
                 log.error("Jwt authentication error: {}", e.getMessage());
@@ -65,6 +105,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } else {
             log.debug("No JWT token supplied for {}", path);
         }
+        
         filterChain.doFilter(request, response);
     }
 
@@ -76,3 +117,5 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                path.startsWith("/public/");
     }
 }
+}
+
