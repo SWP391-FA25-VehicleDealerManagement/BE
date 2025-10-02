@@ -6,11 +6,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
+import java.util.List;
 
 import java.util.Optional;
 
 @Repository
 public interface SalePriceRepository extends JpaRepository<SalePrice, Long> {
+
+    SalePrice findTopByDealerIdAndVariantIdOrderByEffectiveDateDesc(Integer dealerId, Integer variantId);
 
     @Query("SELECT s.price FROM SalePrice s " +
            "WHERE s.variantId = :variantId AND s.dealerId = :dealerId " +
