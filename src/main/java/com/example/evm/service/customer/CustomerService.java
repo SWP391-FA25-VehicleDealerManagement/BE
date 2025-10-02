@@ -1,46 +1,17 @@
 package com.example.evm.service.customer;
 
 import com.example.evm.entity.customer.Customer;
-import com.example.evm.repository.customer.CustomerRepository;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
-import java.util.Optional;
 
-@Service
-public class CustomerService {
+public interface CustomerService {
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    List<Customer> getAllCustomers();
 
-    public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
-    }
+    Customer getCustomerById(Integer id);
 
-    public Optional<Customer> getCustomerById(Integer id) {
-        return customerRepository.findById(id);
-    }
+    Customer createCustomer(Customer customer);
 
-    public Customer createCustomer(Customer customer) {
-        return customerRepository.save(customer);
-    }
+    Customer updateCustomer(Customer customer);
 
-    public Customer updateCustomer(Integer id, Customer detail) {
-        return customerRepository.findById(id)
-                .map(c -> {
-                    c.setCustomerName(detail.getCustomerName());
-                    c.setEmail(detail.getEmail());
-                    c.setPhone(detail.getPhone());
-                    c.setDealer(detail.getDealer());
-                    return customerRepository.save(c);
-                })
-                .orElseThrow(() -> new RuntimeException("Customer not found with id " + id));
-    }
-
-    public void deleteCustomer(Integer id) {
-        customerRepository.deleteById(id);
-    }
+    void deleteCustomer(Integer id);
 }
-
