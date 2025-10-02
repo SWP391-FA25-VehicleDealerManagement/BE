@@ -41,12 +41,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    // ----- 401 – login sai thông tin -----------------------------------------------
+    // ----- 400 – login sai thông tin -----------------------------------------------
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex) {
         log.warn("Authentication failed: {}", ex.getMessage());
         ApiResponse<Void> body = new ApiResponse<>(false, "Invalid username or password", null);
-        return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
     // ----- 401 – thiếu/không hợp lệ thông tin xác thực (ví dụ: token đã logout) ----
