@@ -54,6 +54,7 @@ public class VehicleServiceImpl implements VehicleService {
                         .price(latestPrice != null ? latestPrice.getPrice() : null)
                         .dealerId(latestPrice != null ? latestPrice.getDealerId() : null)
                         .effectiveDate(latestPrice != null ? latestPrice.getEffectiveDate().toString() : "N/A")
+                        .variantImage(variant.getImage())
                         .build();
                 })
                 .collect(Collectors.toList());

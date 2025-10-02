@@ -20,5 +20,7 @@ public class VehicleComparisonDTO {
     // Thông tin về giá bán
     private BigDecimal price;
     private Integer dealerId;
-    private String effectiveDate; // Để dễ đọc hơn
+    private String effectiveDate;
+
+    private String variantImage;
 }
