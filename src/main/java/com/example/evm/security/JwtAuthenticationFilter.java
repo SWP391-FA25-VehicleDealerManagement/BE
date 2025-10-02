@@ -1,17 +1,14 @@
 package com.example.evm.security;
 
 import java.io.IOException;
-
-import org.springframework.lang.NonNull;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import java.util.List;
+
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -28,16 +25,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
 
+    // Hợp nhất constructors: Giữ lại constructor đầy đủ và loại bỏ các khối code thừa
     public JwtAuthenticationFilter(JwtUtil jwtUtil,
                                    CustomUserDetailsService userDetailsService) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
-    
-    // Đã loại bỏ dependency userDetailsService vì không cần truy vấn DB trong Filter
-    // private final CustomUserDetailsService userDetailsService; 
-
-    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
     }
 
     @Override
@@ -59,18 +51,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             log.debug("Found JWT token, validating...");
-            try {
-                String username = jwtUtil.extractUsername(token);
-                if (username != null && SecurityContextHolder.getContext().getAuthentication() == null
-                        && jwtUtil.validateToken(token)) {
 
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, userDetails.getAuthorities());
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    log.info(" Authenticated user {}", username);
-            
+            // Loại bỏ khối try/if bị cắt ngang và chỉ giữ lại khối try/catch hoàn chỉnh
             try {
                 String username = jwtUtil.extractUsername(token);
                 
@@ -82,8 +64,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     && jwtUtil.validateToken(token) 
                     && role != null) {
 
-                    // 1. Chuẩn hóa tên vai trò: chuyển thành chữ HOA và thay thế khoảng trắng bằng gạch dưới.
-                    // VD: "Dealer Staff" -> "ROLE_DEALER_STAFF"
                     String normalizedRole = role.toUpperCase().replace(" ", "_");
                     
                     // 2. Tạo GrantedAuthorities: Sử dụng ROLE_ chuẩn của Spring Security.
@@ -97,7 +77,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                     log.info(" Authenticated user {} with role {}", username, normalizedRole);
-                    
                 }
             } catch (Exception e) {
                 log.error("Jwt authentication error: {}", e.getMessage());
@@ -117,5 +96,3 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                path.startsWith("/public/");
     }
 }
-}
-
