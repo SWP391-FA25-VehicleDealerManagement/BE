@@ -3,6 +3,7 @@ package com.example.evm.entity.user;
 import java.time.LocalDateTime;
 
 import com.example.evm.entity.dealer.Dealer;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -53,6 +54,7 @@ public class User {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id")
+    @JsonIgnore
     private Dealer dealer;    // nullable for admin/EVM
 
     private LocalDateTime createdDate;
