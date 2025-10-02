@@ -2,7 +2,7 @@ package com.example.evm.service.admin;
 
 import com.example.evm.dto.admin.AdminCreateRequest;
 import com.example.evm.dto.admin.AdminUserInfoResponse;
-import com.example.evm.entity.User;
+import com.example.evm.entity.user.User;
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

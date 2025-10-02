@@ -6,6 +6,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -38,6 +39,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNoHandlerFound(NoHandlerFoundException ex) {
         log.warn("No handler for {} {}", ex.getHttpMethod(), ex.getRequestURL());
+        ApiResponse<Void> body = new ApiResponse<>(false, "Page not found", null);
+        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    }
+
+    // ----- 404 – static/resource not found (Spring Boot 3) ----------------------
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(NoResourceFoundException ex) {
+        log.warn("Resource not found: {}", ex.getMessage());
         ApiResponse<Void> body = new ApiResponse<>(false, "Page not found", null);
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }

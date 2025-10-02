@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.example.evm.entity.User;
+import com.example.evm.entity.user.User;
 import com.example.evm.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;

@@ -3,7 +3,8 @@ package com.example.evm.mapper;
 import com.example.evm.dto.admin.AdminUserInfoResponse;
 import com.example.evm.dto.auth.DealerInfo;
 import com.example.evm.dto.auth.UserInfo;
-import com.example.evm.entity.User;
+import com.example.evm.entity.user.User;
+
 import org.springframework.stereotype.Component;
 
 @Component

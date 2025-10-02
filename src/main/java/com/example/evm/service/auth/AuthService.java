@@ -1,7 +1,7 @@
 package com.example.evm.service.auth;
 
 import com.example.evm.dto.auth.*;
-import com.example.evm.entity.User;
+import com.example.evm.entity.user.User;
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.mapper.UserMapper;
 import com.example.evm.repository.UserRepository;

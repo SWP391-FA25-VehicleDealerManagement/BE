@@ -6,7 +6,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,14 +26,12 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<UserInfo>> me(Authentication authentication) {
         UserInfo info = authService.getCurrentUser(authentication.getName());
         return ResponseEntity.ok(new ApiResponse<>(true, "User info retrieved", info));
     }
 
     @PostMapping("/logout")
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<LogoutResponse>> logout(
             @RequestHeader("Authorization") String authHeader) {
 

@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.evm.entity.User;
+import com.example.evm.entity.user.User;
 import com.example.evm.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;

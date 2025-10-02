@@ -9,7 +9,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import com.example.evm.entity.User;
+import com.example.evm.entity.user.User;
 import com.example.evm.repository.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;

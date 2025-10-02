@@ -3,7 +3,7 @@ package com.example.evm.entity.dealer;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.example.evm.entity.User;
+import com.example.evm.entity.user.User;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;

@@ -1,7 +1,8 @@
 package com.example.evm.controller.dealer;
 
 import com.example.evm.dto.auth.ApiResponse;
-import com.example.evm.entity.Dealer;
+import com.example.evm.entity.dealer.Dealer;
+
 import com.example.evm.service.dealer.DealerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

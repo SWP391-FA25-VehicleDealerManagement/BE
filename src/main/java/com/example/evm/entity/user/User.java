@@ -1,6 +1,8 @@
-package com.example.evm.entity;
+package com.example.evm.entity.user;
 
 import java.time.LocalDateTime;
+
+import com.example.evm.entity.dealer.Dealer;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

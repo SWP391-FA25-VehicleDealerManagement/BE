@@ -2,7 +2,7 @@ package com.example.evm.dto.admin;
 
 import java.time.LocalDateTime;
 
-import com.example.evm.entity.User;
+import com.example.evm.entity.user.User;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
