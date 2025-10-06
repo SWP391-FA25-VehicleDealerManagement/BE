@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface VehicleService {
     List<VehicleResponse> getAllVehicles();
-    List<VehicleComparisonDTO> compareVariants(List<Integer> variantIds);
+    List<VehicleComparisonDTO> compareVariants(List<Long> variantIds);
 }

@@ -18,11 +18,11 @@ public class SalePrice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "saleprice_id")
-    private Integer salepriceId;
+    private Long salepriceId;
 
     // --- Mối quan hệ với Dealer ---
     @Column(name = "dealer_id", nullable = false)
-    private Integer dealerId;
+    private Long dealerId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id", insertable = false, updatable = false)
@@ -30,7 +30,7 @@ public class SalePrice {
 
     // --- Mối quan hệ với VehicleVariant ---
     @Column(name = "variant_id", nullable = false)
-    private Integer variantId;
+    private Long variantId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id", insertable = false, updatable = false)

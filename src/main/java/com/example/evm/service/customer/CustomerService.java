@@ -7,11 +7,11 @@ public interface CustomerService {
 
     List<Customer> getAllCustomers();
 
-    Customer getCustomerById(Integer id);
+    Customer getCustomerById(Long id);
 
     Customer createCustomer(Customer customer);
 
     Customer updateCustomer(Customer customer);
 
-    void deleteCustomer(Integer id);
+    void deleteCustomer(Long id);
 }

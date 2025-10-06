@@ -8,21 +8,25 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
-import java.util.*;
+import java.util.Date;
 
 @Slf4j
 @Component
 public class JwtUtil {
 
-    private final Key key;
-    private final long expirationMs;
+    private final Key key; // Key ký JWT
+    private final long expirationMs; // Thời gian hết hạn token (ms)
     private final TokenBlacklistService blacklistService;
-    private final JwtParser parser;
+    private final JwtParser parser; // Parser để parse token
 
     public JwtUtil(TokenBlacklistService blacklistService,
-                   @Value("${jwt.secret}") String secret,
-                   @Value("${jwt.expiration}") long expirationMs) {
+            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.expiration}") long expirationMs) {
+
         this.blacklistService = blacklistService;
+        if (secret == null || secret.isEmpty()) {
+            throw new IllegalArgumentException("JWT secret is not configured!");
+        }
         this.key = Keys.hmacShaKeyFor(secret.getBytes());
         this.expirationMs = expirationMs;
         this.parser = Jwts.parserBuilder().setSigningKey(key).build();
@@ -38,7 +42,6 @@ public class JwtUtil {
                 .compact();
     }
 
-    // PHƯƠNG THỨC CHUNG: Lấy Claims từ Token
     public Claims getClaims(String token) {
         try {
             return parser.parseClaimsJws(token).getBody();
@@ -48,27 +51,14 @@ public class JwtUtil {
         }
     }
 
-    // Lấy Role từ Claims
-    public String getRole(String token) {
+    public String extractUsername(String token) {
         Claims claims = getClaims(token);
-        if (claims != null && claims.containsKey("role")) {
-            return claims.get("role", String.class);
-        }
-        return null;
+        return claims != null ? claims.getSubject() : null;
     }
 
-    // Lấy Username từ Claims
-    public String extractUsername(String token) {
-        try {
-            Claims claims = getClaims(token);
-            if (claims != null) {
-                 return claims.getSubject();
-            }
-            return null;
-        } catch (JwtException e) {
-            log.warn("Cannot extract username: {}", e.getMessage());
-            return null;
-        }
+    public String getRole(String token) {
+        Claims claims = getClaims(token);
+        return (claims != null) ? claims.get("role", String.class) : null;
     }
 
     public boolean validateToken(String token) {
@@ -86,25 +76,15 @@ public class JwtUtil {
     }
 
     public Date getExpirationDate(String token) {
-        try {
-            Claims claims = getClaims(token);
-            if (claims != null) {
-                return claims.getExpiration();
-            }
-            return null;
-        } catch (JwtException e) {
-            log.warn("Cannot get expiration: {}", e.getMessage());
-            // Trả về một giá trị mặc định để tránh null, hoặc xử lý bằng try-catch bên ngoài
-            return new Date(System.currentTimeMillis() + expirationMs); 
-        }
+        Claims claims = getClaims(token);
+        return claims != null ? claims.getExpiration() : null;
     }
 
     public long getRemainingTime(String token) {
         Date expirationDate = getExpirationDate(token);
-        if (expirationDate == null) {
-            return 0; // Xử lý nếu ngày hết hạn không thể lấy được
-        }
-        return expirationDate.getTime() - System.currentTimeMillis();
+        return expirationDate != null
+                ? expirationDate.getTime() - System.currentTimeMillis()
+                : 0;
     }
 
     public long getExpirationInSeconds() {

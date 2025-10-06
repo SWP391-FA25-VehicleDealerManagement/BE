@@ -31,7 +31,7 @@ public class Dealer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "dealer_id")
-    private Integer dealerId;
+    private Long dealerId;
 
     @Column(name = "dealerName", nullable = false, length = 255)
     @NotBlank @Size(max = 255)

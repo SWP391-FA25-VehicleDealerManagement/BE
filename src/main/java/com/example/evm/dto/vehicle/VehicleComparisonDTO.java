@@ -9,17 +9,17 @@ import java.time.LocalDateTime;
 @Builder
 public class VehicleComparisonDTO {
     // Thông tin cơ bản về biến thể
-    private Integer variantId;
+    private Long variantId;
     private String variantName;
     
     // Thông tin về mẫu xe
-    private Integer modelId;
+    private Long modelId;
     private String modelName;
     private String modelDescription;
 
     // Thông tin về giá bán
     private BigDecimal price;
-    private Integer dealerId;
+    private Long dealerId;
     private String effectiveDate;
 
     private String variantImage;

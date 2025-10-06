@@ -12,8 +12,10 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserInfo {
-    private Integer userId;
+
+    private Long userId;
     private String userName;
+    private String fullName;
     private String phone;
     private String email;
     private String role;

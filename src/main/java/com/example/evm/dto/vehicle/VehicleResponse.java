@@ -4,7 +4,7 @@ import lombok.*;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class VehicleResponse {
-    private Integer vehicleId;
+    private Long vehicleId;
     private String name;
     private String color;
     private String variantName;

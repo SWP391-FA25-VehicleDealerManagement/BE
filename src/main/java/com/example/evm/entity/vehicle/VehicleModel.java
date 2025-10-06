@@ -14,7 +14,7 @@ public class VehicleModel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "model_id")
-    private Integer modelId;
+    private Long modelId;
 
     private String name;
     private String description;

@@ -10,7 +10,6 @@ import com.example.evm.repository.vehicle.SalePriceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.math.BigDecimal;
 import java.text.NumberFormat; 
 import java.util.Locale;
 import java.util.ArrayList;
@@ -18,7 +17,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.springframework.security.core.GrantedAuthority;
 
 @Service
 @RequiredArgsConstructor
@@ -30,12 +28,12 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<VehicleComparisonDTO> compareVariants(List<Integer> variantIds) {
+    public List<VehicleComparisonDTO> compareVariants(List<Long> variantIds) {
         if (variantIds == null || variantIds.isEmpty()) {
             return new ArrayList<>();
         }
 
-            Integer currentDealerId = 1; // TODO: THAY THẾ '1' BẰNG Dealer ID CỦA USER ĐANG ĐĂNG NHẬP
+            Long currentDealerId = 1L; // TODO: THAY THẾ '1' BẰNG Dealer ID CỦA USER ĐANG ĐĂNG NHẬP
 
             List<VehicleVariant> variants = variantRepository.findAllById(variantIds);
 
@@ -79,8 +77,8 @@ public class VehicleServiceImpl implements VehicleService {
             dto.setColor(vehicle.getColor());
             dto.setVehicleImage(vehicle.getImage()); 
 
-            Integer variantId = null; 
-            Integer dealerId = null;
+            Long variantId = null; 
+            Long dealerId = null;
 
             if (vehicle.getVariant() != null) {
                 dto.setVariantName(vehicle.getVariant().getName());
@@ -102,12 +100,8 @@ public class VehicleServiceImpl implements VehicleService {
             
             // LOGIC LẤY GIÁ BÁN
             if (variantId != null && dealerId != null) {
-                Optional<BigDecimal> price = salePriceRepository.findActivePriceByVariantIdAndDealerId(variantId, dealerId);
-                
-                price.ifPresent(p -> {
-                    // <<< CHUYỂN BIGDECIMAL THÀNH STRING SỐ ĐẦY ĐỦ TRƯỚC KHI GÁN >>>
-                    dto.setPrice(currencyFormatter.format(p));
-                });
+                Optional<SalePrice> latest = salePriceRepository.findTopByVariantIdAndDealerIdOrderByEffectiveDateDesc(variantId, dealerId);
+                latest.ifPresent(sp -> dto.setPrice(sp.getPrice() != null ? currencyFormatter.format(sp.getPrice()) : null));
             }
 
             return dto;
