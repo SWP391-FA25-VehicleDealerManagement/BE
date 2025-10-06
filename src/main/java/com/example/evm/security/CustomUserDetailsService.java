@@ -9,7 +9,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import com.example.evm.entity.User;
+import com.example.evm.entity.user.User;
 import com.example.evm.repository.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;
@@ -32,9 +32,10 @@ public class CustomUserDetailsService implements UserDetailsService {
                     log.error("User not found: {}", username);
                     return new UsernameNotFoundException("User not found");
                 });
+        String normalizedRole = user.getRole().toUpperCase().replace("ROLE_", "");
 
         List<GrantedAuthority> authorities = List.of(
-                new SimpleGrantedAuthority("ROLE_" + user.getRole().toUpperCase())
+            new SimpleGrantedAuthority("ROLE_" + normalizedRole)
         );
 
         return org.springframework.security.core.userdetails.User.builder()

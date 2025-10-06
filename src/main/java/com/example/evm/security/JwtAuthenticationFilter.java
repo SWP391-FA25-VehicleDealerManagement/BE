@@ -1,10 +1,13 @@
 package com.example.evm.security;
 
 import java.io.IOException;
+import java.util.List;
 
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -21,16 +24,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
 
+    // Hợp nhất constructors: Giữ lại constructor đầy đủ và loại bỏ các khối code thừa
     public JwtAuthenticationFilter(JwtUtil jwtUtil,
                                    CustomUserDetailsService userDetailsService) {
         this.jwtUtil = jwtUtil;
-        this.userDetailsService = userDetailsService;
+        this.userDetailsService = userDetailsService; // retained for potential future use
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String path = request.getRequestURI();
         String method = request.getMethod();
@@ -46,17 +50,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             log.debug("Found JWT token, validating...");
+
+            // Loại bỏ khối try/if bị cắt ngang và chỉ giữ lại khối try/catch hoàn chỉnh
             try {
                 String username = jwtUtil.extractUsername(token);
-                if (username != null && SecurityContextHolder.getContext().getAuthentication() == null
-                        && jwtUtil.validateToken(token)) {
+                
+                // Lấy vai trò (role) từ JWT Claim
+                String role = jwtUtil.getRole(token); 
+                
+                if (username != null 
+                    && SecurityContextHolder.getContext().getAuthentication() == null
+                    && jwtUtil.validateToken(token) 
+                    && role != null) {
 
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    String normalizedRole = role.toUpperCase().replace(" ", "_");
+                    
+                    // 2. Tạo GrantedAuthorities: Sử dụng ROLE_ chuẩn của Spring Security.
+                    List<GrantedAuthority> authorities = List.of(
+                        new SimpleGrantedAuthority("ROLE_" + normalizedRole)
+                    );
+
+                    // 3. Thiết lập Authentication trực tiếp bằng thông tin từ Token
                     UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, userDetails.getAuthorities());
+                            new UsernamePasswordAuthenticationToken(username, null, authorities);
+                    
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    log.info(" Authenticated user {}", username);
+                    log.info(" Authenticated user {} with role {}", username, normalizedRole);
                 }
             } catch (Exception e) {
                 log.error("Jwt authentication error: {}", e.getMessage());
@@ -64,11 +83,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } else {
             log.debug("No JWT token supplied for {}", path);
         }
+        
         filterChain.doFilter(request, response);
     }
 
     private boolean shouldSkip(String path) {
-        return path.startsWith("/api/auth/") ||
+        // Only skip login and public assets; require JWT for /api/auth/me
+        return path.equals("/api/auth/login") ||
                path.startsWith("/api/test/") ||
                path.equals("/") ||
                path.startsWith("/static/") ||

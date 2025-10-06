@@ -1,6 +1,9 @@
-package com.example.evm.entity;
+package com.example.evm.entity.user;
 
 import java.time.LocalDateTime;
+
+import com.example.evm.entity.dealer.Dealer;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -27,11 +30,15 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
-    private Integer userId;
+    private Long userId;
 
     @Column(name = "userName", nullable = false, length = 100)
     @NotBlank @Size(min = 3, max = 100)
     private String userName;
+
+    @Column(length = 255)
+    @Size(max = 255)
+    private String fullName;
 
     @Column(nullable = false, length = 255)
     @NotBlank @Size(min = 6)
@@ -51,6 +58,7 @@ public class User {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id")
+    @JsonIgnore
     private Dealer dealer;    // nullable for admin/EVM
 
     private LocalDateTime createdDate;

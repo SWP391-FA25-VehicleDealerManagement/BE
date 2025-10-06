@@ -1,7 +1,7 @@
 package com.example.evm.service.auth;
 
 import com.example.evm.dto.auth.*;
-import com.example.evm.entity.User;
+import com.example.evm.entity.user.User;
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.mapper.UserMapper;
 import com.example.evm.repository.UserRepository;
@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.*;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -27,10 +26,9 @@ public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
-    private final TokenBlacklistService tokenBlacklistService;
+    private final TokenBlacklistService tokenBlackListService;
     private final UserMapper userMapper;                     // <-- inject mapper
 
     /**
@@ -79,7 +77,7 @@ public class AuthService {
             log.warn("Logout called with empty token");
             return;
         }
-        tokenBlacklistService.blacklist(token, jwtUtil.getExpirationDate(token));
+        tokenBlackListService.blacklist(token, jwtUtil.getExpirationDate(token));
         log.info("Token blacklisted (logout)");
     }
 

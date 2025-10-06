@@ -1,7 +1,11 @@
-package com.example.evm.entity;
+package com.example.evm.entity.dealer;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import com.example.evm.entity.user.User;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -27,7 +31,7 @@ public class Dealer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "dealer_id")
-    private Integer dealerId;
+    private Long dealerId;
 
     @Column(name = "dealerName", nullable = false, length = 255)
     @NotBlank @Size(max = 255)
@@ -45,9 +49,11 @@ public class Dealer {
     @Size(max = 100)
     private String createdBy;
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDate;
 
     // ONE‑TO‑MANY Users
     @OneToMany(mappedBy = "dealer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<User> users;
 }

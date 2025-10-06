@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.example.evm.entity.User;
+import com.example.evm.entity.user.User;
 import com.example.evm.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -28,6 +28,7 @@ public class DataInitializer {
             if (userRepository.findByUserName("admin1").isEmpty()) {
                 User admin = new User();
                 admin.setUserName("admin1");
+                admin.setFullName("Administrator");
                 admin.setPassword(passwordEncoder.encode("123456"));
                 admin.setRole("ADMIN");
                 admin.setEmail("admin@example.com");
