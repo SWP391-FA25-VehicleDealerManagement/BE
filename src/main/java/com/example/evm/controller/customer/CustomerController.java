@@ -26,17 +26,20 @@ public class CustomerController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EVM_STAFF', 'ROLE_DEALER_STAFF', 'ROLE_DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<Customer>> getCustomerById(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponse<Customer>> getCustomerById(@PathVariable Long id) {
         Customer customer = customerService.getCustomerById(id);
         return customer != null 
                 ? ResponseEntity.ok(new ApiResponse<>(true, "Customer retrieved successfully", customer))
                 : ResponseEntity.ok(new ApiResponse<>(false, "Customer not found", null));
     }
 
-    @PostMapping
+    @PostMapping("/create")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EVM_STAFF', 'ROLE_DEALER_STAFF', 'ROLE_DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<Customer>> createCustomer(@RequestBody Customer customer) {
+    public ResponseEntity<ApiResponse<Customer>> createCustomer(@RequestBody Customer customer, @RequestHeader(value = "X-Creator-Name", required = false) String creatorName) {
         try {
+            if (creatorName != null && !creatorName.isBlank()) {
+                customer.setCreateBy(creatorName);
+            }
             Customer createdCustomer = customerService.createCustomer(customer);
             return ResponseEntity.ok(new ApiResponse<>(true, "Customer created successfully", createdCustomer));
         } catch (IllegalArgumentException e) {
@@ -46,7 +49,7 @@ public class CustomerController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EVM_STAFF')")
-    public ResponseEntity<ApiResponse<Customer>> updateCustomer(@PathVariable Integer id, @RequestBody Customer customer) {
+    public ResponseEntity<ApiResponse<Customer>> updateCustomer(@PathVariable Long id, @RequestBody Customer customer) {
         try {
             customer.setCustomerId(id);
             Customer updatedCustomer = customerService.updateCustomer(customer);
@@ -58,7 +61,7 @@ public class CustomerController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable Long id) {
         try {
             customerService.deleteCustomer(id);
             return ResponseEntity.ok(new ApiResponse<>(true, "Customer deleted successfully", null));

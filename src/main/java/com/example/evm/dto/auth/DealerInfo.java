@@ -14,7 +14,9 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class DealerInfo {
-    private Integer dealerId;
+    
+    private Long dealerId;
+
     private String dealerName;
     private String phone;
     private String address;

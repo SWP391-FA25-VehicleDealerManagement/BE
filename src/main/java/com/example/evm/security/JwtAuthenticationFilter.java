@@ -8,7 +8,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -29,7 +28,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     public JwtAuthenticationFilter(JwtUtil jwtUtil,
                                    CustomUserDetailsService userDetailsService) {
         this.jwtUtil = jwtUtil;
-        this.userDetailsService = userDetailsService;
+        this.userDetailsService = userDetailsService; // retained for potential future use
     }
 
     @Override
@@ -89,7 +88,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean shouldSkip(String path) {
-        return path.startsWith("/api/auth/") ||
+        // Only skip login and public assets; require JWT for /api/auth/me
+        return path.equals("/api/auth/login") ||
                path.startsWith("/api/test/") ||
                path.equals("/") ||
                path.startsWith("/static/") ||

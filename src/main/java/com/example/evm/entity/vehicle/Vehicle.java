@@ -13,14 +13,12 @@ public class Vehicle {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "vehicle_id")
-    private Integer vehicleId;
+    private Long vehicleId;
 
     @Column(nullable = false)
     private String name;
     private String color;
     private String image;
-    private Double price;
-    private Integer stock;
 
     // Vehicle belongs to one Variant
     @ManyToOne(fetch = FetchType.LAZY)

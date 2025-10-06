@@ -22,7 +22,7 @@ public class DealerServiceImpl implements DealerService {
     }
 
     @Override
-    public Dealer getDealerById(Integer id) {
+    public Dealer getDealerById(Long id) {
         return dealerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Dealer not found"));
     }
@@ -35,7 +35,7 @@ public class DealerServiceImpl implements DealerService {
 
     @Override
     public Dealer updateDealer(Dealer dealer) {
-        Integer id = dealer.getDealerId();
+        Long id = dealer.getDealerId();
         if (id == null || !dealerRepository.existsById(id)) {
             throw new ResourceNotFoundException("Dealer not found");
         }
@@ -43,12 +43,19 @@ public class DealerServiceImpl implements DealerService {
     }
 
     @Override
-    public void deleteDealer(Integer id) {
+    public void deleteDealer(Long id) {
         if (!dealerRepository.existsById(id)) {
             throw new ResourceNotFoundException("Dealer not found");
         }
         dealerRepository.deleteById(id);
         log.info("Deleted dealer {}", id);
+    }
+
+
+    @Override
+    public Dealer getDealerByName(String dealerName) {
+        return dealerRepository.findByDealerName(dealerName)
+                .orElseThrow(() -> new ResourceNotFoundException("Dealer not found"));
     }
 }
 

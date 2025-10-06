@@ -1,16 +1,10 @@
 package com.example.evm.service.vehicle;
 
-import com.example.evm.dto.vehicle.VehicleRequest;
+import com.example.evm.dto.vehicle.VehicleComparisonDTO;
 import com.example.evm.dto.vehicle.VehicleResponse;
-
 import java.util.List;
 
 public interface VehicleService {
     List<VehicleResponse> getAllVehicles();
-
-    VehicleResponse addVehicle(VehicleRequest request);
-
-    VehicleResponse updateVehicle(Integer id, VehicleRequest request);
-
-    void deleteVehicle(Integer id);
+    List<VehicleComparisonDTO> compareVariants(List<Long> variantIds);
 }

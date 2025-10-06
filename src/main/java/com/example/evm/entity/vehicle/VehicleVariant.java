@@ -14,7 +14,7 @@ public class VehicleVariant {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "variant_id")
-    private Integer variantId;
+    private Long variantId;
 
     private String name;
     private String image;   

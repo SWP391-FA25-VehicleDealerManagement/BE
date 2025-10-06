@@ -14,21 +14,23 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AdminUserInfoResponse {
-    private Integer userId;
+    private Long userId;
     private String username;
+    private String fullName;
     private String role;
     private String email;
     private String phone;
     private LocalDateTime createdDate;
     private LocalDateTime dateModified;
     private LocalDateTime refreshTokenExpiryTime;
-    private Integer dealerId;
+    private Long dealerId;
     private String dealerName;
 
     public static AdminUserInfoResponse fromEntity(User u) {
         AdminUserInfoResponse r = new AdminUserInfoResponse();
         r.setUserId(u.getUserId());
         r.setUsername(u.getUserName());
+        r.setFullName(u.getFullName());
         r.setRole(u.getRole());
         r.setEmail(u.getEmail());
         r.setPhone(u.getPhone());

@@ -22,7 +22,7 @@ public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "customer_id")
-    private Integer customerId;
+    private Long customerId;
 
     @Column(name = "customerName", nullable = false, length = 255)
     @NotBlank(message = "Customer name is required")
@@ -38,7 +38,7 @@ public class Customer {
     private String phone;
 
     @Column(name = "dealer_id")
-    private Integer dealerId;
+    private Long dealerId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id", insertable = false, updatable = false)
@@ -46,6 +46,5 @@ public class Customer {
     private Dealer dealer;
 
     @Column(name = "createBy", length = 100)
-    @Size (max = 100, message = "Create By must not exceed 100 characters")
     private String createBy;
 }
