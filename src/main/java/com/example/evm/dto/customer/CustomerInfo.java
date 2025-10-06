@@ -15,4 +15,5 @@ public class CustomerInfo {
     private String email;
     private String phone;
     private Integer dealerId;
+    private String createBy;
 }
