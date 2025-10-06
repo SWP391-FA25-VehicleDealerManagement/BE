@@ -33,7 +33,7 @@ public class VehicleController {
     @PreAuthorize("hasRole('DEALER_STAFF') or hasRole('DEALER_MANAGER')")
     @GetMapping("/compare")
     public ResponseEntity<ApiResponse<List<VehicleComparisonDTO>>> compareVehicles(
-        @RequestParam List<Integer> variantIds) {
+        @RequestParam List<Long> variantIds) {
         
         List<VehicleComparisonDTO> comparisonData = vehicleService.compareVariants(variantIds);
         
