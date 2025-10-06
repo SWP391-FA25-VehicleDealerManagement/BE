@@ -15,4 +15,8 @@ public class CustomerInfo {
     private String email;
     private String phone;
     private Integer dealerId;
+<<<<<<< HEAD
+=======
+    private String createBy;
+>>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
 }

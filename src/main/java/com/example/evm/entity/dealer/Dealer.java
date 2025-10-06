@@ -31,7 +31,11 @@ public class Dealer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "dealer_id")
+<<<<<<< HEAD
     private Long dealerId;
+=======
+    private Integer dealerId;
+>>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
 
     @Column(name = "dealerName", nullable = false, length = 255)
     @NotBlank @Size(max = 255)

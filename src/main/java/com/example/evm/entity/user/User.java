@@ -30,16 +30,23 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
+<<<<<<< HEAD
     private Long userId;
+=======
+    private Integer userId;
+>>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
 
     @Column(name = "userName", nullable = false, length = 100)
     @NotBlank @Size(min = 3, max = 100)
     private String userName;
 
+<<<<<<< HEAD
     @Column(length = 255)
     @Size(max = 255)
     private String fullName;
 
+=======
+>>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
     @Column(nullable = false, length = 255)
     @NotBlank @Size(min = 6)
     private String password;      // BCrypt hash

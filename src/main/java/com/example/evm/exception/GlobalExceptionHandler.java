@@ -8,7 +8,10 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.security.authentication.BadCredentialsException;
+<<<<<<< HEAD
 import org.springframework.web.bind.MethodArgumentNotValidException;
+=======
+>>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -60,6 +63,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
+<<<<<<< HEAD
     // ----- 400 – validation errors (@Valid) --------------------------------------
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
@@ -72,6 +76,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
+=======
+>>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
     // ----- 400 – invalid/malformed request body ---------------------------------
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotReadable(HttpMessageNotReadableException ex) {

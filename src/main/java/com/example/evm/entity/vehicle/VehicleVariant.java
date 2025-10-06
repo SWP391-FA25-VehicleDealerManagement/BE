@@ -14,7 +14,11 @@ public class VehicleVariant {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "variant_id")
+<<<<<<< HEAD
     private Long variantId;
+=======
+    private Integer variantId;
+>>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
 
     private String name;
     private String image;   
