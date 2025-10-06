@@ -59,4 +59,19 @@ public class InventoryController {
         return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
     }
     }
+
+    @PostMapping("/recall")
+    public ResponseEntity<?> recallVehicle(@RequestBody Map<String, Object> request) {
+    Integer vehicleId = (Integer) request.get("vehicleId");
+    Integer dealerId = (Integer) request.get("dealerId");
+    Integer quantity = (Integer) request.get("quantity");
+
+    try {
+        String result = inventoryService.recallVehicleFromDealer(vehicleId, dealerId, quantity);
+        return ResponseEntity.ok(Map.of("message", result));
+    } catch (RuntimeException e) {
+        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    }
+    }
+
 }
