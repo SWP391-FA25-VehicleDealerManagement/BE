@@ -24,7 +24,7 @@ public class InventoryStock {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id")
-    private Dealer dealer;
+    private Dealer dealer; // null = kho tổng
 
     private Integer quantity;
     private String status;

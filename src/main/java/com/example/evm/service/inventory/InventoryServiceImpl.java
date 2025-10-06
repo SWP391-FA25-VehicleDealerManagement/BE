@@ -98,4 +98,47 @@ public class InventoryServiceImpl implements InventoryService {
                 .dealerName(stock.getDealer() != null ? stock.getDealer().getDealerName() : null)
                 .build();
     }
+
+    @Override
+    @Transactional
+    public String allocateVehicleToDealer(Integer vehicleId, Integer dealerId, Integer quantity) {
+    // 1️⃣ Kiểm tra xe có trong kho tổng không
+    List<InventoryStock> centralStocks = inventoryRepository.findByDealerIsNullAndVehicle_VehicleId(vehicleId);
+    if (centralStocks.isEmpty()) {
+        throw new RuntimeException("Không có xe này trong kho tổng");
+    }
+
+    InventoryStock centralStock = centralStocks.get(0);
+
+    if (centralStock.getQuantity() < quantity) {
+        throw new RuntimeException("Số lượng trong kho tổng không đủ");
+    }
+
+    Dealer dealer = dealerRepository.findById(dealerId.longValue())
+            .orElseThrow(() -> new RuntimeException("Dealer không tồn tại"));
+
+    Vehicle vehicle = vehicleRepository.findById(vehicleId.longValue())
+            .orElseThrow(() -> new RuntimeException("Vehicle không tồn tại"));
+
+    // 2️⃣ Trừ số lượng kho tổng
+    centralStock.setQuantity(centralStock.getQuantity() - quantity);
+    inventoryRepository.save(centralStock);
+
+    // 3️⃣ Cộng vào kho của đại lý
+    InventoryStock dealerStock = inventoryRepository.findByDealerAndVehicle(dealer, vehicle)
+            .orElseGet(() -> {
+                InventoryStock newStock = new InventoryStock();
+                newStock.setDealer(dealer);
+                newStock.setVehicle(vehicle);
+                newStock.setQuantity(0);
+                newStock.setStatus("Available");
+                return newStock;
+            });
+
+    dealerStock.setQuantity(dealerStock.getQuantity() + quantity);
+    inventoryRepository.save(dealerStock);
+
+    return "Điều phối " + quantity + " xe cho đại lý " + dealer.getDealerName() + " thành công";
+    }
+    
 }

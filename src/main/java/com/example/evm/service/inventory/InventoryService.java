@@ -13,4 +13,6 @@ public interface InventoryService {
     InventoryResponse updateStock(Integer id, InventoryStock stock);
 
     void deleteStock(Integer id);
+
+    String allocateVehicleToDealer(Integer vehicleId, Integer dealerId, Integer quantity);
 }

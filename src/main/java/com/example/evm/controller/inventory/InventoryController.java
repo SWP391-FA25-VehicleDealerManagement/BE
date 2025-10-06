@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/inventory")
@@ -42,5 +43,20 @@ public class InventoryController {
     public ResponseEntity<String> deleteStock(@PathVariable Integer id) {
         inventoryService.deleteStock(id);
         return ResponseEntity.ok("Inventory deleted successfully");
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF')")
+    @PostMapping("/allocate")
+    public ResponseEntity<?> allocateVehicle(@RequestBody Map<String, Object> request) {
+    Integer vehicleId = (Integer) request.get("vehicleId");
+    Integer dealerId = (Integer) request.get("dealerId");
+    Integer quantity = (Integer) request.get("quantity");
+
+    try {
+        String result = inventoryService.allocateVehicleToDealer(vehicleId, dealerId, quantity);
+        return ResponseEntity.ok(Map.of("message", result));
+    } catch (RuntimeException e) {
+        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    }
     }
 }
