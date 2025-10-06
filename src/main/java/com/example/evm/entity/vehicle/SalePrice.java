@@ -1,15 +1,15 @@
-package com.example.evm.entity.vehicle; // Đảm bảo đúng package path
+package com.example.evm.entity.vehicle;
 
-import com.example.evm.entity.dealer.Dealer; // Thay thế bằng package path Dealer
+import com.example.evm.entity.dealer.Dealer;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 
-import java.time.LocalDate; // Sử dụng LocalDate cho ngày tháng
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "SalePrice")
-@Data // Tương đương @Getter, @Setter, @ToString, @EqualsAndHashCode
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -40,9 +40,5 @@ public class SalePrice {
     private BigDecimal price;
 
     @Column(name = "effectivedate", nullable = false)
-    private LocalDate effectiveDate; // Lưu ý tên cột trong DB là effectivedate
-
-    // Có thể thêm trường isActive/status nếu bạn muốn quản lý giá nào đang áp dụng bằng cách khác
-    // @Column(name = "is_active")
-    // private Boolean isActive = true;
+    private LocalDate effectiveDate;
 }
