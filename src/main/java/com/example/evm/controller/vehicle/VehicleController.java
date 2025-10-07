@@ -1,7 +1,6 @@
 package com.example.evm.controller.vehicle;
 
 import com.example.evm.dto.auth.ApiResponse;
-import com.example.evm.dto.vehicle.VehicleComparisonDTO;
 import com.example.evm.dto.vehicle.VehicleRequest;
 import com.example.evm.dto.vehicle.VehicleResponse;
 import com.example.evm.service.vehicle.VehicleService;
@@ -34,8 +33,7 @@ public class VehicleController {
         VehicleResponse created = vehicleService.addVehicle(request);
         return ResponseEntity.ok(Map.of(
                 "message", "Vehicle added successfully",
-                "vehicle", created
-        ));
+                "vehicle", created));
     }
 
     // 🔹 UPDATE
@@ -48,8 +46,7 @@ public class VehicleController {
         VehicleResponse updated = vehicleService.updateVehicle(id, request);
         return ResponseEntity.ok(Map.of(
                 "message", "Vehicle updated successfully",
-                "vehicle", updated
-        ));
+                "vehicle", updated));
     }
 
     // 🔹 DELETE
@@ -60,16 +57,4 @@ public class VehicleController {
         return ResponseEntity.ok(Map.of("message", "Vehicle deleted successfully"));
     }
 
-    // 🔹 COMPARE
-    @PreAuthorize("hasAnyRole('DEALER_STAFF', 'DEALER_MANAGER')")
-    @GetMapping("/compare")
-    public ResponseEntity<ApiResponse<List<VehicleComparisonDTO>>> compareVehicles(
-        @RequestParam List<Long> variantIds) {
-        
-        List<VehicleComparisonDTO> comparisonData = vehicleService.compareVariants(variantIds);
-        
-        return ResponseEntity.ok(
-            new ApiResponse<>(true, "Vehicle comparison data retrieved successfully", comparisonData)
-        );
-    }
 }
