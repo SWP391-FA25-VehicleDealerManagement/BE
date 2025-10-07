@@ -46,5 +46,6 @@ public class Customer {
     private Dealer dealer;
 
     @Column(name = "createBy", length = 100)
+    @Size (max = 100, message = "Create By must not exceed 100 characters")
     private String createBy;
 }

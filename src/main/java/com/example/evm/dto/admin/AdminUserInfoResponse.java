@@ -16,7 +16,6 @@ import lombok.Setter;
 public class AdminUserInfoResponse {
     private Long userId;
     private String username;
-    private String fullName;
     private String role;
     private String email;
     private String phone;
@@ -30,7 +29,6 @@ public class AdminUserInfoResponse {
         AdminUserInfoResponse r = new AdminUserInfoResponse();
         r.setUserId(u.getUserId());
         r.setUsername(u.getUserName());
-        r.setFullName(u.getFullName());
         r.setRole(u.getRole());
         r.setEmail(u.getEmail());
         r.setPhone(u.getPhone());

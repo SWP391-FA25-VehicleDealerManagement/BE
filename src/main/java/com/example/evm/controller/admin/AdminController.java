@@ -17,9 +17,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.evm.dto.dealer.CreateDealerAccountRequest;
+import com.example.evm.dto.dealer.CreateDealerAccountResponse;
 import com.example.evm.entity.user.User;
 import com.example.evm.repository.UserRepository;
+import com.example.evm.service.dealer.DealerAccountService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,6 +35,7 @@ public class AdminController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final DealerAccountService dealerAccountService;
 
     // Kiểm tra quyền ADMIN
     private boolean isAdmin(Authentication authentication) {

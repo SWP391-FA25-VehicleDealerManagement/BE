@@ -19,6 +19,8 @@ public class Vehicle {
     private String name;
     private String color;
     private String image;
+    private Double price;
+    private Integer stock;
 
     // Vehicle belongs to one Variant
     @ManyToOne(fetch = FetchType.LAZY)

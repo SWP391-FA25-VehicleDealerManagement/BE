@@ -139,7 +139,7 @@ public class PromotionService {
         Promotion bestPromotion = null;
         
         for (Promotion promo : applicablePromotions) {
-            if (promo.appliesToDealer(dealerId.intValue())) {
+            if (promo.appliesToDealer(dealerId)) {
                 Double discountedPrice = promo.calculateDiscountedPrice(originalPrice);
                 if (discountedPrice < bestPrice) {
                     bestPrice = discountedPrice;

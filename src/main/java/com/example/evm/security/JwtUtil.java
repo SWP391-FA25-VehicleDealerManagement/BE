@@ -42,6 +42,7 @@ public class JwtUtil {
                 .compact();
     }
 
+    // PHƯƠNG THỨC CHUNG: Lấy Claims từ Token
     public Claims getClaims(String token) {
         try {
             return parser.parseClaimsJws(token).getBody();
@@ -51,14 +52,27 @@ public class JwtUtil {
         }
     }
 
-    public String extractUsername(String token) {
-        Claims claims = getClaims(token);
-        return claims != null ? claims.getSubject() : null;
-    }
-
+    // Lấy Role từ Claims
     public String getRole(String token) {
         Claims claims = getClaims(token);
-        return (claims != null) ? claims.get("role", String.class) : null;
+        if (claims != null && claims.containsKey("role")) {
+            return claims.get("role", String.class);
+        }
+        return null;
+    }
+
+    // Lấy Username từ Claims
+    public String extractUsername(String token) {
+        try {
+            Claims claims = getClaims(token);
+            if (claims != null) {
+                 return claims.getSubject();
+            }
+            return null;
+        } catch (JwtException e) {
+            log.warn("Cannot extract username: {}", e.getMessage());
+            return null;
+        }
     }
 
     public boolean validateToken(String token) {
@@ -76,15 +90,25 @@ public class JwtUtil {
     }
 
     public Date getExpirationDate(String token) {
-        Claims claims = getClaims(token);
-        return claims != null ? claims.getExpiration() : null;
+        try {
+            Claims claims = getClaims(token);
+            if (claims != null) {
+                return claims.getExpiration();
+            }
+            return null;
+        } catch (JwtException e) {
+            log.warn("Cannot get expiration: {}", e.getMessage());
+            // Trả về một giá trị mặc định để tránh null, hoặc xử lý bằng try-catch bên ngoài
+            return new Date(System.currentTimeMillis() + expirationMs); 
+        }
     }
 
     public long getRemainingTime(String token) {
         Date expirationDate = getExpirationDate(token);
-        return expirationDate != null
-                ? expirationDate.getTime() - System.currentTimeMillis()
-                : 0;
+        if (expirationDate == null) {
+            return 0; // Xử lý nếu ngày hết hạn không thể lấy được
+        }
+        return expirationDate.getTime() - System.currentTimeMillis();
     }
 
     public long getExpirationInSeconds() {

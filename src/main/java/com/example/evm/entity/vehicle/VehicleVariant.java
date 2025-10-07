@@ -18,6 +18,13 @@ public class VehicleVariant {
 
     private String name;
     private String image;   
+    
+    // Additional fields for comparison
+    private String variantName;
+    private String engineType;
+    private String transmission;
+    private String fuelType;
+    private Integer seatingCapacity;
 
     // Variant belongs to one Model
     @ManyToOne(fetch = FetchType.LAZY)

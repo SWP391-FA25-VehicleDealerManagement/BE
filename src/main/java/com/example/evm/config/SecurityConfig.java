@@ -25,7 +25,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity(prePostEnabled = true)      // enables @PreAuthorize
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -55,8 +55,12 @@ public class SecurityConfig {
                 // ✅ Cho phép swagger-ui và docs không cần JWT
                 .requestMatchers(SWAGGER_WHITELIST).permitAll()
 
-                // ✅ Chỉ cho phép login không cần JWT
-                .requestMatchers("/api/auth/login").permitAll()
+                // ✅ Cho phép auth endpoints không cần JWT (trừ /me)
+                .requestMatchers("/api/auth/login", "/api/auth/logout", "/api/test/**", "/actuator/health", "/health")
+                    .permitAll()
+                
+                // ✅ /api/auth/me cần JWT
+                .requestMatchers("/api/auth/me").authenticated()
 
                 // ✅ Các request khác phải có JWT
                 .anyRequest().authenticated()

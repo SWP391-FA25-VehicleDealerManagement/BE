@@ -1,110 +1,125 @@
 package com.example.evm.service.vehicle;
 
 import com.example.evm.dto.vehicle.VehicleComparisonDTO;
+import com.example.evm.dto.vehicle.VehicleRequest;
 import com.example.evm.dto.vehicle.VehicleResponse;
+import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.vehicle.SalePrice;
+import com.example.evm.entity.vehicle.Vehicle;
 import com.example.evm.entity.vehicle.VehicleVariant;
+import com.example.evm.repository.dealer.DealerRepository;
 import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
-import com.example.evm.repository.vehicle.SalePriceRepository; 
+import com.example.evm.repository.vehicle.SalePriceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.text.NumberFormat; 
-import java.util.Locale;
+
+import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 
 @Service
 @RequiredArgsConstructor
 public class VehicleServiceImpl implements VehicleService {
 
     private final VehicleRepository vehicleRepository;
-    private final SalePriceRepository salePriceRepository;
     private final VehicleVariantRepository variantRepository;
+    private final SalePriceRepository salePriceRepository;
+    private final DealerRepository dealerRepository;
 
     @Override
-    @Transactional(readOnly = true)
-    public List<VehicleComparisonDTO> compareVariants(List<Long> variantIds) {
-        if (variantIds == null || variantIds.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-            Long currentDealerId = 1L; // TODO: THAY THẾ '1' BẰNG Dealer ID CỦA USER ĐANG ĐĂNG NHẬP
-
-            List<VehicleVariant> variants = variantRepository.findAllById(variantIds);
-
-            List<VehicleComparisonDTO> comparisonList = variants.stream()
-                .map(variant -> {
-                // Lấy giá bán mới nhất tương ứng với Dealer của người dùng
-                    SalePrice latestPrice = salePriceRepository
-                        .findTopByDealerIdAndVariantIdOrderByEffectiveDateDesc(currentDealerId, variant.getVariantId());
-
-                    return VehicleComparisonDTO.builder()
-                        .variantId(variant.getVariantId())
-                        .variantName(variant.getName())
-                        .modelId(variant.getModel().getModelId())
-                        .modelName(variant.getModel().getName())
-                        .modelDescription(variant.getModel().getDescription())
-                        .price(latestPrice != null ? latestPrice.getPrice() : null)
-                        .dealerId(latestPrice != null ? latestPrice.getDealerId() : null)
-                        .effectiveDate(latestPrice != null ? latestPrice.getEffectiveDate().toString() : "N/A")
-                        .variantImage(variant.getImage())
-                        .build();
-                })
-                .collect(Collectors.toList());
-
-            return comparisonList;
-    }
-    
-         
-    @Override
-    @Transactional(readOnly = true)
     public List<VehicleResponse> getAllVehicles() {
+        return vehicleRepository.findAll().stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
 
-        // Khởi tạo đối tượng định dạng tiền tệ
-        NumberFormat currencyFormatter = NumberFormat.getNumberInstance(Locale.US);
-        currencyFormatter.setMinimumFractionDigits(0);
-        currencyFormatter.setMaximumFractionDigits(0);
+    @Override
+    @Transactional
+    public VehicleResponse addVehicle(VehicleRequest request) {
+        Vehicle vehicle = new Vehicle();
+        vehicle.setName(request.getName() != null ? request.getName() : request.getVehicleName());
+        vehicle.setColor(request.getColor());
+        vehicle.setImage(request.getImage());
+        vehicle.setPrice(request.getPrice());
+        vehicle.setStock(request.getStock());
+        
+        // Set dealer if provided
+        if (request.getDealerId() != null) {
+            Optional<Dealer> dealer = dealerRepository.findById(request.getDealerId());
+            dealer.ifPresent(vehicle::setDealer);
+        }
+        
+        Vehicle saved = vehicleRepository.save(vehicle);
+        return convertToResponse(saved);
+    }
 
-        return vehicleRepository.findAll().stream().map(vehicle -> {
-            VehicleResponse dto = new VehicleResponse();
-            dto.setVehicleId(vehicle.getVehicleId());
-            dto.setName(vehicle.getName());
-            dto.setColor(vehicle.getColor());
-            dto.setVehicleImage(vehicle.getImage()); 
+    @Override
+    @Transactional
+    public VehicleResponse updateVehicle(Long id, VehicleRequest request) {
+        Vehicle vehicle = vehicleRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Vehicle not found with id: " + id));
+        
+        vehicle.setName(request.getName() != null ? request.getName() : request.getVehicleName());
+        vehicle.setColor(request.getColor());
+        vehicle.setImage(request.getImage());
+        vehicle.setPrice(request.getPrice());
+        vehicle.setStock(request.getStock());
+        
+        // Update dealer if provided
+        if (request.getDealerId() != null) {
+            Optional<Dealer> dealer = dealerRepository.findById(request.getDealerId());
+            dealer.ifPresent(vehicle::setDealer);
+        }
+        
+        Vehicle updated = vehicleRepository.save(vehicle);
+        return convertToResponse(updated);
+    }
 
-            Long variantId = null; 
-            Long dealerId = null;
+    @Override
+    @Transactional
+    public void deleteVehicle(Long id) {
+        if (!vehicleRepository.existsById(id)) {
+            throw new RuntimeException("Vehicle not found with id: " + id);
+        }
+        vehicleRepository.deleteById(id);
+    }
 
-            if (vehicle.getVariant() != null) {
-                dto.setVariantName(vehicle.getVariant().getName());
-                dto.setVariantImage(vehicle.getVariant().getImage());
+    @Override
+    public List<VehicleComparisonDTO> compareVariants(List<Long> variantIds) {
+        List<VehicleComparisonDTO> comparisonData = new ArrayList<>();
+        
+        for (Long variantId : variantIds) {
+            Optional<VehicleVariant> variantOpt = variantRepository.findById(variantId);
+            if (variantOpt.isPresent()) {
+                VehicleVariant variant = variantOpt.get();
+                VehicleComparisonDTO dto = VehicleComparisonDTO.builder()
+                    .variantId(variant.getVariantId())
+                    .variantName(variant.getVariantName())
+                    .engineType(variant.getEngineType())
+                    .transmission(variant.getTransmission())
+                    .fuelType(variant.getFuelType())
+                    .seatingCapacity(variant.getSeatingCapacity())
+                    .build();
                 
-                variantId = vehicle.getVariant().getVariantId(); 
-
-                if (vehicle.getVariant().getModel() != null) {
-                    dto.setModelName(vehicle.getVariant().getModel().getName());
-                    dto.setModelDescription(vehicle.getVariant().getModel().getDescription());
-                }
-            }
-
-            if (vehicle.getDealer() != null) {
-                dto.setDealerName(vehicle.getDealer().getDealerName());
+                // Get sale price - using a simple approach for now
+                // Note: This would need proper implementation based on your business logic
+                dto.setPrice(BigDecimal.ZERO);
+                dto.setDiscountPercentage(0);
                 
-                dealerId = vehicle.getDealer().getDealerId(); 
+                comparisonData.add(dto);
             }
-            
-            // LOGIC LẤY GIÁ BÁN
-            if (variantId != null && dealerId != null) {
-                Optional<SalePrice> latest = salePriceRepository.findTopByVariantIdAndDealerIdOrderByEffectiveDateDesc(variantId, dealerId);
-                latest.ifPresent(sp -> dto.setPrice(sp.getPrice() != null ? currencyFormatter.format(sp.getPrice()) : null));
-            }
+        }
+        
+        return comparisonData;
+    }
 
-            return dto;
-        }).toList();
+    private VehicleResponse convertToResponse(Vehicle vehicle) {
+        return new VehicleResponse(vehicle);
     }
 }

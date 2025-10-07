@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -28,8 +29,15 @@ public class DealerServiceImpl implements DealerService {
     }
 
     @Override
+    public Dealer getDealerByName(String name) {
+        return dealerRepository.findByDealerName(name)
+                .orElseThrow(() -> new ResourceNotFoundException("Dealer not found"));
+    }
+
+    @Override
     public Dealer createDealer(Dealer dealer) {
         dealer.setDealerId(null);
+        dealer.setCreatedDate(LocalDateTime.now());
         return dealerRepository.save(dealer);
     }
 
@@ -49,13 +57,6 @@ public class DealerServiceImpl implements DealerService {
         }
         dealerRepository.deleteById(id);
         log.info("Deleted dealer {}", id);
-    }
-
-
-    @Override
-    public Dealer getDealerByName(String dealerName) {
-        return dealerRepository.findByDealerName(dealerName)
-                .orElseThrow(() -> new ResourceNotFoundException("Dealer not found"));
     }
 }
 

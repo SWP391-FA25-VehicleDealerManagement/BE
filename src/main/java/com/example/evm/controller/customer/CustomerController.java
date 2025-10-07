@@ -33,13 +33,10 @@ public class CustomerController {
                 : ResponseEntity.ok(new ApiResponse<>(false, "Customer not found", null));
     }
 
-    @PostMapping("/create")
+    @PostMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EVM_STAFF', 'ROLE_DEALER_STAFF', 'ROLE_DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<Customer>> createCustomer(@RequestBody Customer customer, @RequestHeader(value = "X-Creator-Name", required = false) String creatorName) {
+    public ResponseEntity<ApiResponse<Customer>> createCustomer(@RequestBody Customer customer) {
         try {
-            if (creatorName != null && !creatorName.isBlank()) {
-                customer.setCreateBy(creatorName);
-            }
             Customer createdCustomer = customerService.createCustomer(customer);
             return ResponseEntity.ok(new ApiResponse<>(true, "Customer created successfully", createdCustomer));
         } catch (IllegalArgumentException e) {

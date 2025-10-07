@@ -34,7 +34,6 @@ public class CustomerServiceImpl implements CustomerService {
         if (customer.getDealerId() != null && !dealerRepository.existsById(customer.getDealerId())) {
             throw new IllegalArgumentException("Invalid dealerId: " + customer.getDealerId());
         }
-        // createBy sẽ được controller gán từ header X-Creator-Name nếu có
         return customerRepository.save(customer);
     }
 

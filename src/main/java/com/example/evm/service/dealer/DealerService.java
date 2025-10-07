@@ -7,17 +7,15 @@ public interface DealerService {
 
     List<Dealer> getAllDealers();
 
-    Dealer getDealerByName(String dealerName);
-
     Dealer getDealerById(Long id);
+
+    Dealer getDealerByName(String name);
 
     Dealer createDealer(Dealer dealer);
 
     Dealer updateDealer(Dealer dealer);
 
     void deleteDealer(Long id);
-
-    
 }
 
 

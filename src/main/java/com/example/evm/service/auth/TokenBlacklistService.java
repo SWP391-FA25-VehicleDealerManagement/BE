@@ -37,5 +37,3 @@ public class TokenBlacklistService {
         return true;
     }
 }
-
-

@@ -3,7 +3,6 @@ package com.example.evm.controller.auth;
 import com.example.evm.dto.auth.*;
 import com.example.evm.service.auth.AuthService;
 import com.example.evm.service.auth.UserProfileService;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,13 +14,10 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-
 public class AuthController {
 
     private final AuthService authService;
     private final UserProfileService userProfileService;
-
-   
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest req) {
         LoginResponse resp = authService.login(req);
