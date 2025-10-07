@@ -8,7 +8,11 @@ import java.util.List;
 
 @Entity
 @Table(name = "VehicleVariant")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class VehicleVariant {
 
     @Id
@@ -16,20 +20,16 @@ public class VehicleVariant {
     @Column(name = "variant_id")
     private Long variantId;
 
+    @Column(name = "name", nullable = false)
     private String name;
-    private String image;   
-    
-    // Additional fields for comparison
-    private String variantName;
-    private String engineType;
-    private String transmission;
-    private String fuelType;
-    private Integer seatingCapacity;
+
+    @Column(name = "image")
+    private String image;
 
     // Variant belongs to one Model
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "model_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "variants"})
+    @JoinColumn(name = "model_id", nullable = false)
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "variants" })
     private VehicleModel model;
 
     // One Variant has many Vehicles
