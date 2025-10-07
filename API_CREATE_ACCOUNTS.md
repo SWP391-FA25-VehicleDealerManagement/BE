@@ -157,6 +157,11 @@ Hệ thống có 3 API để tạo các loại tài khoản khác nhau:
 - `ROLE_DEALER_MANAGER`: Quản lý dealer
 - `ROLE_DEALER_STAFF`: Nhân viên dealer
 
+## Quyền Delete Dealer:
+- `ROLE_ADMIN`: Có thể xóa bất kỳ dealer nào
+- `ROLE_EVM_STAFF`: Có thể xóa bất kỳ dealer nào (✅ Đã cập nhật)
+- Endpoint: `DELETE /api/dealers/delete/{id}`
+
 ## Authentication:
 Tất cả API đều yêu cầu JWT token trong header:
 ```
