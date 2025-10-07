@@ -24,11 +24,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-<<<<<<< HEAD
     public Customer getCustomerById(Long id) {
-=======
-    public Customer getCustomerById(Integer id) {
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
         Optional<Customer> customer = customerRepository.findById(id);
         return customer.orElse(null);
     }
@@ -38,10 +34,6 @@ public class CustomerServiceImpl implements CustomerService {
         if (customer.getDealerId() != null && !dealerRepository.existsById(customer.getDealerId())) {
             throw new IllegalArgumentException("Invalid dealerId: " + customer.getDealerId());
         }
-<<<<<<< HEAD
-        // createBy sẽ được controller gán từ header X-Creator-Name nếu có
-=======
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
         return customerRepository.save(customer);
     }
 
@@ -57,11 +49,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-<<<<<<< HEAD
     public void deleteCustomer(Long id) {
-=======
-    public void deleteCustomer(Integer id) {
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
         customerRepository.deleteById(id);
     }
 }

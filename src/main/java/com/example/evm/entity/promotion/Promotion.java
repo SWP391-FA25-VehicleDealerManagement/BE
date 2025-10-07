@@ -77,13 +77,13 @@ public class Promotion {
     }
 
     // Helper method - kiểm tra khuyến mãi áp dụng cho vehicle cụ thể
-    public boolean appliesToVehicle(Integer vehicleId) {
+    public boolean appliesToVehicle(Long vehicleId) {
         return vehicles.stream()
                 .anyMatch(vehicle -> vehicle.getVehicleId().equals(vehicleId));
     }
 
     // Helper method - kiểm tra khuyến mãi áp dụng cho dealer cụ thể
-    public boolean appliesToDealer(Integer dealerId) {
+    public boolean appliesToDealer(Long dealerId) {
         // Nếu là khuyến mãi toàn hệ thống (dealer = null) hoặc áp dụng cho dealer cụ thể
         return dealer == null || 
                applicableDealers.stream()

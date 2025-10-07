@@ -28,11 +28,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
-<<<<<<< HEAD
-    private final TokenBlacklistService tokenBlackListService;
-=======
     private final TokenBlacklistService tokenBlacklistService;
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
     private final UserMapper userMapper;                     // <-- inject mapper
 
     /**
@@ -81,11 +77,7 @@ public class AuthService {
             log.warn("Logout called with empty token");
             return;
         }
-<<<<<<< HEAD
-        tokenBlackListService.blacklist(token, jwtUtil.getExpirationDate(token));
-=======
         tokenBlacklistService.blacklist(token, jwtUtil.getExpirationDate(token));
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
         log.info("Token blacklisted (logout)");
     }
 

@@ -1,16 +1,10 @@
 package com.example.evm.config;
 
 import com.example.evm.security.*;
-<<<<<<< HEAD
 import com.example.evm.dto.auth.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
-=======
-
-import lombok.RequiredArgsConstructor;
-
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
 import org.springframework.context.annotation.*;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.*;
@@ -27,25 +21,17 @@ import org.springframework.security.web.*;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-<<<<<<< HEAD
 import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
-=======
-
-@Configuration
-@EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)      // enables @PreAuthorize
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-<<<<<<< HEAD
     // ✅ Các endpoint Swagger cần cho phép public
     private static final String[] SWAGGER_WHITELIST = {
         "/swagger-ui.html",
@@ -56,8 +42,6 @@ public class SecurityConfig {
         "/openapi.yaml"
     };
 
-=======
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -65,15 +49,18 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-<<<<<<< HEAD
                 // Cho phép preflight request
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                 // ✅ Cho phép swagger-ui và docs không cần JWT
                 .requestMatchers(SWAGGER_WHITELIST).permitAll()
 
-                // ✅ Chỉ cho phép login không cần JWT
-                .requestMatchers("/api/auth/login").permitAll()
+                // ✅ Cho phép auth endpoints không cần JWT (trừ /me)
+                .requestMatchers("/api/auth/login", "/api/auth/logout", "/api/test/**", "/actuator/health", "/health")
+                    .permitAll()
+                
+                // ✅ /api/auth/me cần JWT
+                .requestMatchers("/api/auth/me").authenticated()
 
                 // ✅ Các request khác phải có JWT
                 .anyRequest().authenticated()
@@ -96,14 +83,6 @@ public class SecurityConfig {
                     response.getWriter().write(body);
                 })
             )
-=======
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/auth/**", "/api/test/**", "/actuator/health", "/health")
-                    .permitAll()
-                .anyRequest().permitAll()
-            )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
             .formLogin(form -> form.disable())
             .logout(logout -> logout.disable())
             .httpBasic(basic -> basic.disable());
@@ -129,10 +108,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-<<<<<<< HEAD
-=======
-    
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();

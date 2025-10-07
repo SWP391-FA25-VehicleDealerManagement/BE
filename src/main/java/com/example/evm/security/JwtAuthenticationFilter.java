@@ -8,10 +8,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-<<<<<<< HEAD
-=======
 import org.springframework.security.core.userdetails.UserDetails;
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -32,11 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     public JwtAuthenticationFilter(JwtUtil jwtUtil,
                                    CustomUserDetailsService userDetailsService) {
         this.jwtUtil = jwtUtil;
-<<<<<<< HEAD
-        this.userDetailsService = userDetailsService; // retained for potential future use
-=======
         this.userDetailsService = userDetailsService;
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
     }
 
     @Override
@@ -96,12 +89,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean shouldSkip(String path) {
-<<<<<<< HEAD
-        // Only skip login and public assets; require JWT for /api/auth/me
         return path.equals("/api/auth/login") ||
-=======
-        return path.startsWith("/api/auth/") ||
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
                path.startsWith("/api/test/") ||
                path.equals("/") ||
                path.startsWith("/static/") ||

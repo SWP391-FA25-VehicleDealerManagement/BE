@@ -17,7 +17,7 @@ public class OrderDetail {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "orderdetail_id")
-    private Long orderDetailId;
+    private Integer orderDetailId;
 
     // Quan hệ nhiều-1 với Order
     @ManyToOne(fetch = FetchType.LAZY)

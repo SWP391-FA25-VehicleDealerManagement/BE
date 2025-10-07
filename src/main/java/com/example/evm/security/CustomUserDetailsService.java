@@ -32,11 +32,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                     log.error("User not found: {}", username);
                     return new UsernameNotFoundException("User not found");
                 });
-<<<<<<< HEAD
-        String normalizedRole = user.getRole().toUpperCase().replace("ROLE_", "");
-=======
         String normalizedRole = user.getRole().toUpperCase().replace("ROLE_", "").replace(" ", "_");
->>>>>>> 54ac894e9c24c5857ad6736606c5e3f39b001e8d
 
         List<GrantedAuthority> authorities = List.of(
             new SimpleGrantedAuthority("ROLE_" + normalizedRole)

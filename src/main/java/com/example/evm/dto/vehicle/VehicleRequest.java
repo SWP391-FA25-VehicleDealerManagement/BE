@@ -9,6 +9,11 @@ public class VehicleRequest {
     private String image;
     private Double price;
     private Integer stock;
-    private Integer dealerId;
-    private Integer variantId;
+    private Long dealerId;
+    private Long variantId;
+    
+    // Additional fields for compatibility
+    private String vehicleName;
+    private String vehicleType;
+    private String description;
 }
