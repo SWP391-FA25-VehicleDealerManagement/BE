@@ -1,6 +1,5 @@
 package com.example.evm.service.promotion;
 
-
 import com.example.evm.entity.promotion.Promotion;
 import com.example.evm.entity.vehicle.Vehicle;
 import com.example.evm.exception.ResourceNotFoundException;
@@ -12,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -50,7 +48,8 @@ public class PromotionService {
     public List<Promotion> getExpiringSoonPromotions() {
         LocalDate today = LocalDate.now();
         LocalDate nextWeek = today.plusDays(7);
-        return promotionRepository.findExpiringSoonPromotions(today, nextWeek);
+        // Lưu ý: Phương thức này có thể cần sửa đổi trong Repository nếu nó dựa vào created_date
+        return promotionRepository.findExpiringSoonPromotions(today, nextWeek); 
     }
 
     public Promotion getPromotionById(Long id) {
@@ -62,14 +61,6 @@ public class PromotionService {
         // Validate dealer exists if specified
         if (promotion.getDealer() != null && promotion.getDealer().getDealerId() != null) {
             // Dealer validation would be here if we had dealer repository injected
-        }
-
-        // Set created date
-        promotion.setCreatedDate(LocalDateTime.now());
-        
-        // Set status to ACTIVE if not set
-        if (promotion.getStatus() == null) {
-            promotion.setStatus("ACTIVE");
         }
 
         Promotion savedPromotion = promotionRepository.save(promotion);
@@ -87,8 +78,7 @@ public class PromotionService {
         promotion.setDiscountRate(promotionDetails.getDiscountRate());
         promotion.setStartDate(promotionDetails.getStartDate());
         promotion.setEndDate(promotionDetails.getEndDate());
-        promotion.setStatus(promotionDetails.getStatus());
-        
+
         // Update dealer if provided
         if (promotionDetails.getDealer() != null) {
             promotion.setDealer(promotionDetails.getDealer());
@@ -116,13 +106,6 @@ public class PromotionService {
         Promotion promotion = getPromotionById(promotionId);
         promotion.getVehicles().removeIf(vehicle -> vehicle.getVehicleId().equals(vehicleId));
         return promotionRepository.save(promotion);
-    }
-
-    public void deactivatePromotion(Long id) {
-        Promotion promotion = getPromotionById(id);
-        promotion.setStatus("INACTIVE");
-        promotionRepository.save(promotion);
-        log.info("Promotion deactivated: {}", promotion.getTitle());
     }
 
     public void deletePromotion(Long id) {

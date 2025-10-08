@@ -8,9 +8,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "VehicleVariant")
-@Getter 
-@Setter 
-@NoArgsConstructor 
+@Getter
+@Setter
+@NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class VehicleVariant {
@@ -22,14 +22,14 @@ public class VehicleVariant {
 
     @Column(name = "name", nullable = false)
     private String name;
-    
+
     @Column(name = "image")
     private String image;
 
     // Variant belongs to one Model
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "model_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "variants"})
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "variants" })
     private VehicleModel model;
 
     // One Variant has many Vehicles

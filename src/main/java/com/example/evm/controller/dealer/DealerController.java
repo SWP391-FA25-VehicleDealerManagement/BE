@@ -46,6 +46,7 @@ public class DealerController {
         Dealer createdDealer = dealerService.createDealer(dealer);
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer created successfully", createdDealer));
     }
+
     @PutMapping("/update/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EVM_STAFF')")
     public ResponseEntity<ApiResponse<Dealer>> updateDealer(@PathVariable Long id, @Valid @RequestBody Dealer dealer) {
@@ -55,7 +56,7 @@ public class DealerController {
     }
 
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EVM_STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteDealer(@PathVariable Long id) {
         dealerService.deleteDealer(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer deleted successfully", null));

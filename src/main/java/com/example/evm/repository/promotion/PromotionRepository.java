@@ -19,18 +19,18 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
     List<Promotion> findByDealerIsNull();
     
     // Tìm khuyến mãi đang active
-    @Query("SELECT p FROM Promotion p WHERE p.status = 'ACTIVE' AND p.startDate <= :today AND p.endDate >= :today")
+    @Query("SELECT p FROM Promotion p WHERE p.startDate <= :today AND p.endDate >= :today")
     List<Promotion> findActivePromotions(@Param("today") LocalDate today);
     
     // Tìm khuyến mãi áp dụng cho vehicle cụ thể
-    @Query("SELECT p FROM Promotion p JOIN p.vehicles v WHERE v.vehicleId = :vehicleId AND p.status = 'ACTIVE' AND p.startDate <= :today AND p.endDate >= :today")
+    @Query("SELECT p FROM Promotion p JOIN p.vehicles v WHERE v.vehicleId = :vehicleId AND p.startDate <= :today AND p.endDate >= :today")
     List<Promotion> findActivePromotionsByVehicle(@Param("vehicleId") Long vehicleId, @Param("today") LocalDate today);
     
     // Tìm khuyến mãi áp dụng cho dealer cụ thể (bao gồm cả toàn hệ thống)
-    @Query("SELECT p FROM Promotion p WHERE (p.dealer.dealerId = :dealerId OR p.dealer IS NULL) AND p.status = 'ACTIVE' AND p.startDate <= :today AND p.endDate >= :today")
+    @Query("SELECT p FROM Promotion p WHERE (p.dealer.dealerId = :dealerId OR p.dealer IS NULL) AND p.startDate <= :today AND p.endDate >= :today")
     List<Promotion> findActivePromotionsByDealer(@Param("dealerId") Long dealerId, @Param("today") LocalDate today);
     
     // Tìm khuyến mãi sắp hết hạn (trong vòng 7 ngày)
-    @Query("SELECT p FROM Promotion p WHERE p.endDate BETWEEN :today AND :nextWeek AND p.status = 'ACTIVE'")
+    @Query("SELECT p FROM Promotion p WHERE p.endDate BETWEEN :today AND :nextWeek")
     List<Promotion> findExpiringSoonPromotions(@Param("today") LocalDate today, @Param("nextWeek") LocalDate nextWeek);
 }

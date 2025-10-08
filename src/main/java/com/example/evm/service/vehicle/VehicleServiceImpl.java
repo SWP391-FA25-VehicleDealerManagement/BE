@@ -15,13 +15,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -33,11 +32,33 @@ public class VehicleServiceImpl implements VehicleService {
     private final DealerRepository dealerRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public List<VehicleResponse> getAllVehicles() {
         return vehicleRepository.findAll().stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
+
+    private VehicleResponse convertToResponse(Vehicle vehicle) {
+    Long dealerId = vehicle.getDealer() != null ? vehicle.getDealer().getDealerId() : null;
+    Long variantId = vehicle.getVariant() != null ? vehicle.getVariant().getVariantId() : null;
+
+    if (dealerId != null && variantId != null) {
+        SalePrice latestPrice = salePriceRepository
+            .findTopByDealerIdAndVariantIdOrderByEffectiveDateDesc(dealerId, variantId);
+
+        if (latestPrice != null) {
+            // Lấy giá trị Double/BigDecimal thô và set vào Entity
+            Double rawPrice = latestPrice.getPrice().doubleValue();
+            vehicle.setPrice(rawPrice);
+            
+        } else {
+             vehicle.setPrice(null); 
+        }
+    }
+    return new VehicleResponse(vehicle); 
+}
+    
 
     @Override
     @Transactional
@@ -91,35 +112,36 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<VehicleComparisonDTO> compareVariants(List<Long> variantIds) {
-        List<VehicleComparisonDTO> comparisonData = new ArrayList<>();
-        
-        for (Long variantId : variantIds) {
-            Optional<VehicleVariant> variantOpt = variantRepository.findById(variantId);
-            if (variantOpt.isPresent()) {
-                VehicleVariant variant = variantOpt.get();
-                VehicleComparisonDTO dto = VehicleComparisonDTO.builder()
-                    .variantId(variant.getVariantId())
-                    .variantName(variant.getVariantName())
-                    .engineType(variant.getEngineType())
-                    .transmission(variant.getTransmission())
-                    .fuelType(variant.getFuelType())
-                    .seatingCapacity(variant.getSeatingCapacity())
-                    .build();
-                
-                // Get sale price - using a simple approach for now
-                // Note: This would need proper implementation based on your business logic
-                dto.setPrice(BigDecimal.ZERO);
-                dto.setDiscountPercentage(0);
-                
-                comparisonData.add(dto);
-            }
+        if (variantIds == null || variantIds.isEmpty()) {
+            return new ArrayList<>();
         }
-        
-        return comparisonData;
-    }
 
-    private VehicleResponse convertToResponse(Vehicle vehicle) {
-        return new VehicleResponse(vehicle);
+            Long currentDealerId = 1L; // TODO: THAY THẾ '1' BẰNG Dealer ID CỦA USER ĐANG ĐĂNG NHẬP
+
+            List<VehicleVariant> variants = variantRepository.findAllById(variantIds);
+
+            List<VehicleComparisonDTO> comparisonList = variants.stream()
+                .map(variant -> {
+                // Lấy giá bán mới nhất tương ứng với Dealer của người dùng
+                    SalePrice latestPrice = salePriceRepository
+                        .findTopByDealerIdAndVariantIdOrderByEffectiveDateDesc(currentDealerId, variant.getVariantId());
+
+                    return VehicleComparisonDTO.builder()
+                        .variantId(variant.getVariantId())
+                        .variantName(variant.getName())
+                        .modelId(variant.getModel().getModelId())
+                        .modelName(variant.getModel().getName())
+                        .modelDescription(variant.getModel().getDescription())
+                        .price(latestPrice != null ? latestPrice.getPrice() : null)
+                        .dealerId(latestPrice != null ? latestPrice.getDealerId() : null)
+                        .effectiveDate(latestPrice != null ? latestPrice.getEffectiveDate().toString() : "N/A")
+                        .variantImage(variant.getImage())
+                        .build();
+                })
+                .collect(Collectors.toList());
+
+            return comparisonList;
     }
 }

@@ -2,9 +2,9 @@ package com.example.evm.entity.promotion;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +26,7 @@ public class Promotion {
 
     // Quan hệ nhiều-1 với Dealer (có thể null nếu là khuyến mãi toàn hệ thống)
     @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnore
     @JoinColumn(name = "dealer_id")
     private Dealer dealer;
 
@@ -44,11 +45,6 @@ public class Promotion {
     @Column(name = "end_date")
     private LocalDate endDate;
 
-    @Column(name = "created_date")
-    private LocalDateTime createdDate;
-
-    @Column(name = "status", length = 20)
-    private String status; // ACTIVE, INACTIVE, EXPIRED
 
     // Quan hệ many-to-many với Vehicle (thông qua bảng PromotionVehicle)
     @ManyToMany
@@ -57,6 +53,7 @@ public class Promotion {
         joinColumns = @JoinColumn(name = "promo_id"),
         inverseJoinColumns = @JoinColumn(name = "vehicle_id")
     )
+    @JsonIgnore
     private List<Vehicle> vehicles = new ArrayList<>();
 
     // Quan hệ many-to-many với Dealer (thông qua bảng PromotionDealer)
@@ -66,20 +63,20 @@ public class Promotion {
         joinColumns = @JoinColumn(name = "promo_id"),
         inverseJoinColumns = @JoinColumn(name = "dealer_id")
     )
+    @JsonIgnore
     private List<Dealer> applicableDealers = new ArrayList<>();
 
     // Helper method - kiểm tra khuyến mãi còn hiệu lực
     public boolean isActive() {
         LocalDate today = LocalDate.now();
-        return "ACTIVE".equals(status) && 
-               !today.isBefore(startDate) && 
-               !today.isAfter(endDate);
+        // Kiểm tra xem ngày hôm nay có nằm trong khoảng [startDate, endDate] hay không
+        return !today.isBefore(startDate) && !today.isAfter(endDate);
     }
 
     // Helper method - kiểm tra khuyến mãi áp dụng cho vehicle cụ thể
     public boolean appliesToVehicle(Long vehicleId) {
         return vehicles.stream()
-                .anyMatch(vehicle -> vehicle.getVehicleId().equals(vehicleId));
+                 .anyMatch(vehicle -> vehicle.getVehicleId().equals(vehicleId));
     }
 
     // Helper method - kiểm tra khuyến mãi áp dụng cho dealer cụ thể
@@ -87,23 +84,13 @@ public class Promotion {
         // Nếu là khuyến mãi toàn hệ thống (dealer = null) hoặc áp dụng cho dealer cụ thể
         return dealer == null || 
                applicableDealers.stream()
-                       .anyMatch(d -> d.getDealerId().equals(dealerId));
+                        .anyMatch(d -> d.getDealerId().equals(dealerId));
     }
 
     // Helper method - tính giá sau khuyến mãi
     public Double calculateDiscountedPrice(Double originalPrice) {
         if (discountRate == null) return originalPrice;
         return originalPrice * (1 - discountRate / 100);
-    }
-
-    @PrePersist
-    protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
-        if (status == null) {
-            status = "ACTIVE";
-        }
     }
 
     @Override
@@ -114,7 +101,6 @@ public class Promotion {
                 ", discountRate=" + discountRate +
                 ", startDate=" + startDate +
                 ", endDate=" + endDate +
-                ", status='" + status + '\'' +
                 '}';
     }
 }

@@ -1,9 +1,9 @@
 package com.example.evm.controller.vehicle;
 
 import com.example.evm.dto.auth.ApiResponse;
-import com.example.evm.dto.vehicle.VehicleComparisonDTO;
 import com.example.evm.dto.vehicle.VehicleRequest;
 import com.example.evm.dto.vehicle.VehicleResponse;
+import com.example.evm.dto.vehicle.VehicleComparisonDTO;
 import com.example.evm.service.vehicle.VehicleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -34,8 +34,7 @@ public class VehicleController {
         VehicleResponse created = vehicleService.addVehicle(request);
         return ResponseEntity.ok(Map.of(
                 "message", "Vehicle added successfully",
-                "vehicle", created
-        ));
+                "vehicle", created));
     }
 
     // 🔹 UPDATE
@@ -48,8 +47,7 @@ public class VehicleController {
         VehicleResponse updated = vehicleService.updateVehicle(id, request);
         return ResponseEntity.ok(Map.of(
                 "message", "Vehicle updated successfully",
-                "vehicle", updated
-        ));
+                "vehicle", updated));
     }
 
     // 🔹 DELETE
@@ -60,8 +58,7 @@ public class VehicleController {
         return ResponseEntity.ok(Map.of("message", "Vehicle deleted successfully"));
     }
 
-    // 🔹 COMPARE
-    @PreAuthorize("hasAnyRole('DEALER_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasRole('DEALER_STAFF') or hasRole('DEALER_MANAGER')")
     @GetMapping("/compare")
     public ResponseEntity<ApiResponse<List<VehicleComparisonDTO>>> compareVehicles(
         @RequestParam List<Long> variantIds) {
@@ -70,6 +67,6 @@ public class VehicleController {
         
         return ResponseEntity.ok(
             new ApiResponse<>(true, "Vehicle comparison data retrieved successfully", comparisonData)
-        );
-    }
+        );   
+    }    
 }
