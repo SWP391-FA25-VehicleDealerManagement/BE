@@ -58,7 +58,7 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Password changed successfully", "OK"));
     }
 
-    @PutMapping("/me")
+    @PutMapping("/update-user")
     public ResponseEntity<ApiResponse<UserInfo>> updateProfile(
             Authentication authentication,
             @Valid @RequestBody UpdateProfileRequest request) {

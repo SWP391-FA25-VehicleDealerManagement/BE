@@ -18,6 +18,7 @@ public class UserMapper {
         UserInfo userInfo = new UserInfo();
         userInfo.setUserId(u.getUserId());
         userInfo.setUserName(u.getUserName());
+        userInfo.setFullName(u.getFullName());
         userInfo.setPhone(u.getPhone());
         userInfo.setEmail(u.getEmail());
         userInfo.setRole(u.getRole());
