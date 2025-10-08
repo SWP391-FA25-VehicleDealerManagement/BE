@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface SalePriceRepository extends JpaRepository<SalePrice, Integer> {
+public interface SalePriceRepository extends JpaRepository<SalePrice, Long> {
 
     SalePrice findTopByDealerIdAndVariantIdOrderByEffectiveDateDesc(Long dealerId, Long variantId);
 

@@ -1,9 +1,12 @@
 package com.example.evm.service.vehicle;
 
+import com.example.evm.dto.vehicle.VehicleComparisonDTO;
 import com.example.evm.dto.vehicle.VehicleRequest;
 import com.example.evm.dto.vehicle.VehicleResponse;
 import com.example.evm.entity.dealer.Dealer;
+import com.example.evm.entity.vehicle.SalePrice;
 import com.example.evm.entity.vehicle.Vehicle;
+import com.example.evm.entity.vehicle.VehicleVariant;
 import com.example.evm.repository.dealer.DealerRepository;
 import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
@@ -12,9 +15,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -26,11 +32,33 @@ public class VehicleServiceImpl implements VehicleService {
     private final DealerRepository dealerRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public List<VehicleResponse> getAllVehicles() {
         return vehicleRepository.findAll().stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
+
+    private VehicleResponse convertToResponse(Vehicle vehicle) {
+    Long dealerId = vehicle.getDealer() != null ? vehicle.getDealer().getDealerId() : null;
+    Long variantId = vehicle.getVariant() != null ? vehicle.getVariant().getVariantId() : null;
+
+    if (dealerId != null && variantId != null) {
+        SalePrice latestPrice = salePriceRepository
+            .findTopByDealerIdAndVariantIdOrderByEffectiveDateDesc(dealerId, variantId);
+
+        if (latestPrice != null) {
+            // Lấy giá trị Double/BigDecimal thô và set vào Entity
+            Double rawPrice = latestPrice.getPrice().doubleValue();
+            vehicle.setPrice(rawPrice);
+            
+        } else {
+             vehicle.setPrice(null); 
+        }
+    }
+    return new VehicleResponse(vehicle); 
+}
+    
 
     @Override
     @Transactional
@@ -83,7 +111,37 @@ public class VehicleServiceImpl implements VehicleService {
         vehicleRepository.deleteById(id);
     }
 
-    private VehicleResponse convertToResponse(Vehicle vehicle) {
-        return new VehicleResponse(vehicle);
+    @Override
+    @Transactional(readOnly = true)
+    public List<VehicleComparisonDTO> compareVariants(List<Long> variantIds) {
+        if (variantIds == null || variantIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+            Long currentDealerId = 1L; // TODO: THAY THẾ '1' BẰNG Dealer ID CỦA USER ĐANG ĐĂNG NHẬP
+
+            List<VehicleVariant> variants = variantRepository.findAllById(variantIds);
+
+            List<VehicleComparisonDTO> comparisonList = variants.stream()
+                .map(variant -> {
+                // Lấy giá bán mới nhất tương ứng với Dealer của người dùng
+                    SalePrice latestPrice = salePriceRepository
+                        .findTopByDealerIdAndVariantIdOrderByEffectiveDateDesc(currentDealerId, variant.getVariantId());
+
+                    return VehicleComparisonDTO.builder()
+                        .variantId(variant.getVariantId())
+                        .variantName(variant.getName())
+                        .modelId(variant.getModel().getModelId())
+                        .modelName(variant.getModel().getName())
+                        .modelDescription(variant.getModel().getDescription())
+                        .price(latestPrice != null ? latestPrice.getPrice() : null)
+                        .dealerId(latestPrice != null ? latestPrice.getDealerId() : null)
+                        .effectiveDate(latestPrice != null ? latestPrice.getEffectiveDate().toString() : "N/A")
+                        .variantImage(variant.getImage())
+                        .build();
+                })
+                .collect(Collectors.toList());
+
+            return comparisonList;
     }
 }

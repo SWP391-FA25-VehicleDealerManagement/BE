@@ -1,5 +1,8 @@
 package com.example.evm.dto.vehicle;
 
+import java.util.Locale;
+import java.text.NumberFormat;
+
 import com.example.evm.entity.vehicle.Vehicle;
 import lombok.Data;
 
@@ -9,7 +12,7 @@ public class VehicleResponse {
     private String name;
     private String color;
     private String image;
-    private Double price;
+    private String price;
     private Integer stock;
     private String variantName;
     private String variantImage;
@@ -24,8 +27,21 @@ public class VehicleResponse {
         this.name = vehicle.getName();
         this.color = vehicle.getColor();
         this.image = vehicle.getImage();
-        this.price = vehicle.getPrice();
         this.stock = vehicle.getStock();
+
+        if (vehicle.getPrice() != null) {
+            // 1. Sử dụng NumberFormat với Locale.US để có dấu phẩy (,) làm phân cách hàng nghìn
+            NumberFormat formatter = NumberFormat.getNumberInstance(Locale.US);
+        
+            // 2. Định dạng giá trị Double thành String
+            String formattedPrice = formatter.format(vehicle.getPrice());
+        
+            // 3. Nối chuỗi "VND" vào kết quả đã định dạng
+            this.price = formattedPrice + "VND";
+        } else {
+            this.price = null; // Hoặc set thành "N/A"
+        }
+            // --- KẾT THÚC PHẦN SỬA ĐỔI ĐỊNH DẠNG GIÁ ---
 
         if (vehicle.getVariant() != null) {
             this.variantName = vehicle.getVariant().getName();

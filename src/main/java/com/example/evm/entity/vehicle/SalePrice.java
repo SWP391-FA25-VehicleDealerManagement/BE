@@ -18,7 +18,7 @@ public class SalePrice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "saleprice_id")
-    private Integer salepriceId;
+    private Long salepriceId;
 
     // --- Mối quan hệ với Dealer ---
     @Column(name = "dealer_id", nullable = false)
@@ -42,6 +42,4 @@ public class SalePrice {
     @Column(name = "effectivedate", nullable = false)
     private LocalDate effectiveDate;
     
-    @Column(name = "discount_percentage")
-    private Integer discountPercentage;
 }
