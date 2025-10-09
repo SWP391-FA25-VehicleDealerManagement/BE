@@ -29,35 +29,35 @@ public class OrderController {
     private final OrderService orderService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM', 'DEALER', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<List<Order>>> getAllOrders() {
         List<Order> orders = orderService.getAllOrders();
         return ResponseEntity.ok(new ApiResponse<>(true, "Orders retrieved successfully", orders));
     }
 
     @GetMapping("/dealer/{dealerId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM', 'DEALER', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<List<Order>>> getOrdersByDealer(@PathVariable Long dealerId) {
         List<Order> orders = orderService.getOrdersByDealer(dealerId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Orders retrieved successfully", orders));
     }
 
     @GetMapping("/customer/{customerId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM', 'DEALER', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<List<Order>>> getOrdersByCustomer(@PathVariable Long customerId) {
         List<Order> orders = orderService.getOrdersByCustomer(customerId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Orders retrieved successfully", orders));
     }
 
     @GetMapping("/status/{status}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM', 'DEALER', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<List<Order>>> getOrdersByStatus(@PathVariable String status) {
         List<Order> orders = orderService.getOrdersByStatus(status);
         return ResponseEntity.ok(new ApiResponse<>(true, "Orders retrieved successfully", orders));
     }
 
     @GetMapping("/dealer/{dealerId}/status/{status}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM', 'DEALER', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<List<Order>>> getOrdersByDealerAndStatus(
             @PathVariable Long dealerId, 
             @PathVariable String status) {
@@ -66,28 +66,28 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM', 'DEALER', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Order>> getOrderById(@PathVariable Long id) {
         Order order = orderService.getOrderById(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Order retrieved successfully", order));
     }
 
     @GetMapping("/{id}/details")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM', 'DEALER', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<List<OrderDetail>>> getOrderDetails(@PathVariable Long id) {
         List<OrderDetail> details = orderService.getOrderDetails(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Order details retrieved successfully", details));
     }
 
     @PostMapping("/create")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM', 'DEALER', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Order>> createOrder(@RequestBody Order order) {
         Order createdOrder = orderService.createOrder(order);
         return ResponseEntity.ok(new ApiResponse<>(true, "Order created successfully", createdOrder));
     }
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM', 'DEALER', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Order>> updateOrderStatus(
             @PathVariable Long id, 
             @RequestParam String status) {
@@ -96,14 +96,14 @@ public class OrderController {
     }
 
     @GetMapping("/dealer/{dealerId}/total-sales")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM', 'DEALER', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Double>> getTotalSales(@PathVariable Long dealerId) {
         Double totalSales = orderService.getTotalSalesByDealer(dealerId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Total sales retrieved", totalSales));
     }
 
     @GetMapping("/dealer/{dealerId}/count")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM', 'DEALER', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Long>> countOrders(
             @PathVariable Long dealerId,
             @RequestParam String status) {
@@ -112,7 +112,7 @@ public class OrderController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteOrder(@PathVariable Long id) {
         orderService.deleteOrder(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Order deleted successfully", null));
