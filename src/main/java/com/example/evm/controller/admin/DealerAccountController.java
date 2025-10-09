@@ -25,8 +25,15 @@ public class DealerAccountController {
     }
 
     /**
-     * API tạo dealer account (chỉ admin mới có thể gọi)
-     * Tạo đồng thời cả Dealer entity và User account cho dealer
+     * API tạo tài khoản cho dealer đã có sẵn (chỉ admin mới có thể gọi)
+     * Tạo User account liên kết với Dealer đã tồn tại
+     * 
+     * Request body cần:
+     * - dealerId: ID của dealer đã tồn tại
+     * - username: Tên đăng nhập
+     * - password: Mật khẩu
+     * 
+     * Response trả về thông tin dealer (không bao gồm password) và thông báo thành công
      */
     @PostMapping("/create-dealer-account")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
@@ -36,9 +43,18 @@ public class DealerAccountController {
         try {
             CreateDealerAccountResponse response = dealerAccountService.createDealerAccount(request);
 
+            // Check if the operation was successful
+            if (!response.isSuccess()) {
+                ApiResponse<CreateDealerAccountResponse> errorResponse = new ApiResponse<CreateDealerAccountResponse>();
+                errorResponse.setSuccess(false);
+                errorResponse.setMessage(response.getMessage());
+                errorResponse.setData(response);
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
             ApiResponse<CreateDealerAccountResponse> apiResponse = new ApiResponse<CreateDealerAccountResponse>();
             apiResponse.setSuccess(true);
-            apiResponse.setMessage("Dealer account created successfully");
+            apiResponse.setMessage(response.getMessage());
             apiResponse.setData(response);
 
             return ResponseEntity.ok(apiResponse);

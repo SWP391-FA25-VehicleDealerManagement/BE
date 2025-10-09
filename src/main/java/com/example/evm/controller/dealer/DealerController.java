@@ -4,17 +4,22 @@ import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.entity.dealer.Dealer;
 
 import com.example.evm.service.dealer.DealerService;
+
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/dealers")
 @RequiredArgsConstructor
+@Slf4j
 public class DealerController {
 
     private final DealerService dealerService;
@@ -61,4 +66,6 @@ public class DealerController {
         dealerService.deleteDealer(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer deleted successfully", null));
     }
+
+
 }
