@@ -53,7 +53,7 @@ public class User {
     private String email;
 
     @Column(length = 50, nullable = false)
-    @NotBlank
+    
     private String role;          // ADMIN, DEALER, MANAGER, EVM
 
     @ManyToOne(fetch = FetchType.LAZY)
