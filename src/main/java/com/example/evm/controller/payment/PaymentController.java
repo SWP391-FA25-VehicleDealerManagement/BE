@@ -26,14 +26,14 @@ public class PaymentController {
 private final PaymentService paymentService;
 
 @GetMapping
-@PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_EVM_STAFF','ROLE_DEALER_STAFF','ROLE_DEALER_MANAGER')")
+@PreAuthorize("hasAnyAuthority('ADMIN','EVM_STAFF','DEALER_STAFF','DEALER_MANAGER')")
 public ResponseEntity<ApiResponse<List<Payment>>> getAllPayments(){
     List<Payment> payments = paymentService.getAllPayments();
     return ResponseEntity.ok(new ApiResponse<>(true, "Paymets retrived successfully", payments));
 }
 
 @GetMapping("/{id}")
-@PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_EVM_STAFF','ROLE_DEALER_STAFF','ROLE_DEALER_MANAGER')")
+@PreAuthorize("hasAnyAuthority('ADMIN','EVM_STAFF','DEALER_STAFF','DEALER_MANAGER')")
 public ResponseEntity<ApiResponse<Payment>> getPaymentById(@PathVariable Long id){
     Payment payment = paymentService.getPaymentById(id);
     return payment!=null
@@ -42,7 +42,7 @@ public ResponseEntity<ApiResponse<Payment>> getPaymentById(@PathVariable Long id
 }
 
 @PostMapping
-@PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_EVM_STAFF','ROLE_DEALER_STAFF','ROLE_DEALER_MANAGER')")
+@PreAuthorize("hasAnyAuthority('ADMIN','EVM_STAFF','DEALER_STAFF','DEALER_MANAGER')")
 public ResponseEntity<ApiResponse<Payment>> createPayment(@RequestBody Payment payment){
     try {
         Payment createPayment = paymentService.createPayment(payment);
@@ -53,7 +53,7 @@ public ResponseEntity<ApiResponse<Payment>> createPayment(@RequestBody Payment p
 }
 
 @PutMapping("/{id}")
-@PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_EVM_STAFF','ROLE_DEALER_MANAGER','ROLE_DEALER_STAFF')")
+@PreAuthorize("hasAnyAuthority('ADMIN','EVM_STAFF','DEALER_MANAGER','DEALER_STAFF')")
 public ResponseEntity<ApiResponse<Payment>> updatePayment(@PathVariable Long id, @RequestBody Payment payment){
     try {
         payment.setPaymentId(id);
@@ -65,7 +65,7 @@ public ResponseEntity<ApiResponse<Payment>> updatePayment(@PathVariable Long id,
 }
 
 @DeleteMapping("/{id}")
-@PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
+@PreAuthorize("hasAnyAuthority('ADMIN')")
 public ResponseEntity<ApiResponse<Payment>> deletePayment(@PathVariable Long id){
     try {
         paymentService.deletePayment(id);
