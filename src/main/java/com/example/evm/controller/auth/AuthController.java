@@ -66,23 +66,4 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Profile updated successfully", updated));
     }
 
-    // Forgot password
-    @PostMapping("/forgot-password")
-    public ResponseEntity<ApiResponse<ForgotPasswordResponse>> forgotPassword(
-        @Valid @RequestBody ForgotPasswordRequest request) {
-        try {
-            ForgotPasswordResponse response = userProfileService.forgotPassword(request);
-            log.info("Forgot password request processed successfully for username: {}", request.getUsername());
-            return ResponseEntity.ok(new ApiResponse<>(true, "Password reset successfully", response));
-        } catch (Exception e) {
-            log.error("Forgot password failed for username: {} and email: {}", 
-            request.getUsername(), request.getEmail(), e);
-    
-            return ResponseEntity.badRequest().body(new ApiResponse<>(
-                    false, 
-                    "Password reset failed: " + e.getMessage(), 
-                    null
-            ));
-        }
-    }
 }

@@ -1,8 +1,7 @@
 package com.example.evm.service.auth;
 
 import com.example.evm.dto.auth.ChangePasswordRequest;
-import com.example.evm.dto.auth.ForgotPasswordRequest;
-import com.example.evm.dto.auth.ForgotPasswordResponse;
+
 import com.example.evm.dto.auth.UpdateProfileRequest;
 import com.example.evm.dto.auth.UserInfo;
 import com.example.evm.entity.user.User;
@@ -56,33 +55,7 @@ public class UserProfileService {
 	}
 
 
-	//-----------Forgot Password-----------//
-
-	public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest req) {
-		log.info("Processing forgot password request for username: {} and email: {}", 
-				req.getUsername(), req.getEmail());
-		
-		// Tìm user theo username và email
-		User user = userRepository.findByUserNameAndEmail(req.getUsername(), req.getEmail())
-				.orElseThrow(() -> new ResourceNotFoundException(
-					"User not found with the provided username and email combination"));
-		
-		// Cập nhật mật khẩu mới
-		user.setPassword(passwordEncoder.encode(req.getNewPassword()));
-		user.setDateModified(LocalDateTime.now());
-		
-		// Vô hiệu hóa refresh token cũ (nếu có)
-		user.setRefreshTokenExpiryTime(null);
-		
-		userRepository.save(user);
-		
-		log.info("Password reset successfully for user: {}", req.getUsername());
-		
-		return new ForgotPasswordResponse(
-			"Password reset successfully. Please login with your new password.",
-			user.getUserName()
-		);
-	}
+	
 	
 
 	
