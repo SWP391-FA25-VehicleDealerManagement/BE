@@ -20,7 +20,7 @@ public class VehicleController {
     private final VehicleService vehicleService;
 
     // 🟢 GET all active vehicles
-    @PreAuthorize("hasAnyRole('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF')")
     @GetMapping
     public ResponseEntity<ApiResponse<List<VehicleResponse>>> getAllActiveVehicles() {
         List<VehicleResponse> vehicles = vehicleService.getAllVehicles();
@@ -33,6 +33,14 @@ public class VehicleController {
     public ResponseEntity<ApiResponse<List<VehicleResponse>>> getAllInactiveVehicles() {
         List<VehicleResponse> vehicles = vehicleService.getAllInactiveVehicles();
         return ResponseEntity.ok(new ApiResponse<>(true, "Inactive vehicles retrieved successfully", vehicles));
+    }
+
+    // 🏢 GET vehicles by dealer ID
+    @PreAuthorize("hasAnyRole('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
+    @GetMapping("/dealer/{dealerId}")
+    public ResponseEntity<ApiResponse<List<VehicleResponse>>> getVehiclesByDealerId(@PathVariable Long dealerId) {
+        List<VehicleResponse> vehicles = vehicleService.getVehiclesByDealerId(dealerId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicles for dealer retrieved successfully", vehicles));
     }
 
     // 🔍 SEARCH by name
