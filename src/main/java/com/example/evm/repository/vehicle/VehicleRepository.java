@@ -12,6 +12,9 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     // 🔹 Lấy tất cả xe ACTIVE
     List<Vehicle> findByStatusIgnoreCase(String status);
 
+    // 🏢 Lấy tất cả xe ACTIVE theo Dealer ID
+    List<Vehicle> findByDealer_DealerIdAndStatusIgnoreCase(Long dealerId, String status);
+
     // 🔹 Hoặc có thể giữ thêm query riêng cho rõ ràng
     @Query("SELECT v FROM Vehicle v WHERE v.status = 'ACTIVE'")
     List<Vehicle> findAllActiveVehicles();

@@ -50,6 +50,19 @@ public class VehicleServiceImpl implements VehicleService {
                 .collect(Collectors.toList());
     }
 
+    // 🏢 Lấy danh sách xe theo Dealer ID
+    @Override
+    @Transactional(readOnly = true)
+    public List<VehicleResponse> getVehiclesByDealerId(Long dealerId) {
+        // 1. Gọi Repository để tìm các xe đang active của dealer đó
+        List<Vehicle> vehicles = vehicleRepository.findByDealer_DealerIdAndStatusIgnoreCase(dealerId, "ACTIVE");
+
+        // 2. Chuyển đổi sang DTO và trả về
+        return vehicles.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
     // 🟠 Tìm kiếm theo tên xe
     @Override
     @Transactional(readOnly = true)

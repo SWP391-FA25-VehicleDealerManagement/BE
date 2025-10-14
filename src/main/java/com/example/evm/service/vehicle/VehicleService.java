@@ -3,6 +3,7 @@ package com.example.evm.service.vehicle;
 import com.example.evm.dto.vehicle.VehicleComparisonDTO;
 import com.example.evm.dto.vehicle.VehicleRequest;
 import com.example.evm.dto.vehicle.VehicleResponse;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -19,4 +20,6 @@ public interface VehicleService {
     void activateVehicle(Long id);
 
     List<VehicleComparisonDTO> compareVariants(List<Long> variantIds);
+
+    List<VehicleResponse> getVehiclesByDealerId(Long dealerId);
 }
