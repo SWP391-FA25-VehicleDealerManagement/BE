@@ -5,7 +5,7 @@ import com.example.evm.dto.dealer.CreateDealerAccountRequest;
 import com.example.evm.dto.dealer.CreateDealerAccountResponse;
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.user.User;
-import com.example.evm.repository.UserRepository;
+import com.example.evm.repository.auth.UserRepository;
 import com.example.evm.repository.dealer.DealerRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -11,7 +11,7 @@ import com.example.evm.entity.promotion.Promotion;
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.repository.order.OrderRepository;
 import com.example.evm.repository.order.OrderDetailRepository;
-import com.example.evm.repository.UserRepository;
+import com.example.evm.repository.auth.UserRepository;
 import com.example.evm.repository.customer.CustomerRepository;
 
 import com.example.evm.repository.dealer.DealerRepository;

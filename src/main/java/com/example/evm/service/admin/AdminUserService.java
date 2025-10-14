@@ -4,7 +4,8 @@ import com.example.evm.dto.admin.AdminCreateRequest;
 import com.example.evm.dto.admin.AdminUserInfoResponse;
 import com.example.evm.entity.user.User;
 import com.example.evm.exception.ResourceNotFoundException;
-import com.example.evm.repository.UserRepository;
+import com.example.evm.repository.auth.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
