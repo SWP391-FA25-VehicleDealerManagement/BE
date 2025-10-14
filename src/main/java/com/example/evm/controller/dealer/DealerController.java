@@ -25,42 +25,42 @@ public class DealerController {
     private final DealerService dealerService;
 
     @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<List<Dealer>>> getAllDealers() {
         List<Dealer> dealers = dealerService.getAllDealers();
         return ResponseEntity.ok(new ApiResponse<>(true, "Active dealers retrieved successfully", dealers));
     }
 
     @GetMapping("/inactive")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<List<Dealer>>> getInactiveDealers() {
         List<Dealer> inactive = dealerService.getInactiveDealers();
         return ResponseEntity.ok(new ApiResponse<>(true, "Inactive dealers retrieved successfully", inactive));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Dealer>> getDealerById(@PathVariable Long id) {
         Dealer dealer = dealerService.getDealerById(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer retrieved successfully", dealer));
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Dealer>> getDealerByName(@RequestParam String name) {
         Dealer dealer = dealerService.getDealerByName(name);
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer retrieved successfully", dealer));
     }
 
     @PostMapping("/create")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Dealer>> createDealer(@Valid @RequestBody Dealer dealer) {
         Dealer createdDealer = dealerService.createDealer(dealer);
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer created successfully", createdDealer));
     }
 
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<Dealer>> updateDealer(@PathVariable Long id, @Valid @RequestBody Dealer dealer) {
         dealer.setDealerId(id);
         Dealer updatedDealer = dealerService.updateDealer(dealer);
@@ -68,14 +68,14 @@ public class DealerController {
     }
 
     @DeleteMapping("/deactivate/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteDealer(@PathVariable Long id) {
         dealerService.deleteDealer(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer deactivated successfully", null));
     }
 
     @PutMapping("/activate/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Void>> activateDealer(@PathVariable Long id) {
         dealerService.activateDealer(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer reactivated successfully", null));

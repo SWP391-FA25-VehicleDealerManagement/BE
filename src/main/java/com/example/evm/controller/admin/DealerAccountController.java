@@ -36,7 +36,7 @@ public class DealerAccountController {
      * Response trả về thông tin dealer (không bao gồm password) và thông báo thành công
      */
     @PostMapping("/create-dealer-account")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<CreateDealerAccountResponse>> createDealerAccount(
             @Valid @RequestBody CreateDealerAccountRequest request) {
 
@@ -82,12 +82,12 @@ public class DealerAccountController {
      * Tạo user account với role ROLE_DEALER_STAFF cho dealer đã tồn tại
      */
     @PostMapping("/create-dealer-staff")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<CreateUserAccountResponse>> createDealerStaff(
             @Valid @RequestBody CreateUserAccountRequest request) {
 
         // Force role to be DEALER_STAFF
-        request.setRole("ROLE_DEALER_STAFF");
+        request.setRole("DEALER_STAFF");
 
         try {
             CreateUserAccountResponse response = userAccountService.createUserAccount(request);
@@ -122,12 +122,12 @@ public class DealerAccountController {
      * Tạo user account với role ROLE_EVM_STAFF
      */
     @PostMapping("/create-evm-staff")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<CreateUserAccountResponse>> createEvmStaff(
             @Valid @RequestBody CreateUserAccountRequest request) {
 
         // Force role to be EVM_STAFF and no dealer
-        request.setRole("ROLE_EVM_STAFF");
+        request.setRole("EVM_STAFF");
         request.setDealerId(null);
 
         try {

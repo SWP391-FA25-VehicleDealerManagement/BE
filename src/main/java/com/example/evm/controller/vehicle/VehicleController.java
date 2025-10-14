@@ -20,7 +20,7 @@ public class VehicleController {
     private final VehicleService vehicleService;
 
     // 🟢 GET all active vehicles
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @GetMapping
     public ResponseEntity<ApiResponse<List<VehicleResponse>>> getAllActiveVehicles() {
         List<VehicleResponse> vehicles = vehicleService.getAllVehicles();
@@ -28,7 +28,7 @@ public class VehicleController {
     }
 
     // 🔴 GET all inactive vehicles
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @GetMapping("/inactive")
     public ResponseEntity<ApiResponse<List<VehicleResponse>>> getAllInactiveVehicles() {
         List<VehicleResponse> vehicles = vehicleService.getAllInactiveVehicles();
@@ -36,7 +36,7 @@ public class VehicleController {
     }
 
     // 🏢 GET vehicles by dealer ID
-    @PreAuthorize("hasAnyRole('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
     @GetMapping("/dealer/{dealerId}")
     public ResponseEntity<ApiResponse<List<VehicleResponse>>> getVehiclesByDealerId(@PathVariable Long dealerId) {
         List<VehicleResponse> vehicles = vehicleService.getVehiclesByDealerId(dealerId);
@@ -44,7 +44,7 @@ public class VehicleController {
     }
 
     // 🔍 SEARCH by name
-    @PreAuthorize("hasAnyRole('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<VehicleResponse>>> searchVehiclesByName(@RequestParam String name) {
         List<VehicleResponse> vehicles = vehicleService.searchVehiclesByName(name);
@@ -52,7 +52,7 @@ public class VehicleController {
     }
 
     // ➕ ADD new vehicle
-    @PreAuthorize("hasAnyRole('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
     @PostMapping
     public ResponseEntity<ApiResponse<VehicleResponse>> addVehicle(@RequestBody VehicleRequest request) {
         VehicleResponse created = vehicleService.addVehicle(request);
@@ -60,7 +60,7 @@ public class VehicleController {
     }
 
     // 🔄 UPDATE existing vehicle
-    @PreAuthorize("hasAnyRole('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<VehicleResponse>> updateVehicle(
             @PathVariable Long id,
@@ -71,7 +71,7 @@ public class VehicleController {
     }
 
     // 🚫 DEACTIVATE vehicle (soft delete)
-    @PreAuthorize("hasAnyRole('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
     @PutMapping("/deactivate/{id}")
     public ResponseEntity<ApiResponse<Void>> deactivateVehicle(@PathVariable Long id) {
         vehicleService.deactivateVehicle(id);
@@ -79,7 +79,7 @@ public class VehicleController {
     }
 
     // ✅ ACTIVATE vehicle again
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @PutMapping("/activate/{id}")
     public ResponseEntity<ApiResponse<Void>> activateVehicle(@PathVariable Long id) {
         vehicleService.activateVehicle(id);
@@ -87,7 +87,7 @@ public class VehicleController {
     }
 
     // ⚖️ COMPARE variants
-    @PreAuthorize("hasAnyRole('DEALER_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER')")
     @GetMapping("/compare")
     public ResponseEntity<ApiResponse<List<VehicleComparisonDTO>>> compareVehicles(
             @RequestParam List<Long> variantIds) {

@@ -20,7 +20,7 @@ public class VehicleVariantController {
 
     // ➕ TẠO MỚI một biến thể xe
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<VehicleVariantResponse>> createVariant(@RequestBody VehicleVariantRequest request) {
         VehicleVariantResponse createdVariant = variantService.createVariant(request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Variant created successfully", createdVariant));
@@ -42,7 +42,7 @@ public class VehicleVariantController {
 
     // 🔄 CẬP NHẬT một biến thể
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<VehicleVariantResponse>> updateVariant(@PathVariable Long id, @RequestBody VehicleVariantRequest request) {
         VehicleVariantResponse updatedVariant = variantService.updateVariant(id, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Variant updated successfully", updatedVariant));
@@ -50,7 +50,7 @@ public class VehicleVariantController {
 
     // ❌ XÓA một biến thể
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteVariant(@PathVariable Long id) {
         variantService.deleteVariant(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Variant deleted successfully", null));
