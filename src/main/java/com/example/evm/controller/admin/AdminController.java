@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.evm.dto.dealer.CreateDealerAccountRequest;
 import com.example.evm.dto.dealer.CreateDealerAccountResponse;
 import com.example.evm.entity.user.User;
-import com.example.evm.repository.UserRepository;
+import com.example.evm.repository.auth.UserRepository;
 import com.example.evm.service.dealer.DealerAccountService;
 
 import jakarta.validation.Valid;
