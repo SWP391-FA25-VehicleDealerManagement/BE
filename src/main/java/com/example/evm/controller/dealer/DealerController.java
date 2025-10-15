@@ -67,7 +67,7 @@ public class DealerController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer updated successfully", updatedDealer));
     }
 
-    @DeleteMapping("/deactivate/{id}")
+    @DeleteMapping("/delete/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteDealer(@PathVariable Long id) {
         dealerService.deleteDealer(id);

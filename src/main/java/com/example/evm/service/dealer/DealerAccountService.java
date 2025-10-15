@@ -33,9 +33,9 @@ public class DealerAccountService {
     }
 
     /**
-     * Tạo tài khoản user cho dealer đã tồn tại
-     * Chỉ cần truyền dealerId, username và password
-     * Trả về thông tin dealer (không bao gồm password) và thông báo tạo thành công
+     * Tạo tài khoản DEALER_MANAGER cho dealer
+     * ✅ Chỉ được tạo 1 DEALER_MANAGER cho mỗi dealer
+     * ✅ ADMIN và EVM_STAFF có thể tạo
      */
     @Transactional
     public CreateDealerAccountResponse createDealerAccount(CreateDealerAccountRequest request) {
@@ -46,40 +46,49 @@ public class DealerAccountService {
             Dealer dealer = dealerRepository.findById(request.getDealerId())
                     .orElseThrow(() -> new IllegalArgumentException("Dealer not found with ID: " + request.getDealerId()));
 
-            // 2. Kiểm tra username đã tồn tại chưa
+            // ✅ 2. Kiểm tra dealer đã có DEALER_MANAGER chưa
+            long managerCount = userRepository.countByDealerIdAndRole(request.getDealerId(), "DEALER_MANAGER");
+            if (managerCount > 0) {
+                response.setSuccess(false);
+                response.setMessage("Dealer already has a DEALER_MANAGER account. Each dealer can only have one manager.");
+                return response;
+            }
+
+            // 3. Kiểm tra username đã tồn tại chưa
             if (userRepository.findByUserName(request.getUsername()).isPresent()) {
                 response.setSuccess(false);
                 response.setMessage("Username already exists: " + request.getUsername());
                 return response;
             }
 
-            // 3. Tạo User account với role DEALER_MANAGER
+            // 4. Tạo User account với role DEALER_MANAGER (không có prefix ROLE_)
             User user = new User();
             user.setUserName(request.getUsername());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
-            user.setRole("ROLE_DEALER_MANAGER");
+            user.setRole("DEALER_MANAGER"); // ✅ Không có prefix ROLE_
             user.setDealer(dealer);
             user.setCreatedDate(LocalDateTime.now());
 
             User savedUser = userRepository.save(user);
-            log.info("Created dealer account - username: {}, dealerId: {}", savedUser.getUserName(), dealer.getDealerId());
+            log.info("✅ Created DEALER_MANAGER account - username: {}, dealerId: {}", 
+                    savedUser.getUserName(), dealer.getDealerId());
 
-            // 4. Tạo DealerInfo (không bao gồm password)
+            // 5. Tạo DealerInfo (bao gồm createdBy và createdDate)
             DealerInfo dealerInfo = new DealerInfo();
             dealerInfo.setDealerId(dealer.getDealerId());
             dealerInfo.setDealerName(dealer.getDealerName());
             dealerInfo.setPhone(dealer.getPhone());
             dealerInfo.setAddress(dealer.getAddress());
-            dealerInfo.setCreatedBy(dealer.getCreatedBy());
-            dealerInfo.setCreatedDate(dealer.getCreatedDate());
+            dealerInfo.setCreatedBy(dealer.getCreatedBy()); // ✅ Có createdBy
+            dealerInfo.setCreatedDate(dealer.getCreatedDate()); // ✅ Có createdDate
 
-            // 5. Tạo response
+            // 6. Tạo response
             response.setSuccess(true);
-            response.setMessage("Tạo tài khoản dealer thành công");
+            response.setMessage("Dealer manager account created successfully");
             response.setUserId(savedUser.getUserId());
             response.setUsername(savedUser.getUserName());
             response.setRole(savedUser.getRole());
-            response.setUserCreatedDate(savedUser.getCreatedDate());
+            response.setUserCreatedDate(savedUser.getCreatedDate()); // ✅ Có userCreatedDate
             response.setDealerInfo(dealerInfo);
 
             return response;
@@ -93,7 +102,7 @@ public class DealerAccountService {
         } catch (Exception e) {
             log.error("Failed to create dealer account", e);
             response.setSuccess(false);
-            response.setMessage("Không thể tạo tài khoản dealer: " + e.getMessage());
+            response.setMessage("Failed to create dealer account: " + e.getMessage());
             return response;
         }
     }

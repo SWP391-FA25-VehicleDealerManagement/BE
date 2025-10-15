@@ -20,12 +20,12 @@ public class DealerServiceImpl implements DealerService {
 
     @Override
     public List<Dealer> getAllDealers() {
-        return dealerRepository.findAllActiveDealers(); // ✅ chỉ lấy ACTIVE Dealer
+        return dealerRepository.findAllActiveDealers();
     }
 
     @Override
     public List<Dealer> getInactiveDealers() {
-        return dealerRepository.findAllInactiveDealers(); // ✅ chỉ lấy INACTIVE Dealer
+        return dealerRepository.findAllInactiveDealers();
     }
 
     @Override
@@ -43,10 +43,16 @@ public class DealerServiceImpl implements DealerService {
     }
 
     @Override
+    @Transactional
     public Dealer createDealer(Dealer dealer) {
-        dealer.setDealerId(null);
+        // ✅ Tính toán ID tiếp theo (sequential)
+        Long nextId = dealerRepository.findMaxActiveId().orElse(0L) + 1;
+        
+        dealer.setDealerId(nextId);
         dealer.setStatus("ACTIVE");
         dealer.setCreatedDate(LocalDateTime.now());
+        
+        log.info("🆕 Creating dealer with sequential ID: {}", nextId);
         return dealerRepository.save(dealer);
     }
 
@@ -66,8 +72,13 @@ public class DealerServiceImpl implements DealerService {
         if (!dealerRepository.existsById(id)) {
             throw new ResourceNotFoundException("Dealer not found");
         }
-        dealerRepository.updateStatus(id, "INACTIVE");
-        log.info("🟡 Dealer {} marked as INACTIVE", id);
+        
+        // ⚠️ HARD DELETE để compact IDs
+        dealerRepository.deleteById(id);
+        log.warn("🗑️ Dealer {} permanently deleted", id);
+        
+        // ✅ Compact IDs - shift tất cả ID > deletedId xuống 1 đơn vị
+        compactIds(id);
     }
 
     @Override
@@ -80,6 +91,29 @@ public class DealerServiceImpl implements DealerService {
         log.info("🟢 Dealer {} reactivated", id);
     }
 
+   
+    @Transactional
+    private void compactIds(Long deletedId) {
+        List<Dealer> dealersToShift = dealerRepository.findDealersToShift(deletedId);
+        
+        log.warn("🔄 Compacting {} dealer IDs after deleting ID {}", dealersToShift.size(), deletedId);
+        
+        for (Dealer dealer : dealersToShift) {
+            Long oldId = dealer.getDealerId();
+            Long newId = oldId - 1;
+            
+            
+            dealer.setDealerId(null);
+            dealerRepository.save(dealer);
+            dealerRepository.flush();
+            
+            // Set ID mới
+            dealer.setDealerId(newId);
+            dealerRepository.save(dealer);
+            
+            log.info("Shifted dealer ID: {} → {}", oldId, newId);
+        }
+        
+        log.warn("ID compaction completed");
+    }
 }
-
-

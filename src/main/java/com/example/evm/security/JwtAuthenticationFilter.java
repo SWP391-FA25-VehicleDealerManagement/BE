@@ -25,7 +25,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
 
-    // Hợp nhất constructors: Giữ lại constructor đầy đủ và loại bỏ các khối code thừa
     public JwtAuthenticationFilter(JwtUtil jwtUtil,
                                    CustomUserDetailsService userDetailsService) {
         this.jwtUtil = jwtUtil;
@@ -39,9 +38,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
         String method = request.getMethod();
-        log.info(" JWT filter - {} {}", method, path);
+        log.info("JWT filter - {} {}", method, path);
 
-        // Skip auth‑free endpoints
+        // Skip auth-free endpoints
         if (shouldSkip(path)) {
             filterChain.doFilter(request, response);
             return;
@@ -52,7 +51,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
             log.debug("Found JWT token, validating...");
 
-            // Loại bỏ khối try/if bị cắt ngang và chỉ giữ lại khối try/catch hoàn chỉnh
             try {
                 String username = jwtUtil.extractUsername(token);
                 
@@ -64,22 +62,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     && jwtUtil.validateToken(token) 
                     && role != null) {
 
+                    // Chuẩn hóa role
                     String normalizedRole = role.toUpperCase().replace(" ", "_");
                     
-                    // 2. Tạo GrantedAuthorities: Sử dụng ROLE_ chuẩn của Spring Security.
+                    // ✅ KHÔNG thêm ROLE_ prefix vì controller dùng hasAnyAuthority()
                     List<GrantedAuthority> authorities = List.of(
-                        new SimpleGrantedAuthority("ROLE_" + normalizedRole)
+                        new SimpleGrantedAuthority(normalizedRole)
                     );
 
-                    // 3. Thiết lập Authentication trực tiếp bằng thông tin từ Token
+                    // Thiết lập Authentication
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(username, null, authorities);
                     
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    log.info(" Authenticated user {} with role {}", username, normalizedRole);
+                    log.info("Authenticated user {} with authority: {}", username, normalizedRole);
                 }
             } catch (Exception e) {
-                log.error("Jwt authentication error: {}", e.getMessage());
+                log.error("JWT authentication error: {}", e.getMessage());
             }
         } else {
             log.debug("No JWT token supplied for {}", path);

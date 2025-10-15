@@ -32,11 +32,16 @@ public class CustomUserDetailsService implements UserDetailsService {
                     log.error("User not found: {}", username);
                     return new UsernameNotFoundException("User not found");
                 });
+        
+        // Chuẩn hóa role: viết hoa và thay thế khoảng trắng
         String normalizedRole = user.getRole().toUpperCase().replace("ROLE_", "").replace(" ", "_");
-
+        
+        // ✅ KHÔNG thêm ROLE_ prefix vì controller dùng hasAnyAuthority()
         List<GrantedAuthority> authorities = List.of(
-            new SimpleGrantedAuthority("ROLE_" + normalizedRole)
+            new SimpleGrantedAuthority(normalizedRole)
         );
+
+        log.info("User {} loaded with authority: {}", username, normalizedRole);
 
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUserName())
