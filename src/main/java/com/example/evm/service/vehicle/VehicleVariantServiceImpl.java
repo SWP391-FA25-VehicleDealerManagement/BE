@@ -108,7 +108,7 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
         variantRepository.save(variant);
     }
 
-    @Override
+    @Override  
     @Transactional
     public VehicleDetailResponse addOrUpdateDetails(Long variantId, VehicleDetailRequest request) {
         // Tìm variant tương ứng
@@ -119,14 +119,47 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
         VehicleDetail detail = detailRepository.findByVariant_VariantId(variantId)
                 .orElse(new VehicleDetail());
 
-        // Map dữ liệu từ request vào entity
+        // --- BẮT ĐẦU GÁN GIÁ TRỊ (ĐẦY ĐỦ) ---
         detail.setVariant(variant);
+
+        // Thông số
         detail.setDimensionsMm(request.getDimensionsMm());
         detail.setWheelbaseMm(request.getWheelbaseMm());
-        // ... Set tất cả các trường còn lại ...
+        detail.setGroundClearanceMm(request.getGroundClearanceMm());
+        detail.setCurbWeightKg(request.getCurbWeightKg());
+        detail.setSeatingCapacity(request.getSeatingCapacity());
+        detail.setTrunkCapacityLiters(request.getTrunkCapacityLiters());
+
+        // Động cơ & Vận Hành
+        detail.setEngineType(request.getEngineType());
+        detail.setMaxPower(request.getMaxPower());
+        detail.setMaxTorque(request.getMaxTorque());
+        detail.setTopSpeedKmh(request.getTopSpeedKmh());
+        detail.setDrivetrain(request.getDrivetrain());
+        detail.setDriveModes(request.getDriveModes());
+
+        // Pin & Khả năng di chuyển
+        detail.setBatteryCapacityKwh(request.getBatteryCapacityKwh());
+        detail.setRangePerChargeKm(request.getRangePerChargeKm());
+        detail.setChargingTime(request.getChargingTime());
+
+        // Thiết kế
+        detail.setExteriorFeatures(request.getExteriorFeatures());
+        detail.setInteriorFeatures(request.getInteriorFeatures());
+
+        // Tính năng an toàn
+        detail.setAirbags(request.getAirbags());
+        detail.setBrakingSystem(request.getBrakingSystem());
+        detail.setHasEsc(request.getHasEsc());
+        detail.setHasHillStartAssist(request.getHasHillStartAssist());
+        detail.setHasTpms(request.getHasTpms());
+        detail.setHasRearCamera(request.getHasRearCamera());
+        detail.setHasChildLock(request.getHasChildLock());
     
-        VehicleDetail savedDetail = detailRepository.save(detail);
-        return new VehicleDetailResponse(savedDetail);
+        // --- KẾT THÚC GÁN GIÁ TRỊ ---
+
+    VehicleDetail savedDetail = detailRepository.save(detail);
+    return new VehicleDetailResponse(savedDetail);
     }   
 
     @Override
