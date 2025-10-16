@@ -12,6 +12,8 @@ import com.example.evm.repository.dealer.DealerRepository;
 import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
 import com.example.evm.repository.vehicle.SalePriceRepository;
+import org.springframework.web.multipart.MultipartFile;
+import com.example.evm.service.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class VehicleServiceImpl implements VehicleService {
     private final VehicleVariantRepository variantRepository;
     private final SalePriceRepository salePriceRepository;
     private final DealerRepository dealerRepository;
+    private final FileStorageService fileStorageService;
 
     // 🟢 Lấy danh sách xe còn hoạt động
     @Override
@@ -76,14 +79,20 @@ public class VehicleServiceImpl implements VehicleService {
     // 🔹 Thêm mới Vehicle
     @Override
     @Transactional
-    public VehicleResponse addVehicle(VehicleRequest request) {
+    public VehicleResponse addVehicle(VehicleRequest request, MultipartFile file) {
+        // 1. Lưu file ảnh và lấy về tên file duy nhất
+        String filename = fileStorageService.save(file);
+        // Tạo URL (giả sử endpoint xem ảnh của Vehicle sẽ là /api/vehicles/images/{filename})
+        String imageUrl = "/api/vehicles/images/" + filename;
+
+        // 2. Logic cũ của bạn
         Vehicle vehicle = new Vehicle();
         vehicle.setName(request.getName() != null ? request.getName() : request.getVehicleName());
         vehicle.setColor(request.getColor());
-        vehicle.setImage(request.getImage());
+        vehicle.setImage(imageUrl); // <-- Lưu URL vào DB, KHÔNG dùng request.getImage()
         vehicle.setPrice(request.getPrice());
         vehicle.setStock(request.getStock());
-        vehicle.setStatus("ACTIVE"); // ✅ mặc định ACTIVE
+        vehicle.setStatus("ACTIVE");
 
         if (request.getDealerId() != null) {
             dealerRepository.findById(request.getDealerId()).ifPresent(vehicle::setDealer);
@@ -91,7 +100,7 @@ public class VehicleServiceImpl implements VehicleService {
 
         if (request.getVariantId() != null) {
             VehicleVariant variant = variantRepository.findById(request.getVariantId())
-                .orElseThrow(() -> new RuntimeException("Variant not found with id: " + request.getVariantId()));
+                    .orElseThrow(() -> new RuntimeException("Variant not found with id: " + request.getVariantId()));
             vehicle.setVariant(variant);
         }
 
@@ -102,13 +111,20 @@ public class VehicleServiceImpl implements VehicleService {
     // 🔹 Cập nhật Vehicle
     @Override
     @Transactional
-    public VehicleResponse updateVehicle(Long id, VehicleRequest request) {
+    public VehicleResponse updateVehicle(Long id, VehicleRequest request, MultipartFile file) {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
 
+        // Xử lý file ảnh nếu người dùng có gửi file mới
+        if (file != null && !file.isEmpty()) {
+            String filename = fileStorageService.save(file);
+            String imageUrl = "/api/vehicles/images/" + filename;
+            vehicle.setImage(imageUrl); // Cập nhật ảnh mới
+        }
+
+        // Cập nhật các thông tin khác
         vehicle.setName(request.getName() != null ? request.getName() : request.getVehicleName());
         vehicle.setColor(request.getColor());
-        vehicle.setImage(request.getImage());
         vehicle.setPrice(request.getPrice());
         vehicle.setStock(request.getStock());
 
@@ -118,9 +134,9 @@ public class VehicleServiceImpl implements VehicleService {
 
         if (request.getVariantId() != null) {
             VehicleVariant variant = variantRepository.findById(request.getVariantId())
-                .orElseThrow(() -> new RuntimeException("Variant not found with id: " + request.getVariantId()));
+                    .orElseThrow(() -> new RuntimeException("Variant not found with id: " + request.getVariantId()));
             vehicle.setVariant(variant);
-    }
+        }
 
         Vehicle updated = vehicleRepository.save(vehicle);
         return convertToResponse(updated);

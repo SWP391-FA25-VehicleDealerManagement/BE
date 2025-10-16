@@ -1,6 +1,8 @@
 package com.example.evm.controller.vehicle;
 
 import com.example.evm.dto.auth.ApiResponse;
+import com.example.evm.dto.vehicle.VehicleDetailRequest;
+import com.example.evm.dto.vehicle.VehicleDetailResponse;
 import com.example.evm.dto.vehicle.VehicleVariantRequest;
 import com.example.evm.dto.vehicle.VehicleVariantResponse;
 import com.example.evm.service.vehicle.VehicleVariantService;
@@ -8,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 import java.util.List;
 
@@ -19,11 +23,14 @@ public class VehicleVariantController {
     private final VehicleVariantService variantService;
 
     // ➕ TẠO MỚI một biến thể xe
-    @PostMapping
+    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<VehicleVariantResponse>> createVariant(@RequestBody VehicleVariantRequest request) {
-        VehicleVariantResponse createdVariant = variantService.createVariant(request);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Variant created successfully", createdVariant));
+    public ResponseEntity<ApiResponse<VehicleVariantResponse>> createVariant(
+        @RequestPart("variant") VehicleVariantRequest request,
+        @RequestPart("file") MultipartFile file) {
+
+    VehicleVariantResponse createdVariant = variantService.createVariant(request, file);
+    return ResponseEntity.ok(new ApiResponse<>(true, "Variant created successfully", createdVariant));
     }
 
     // 🟢 LẤY TẤT CẢ các biến thể
@@ -41,18 +48,47 @@ public class VehicleVariantController {
     }
 
     // 🔄 CẬP NHẬT một biến thể
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<VehicleVariantResponse>> updateVariant(@PathVariable Long id, @RequestBody VehicleVariantRequest request) {
-        VehicleVariantResponse updatedVariant = variantService.updateVariant(id, request);
+    public ResponseEntity<ApiResponse<VehicleVariantResponse>> updateVariant(
+            @PathVariable Long id,
+            @RequestPart("variant") VehicleVariantRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file) { // Đặt required = false để không bắt buộc phải có file
+
+        VehicleVariantResponse updatedVariant = variantService.updateVariant(id, request, file);
         return ResponseEntity.ok(new ApiResponse<>(true, "Variant updated successfully", updatedVariant));
     }
 
-    // ❌ XÓA một biến thể
-    @DeleteMapping("/{id}")
+    // 🚫 DEACTIVATE a variant (soft delete)
+    @PutMapping("/deactivate/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<Void>> deleteVariant(@PathVariable Long id) {
-        variantService.deleteVariant(id);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Variant deleted successfully", null));
+    public ResponseEntity<ApiResponse<Void>> deactivateVariant(@PathVariable Long id) {
+        variantService.deactivateVariant(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Variant deactivated successfully", null));
+    }
+
+    // ✅ ACTIVATE a variant
+    @PutMapping("/activate/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<Void>> activateVariant(@PathVariable Long id) {
+        variantService.activateVariant(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Variant activated successfully", null));
+    }
+
+    // ➕ LẤY thông số kỹ thuật của một variant
+    @GetMapping("/{variantId}/details")
+    public ResponseEntity<ApiResponse<VehicleDetailResponse>> getVariantDetails(@PathVariable Long variantId) {
+        VehicleDetailResponse details = variantService.getDetailsByVariantId(variantId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Details retrieved successfully", details));
+    }
+
+    // 🔄 THÊM/CẬP NHẬT thông số kỹ thuật cho một variant
+    @PostMapping("/{variantId}/details")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<VehicleDetailResponse>> addOrUpdateVariantDetails(
+            @PathVariable Long variantId,
+            @RequestBody VehicleDetailRequest request) {
+        VehicleDetailResponse details = variantService.addOrUpdateDetails(variantId, request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Details added/updated successfully", details));
     }
 }

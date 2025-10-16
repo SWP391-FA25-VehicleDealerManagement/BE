@@ -9,6 +9,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+import com.example.evm.service.storage.FileStorageService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 
 import java.util.List;
 
@@ -18,6 +23,7 @@ import java.util.List;
 public class VehicleController {
 
     private final VehicleService vehicleService;
+    private final FileStorageService fileStorageService;
 
     // 🟢 GET all active vehicles
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
@@ -52,21 +58,23 @@ public class VehicleController {
     }
 
     // ➕ ADD new vehicle
+    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
-    @PostMapping
-    public ResponseEntity<ApiResponse<VehicleResponse>> addVehicle(@RequestBody VehicleRequest request) {
-        VehicleResponse created = vehicleService.addVehicle(request);
+    public ResponseEntity<ApiResponse<VehicleResponse>> addVehicle(
+            @RequestPart("vehicle") VehicleRequest request,
+            @RequestPart("file") MultipartFile file) {
+        VehicleResponse created = vehicleService.addVehicle(request, file);
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle added successfully", created));
     }
 
     // 🔄 UPDATE existing vehicle
+    @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
-    @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<VehicleResponse>> updateVehicle(
             @PathVariable Long id,
-            @RequestBody VehicleRequest request) {
-
-        VehicleResponse updated = vehicleService.updateVehicle(id, request);
+            @RequestPart("vehicle") VehicleRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file) { // file is optional on update
+        VehicleResponse updated = vehicleService.updateVehicle(id, request, file);
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle updated successfully", updated));
     }
 
