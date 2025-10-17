@@ -66,6 +66,14 @@ public class VehicleServiceImpl implements VehicleService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public VehicleResponse getVehicleById(Long id) {
+        Vehicle vehicle = vehicleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
+        return convertToResponse(vehicle);
+    }
+
     // 🟠 Tìm kiếm theo tên xe
     @Override
     @Transactional(readOnly = true)

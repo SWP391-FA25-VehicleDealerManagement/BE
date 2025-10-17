@@ -29,7 +29,7 @@ public class FileStorageServiceImpl implements FileStorageService {
 
     // Khởi tạo thư mục lưu trữ ngay khi service được tạo
     @Override
-    @PostConstruct // Đảm bảo hàm này được gọi sau khi service được khởi tạo
+    @PostConstruct
     public void init() {
         try {
             Files.createDirectories(rootLocation);

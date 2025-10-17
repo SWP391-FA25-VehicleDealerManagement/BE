@@ -49,6 +49,14 @@ public class VehicleController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicles for dealer retrieved successfully", vehicles));
     }
 
+    // 🆔 GET vehicle by ID
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<VehicleResponse>> getVehicleById(@PathVariable Long id) {
+        VehicleResponse vehicle = vehicleService.getVehicleById(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle retrieved successfully", vehicle));
+    }
+
     // 🔍 SEARCH by name
     @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
     @GetMapping("/search")

@@ -12,6 +12,7 @@ public interface VehicleService {
 
     List<VehicleResponse> getAllVehicles();
     List<VehicleResponse> getAllInactiveVehicles();
+    VehicleResponse getVehicleById(Long id);
     List<VehicleResponse> searchVehiclesByName(String name);
 
     VehicleResponse addVehicle(VehicleRequest request, MultipartFile file);
