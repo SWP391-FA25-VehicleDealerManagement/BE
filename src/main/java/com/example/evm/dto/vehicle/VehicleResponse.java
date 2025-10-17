@@ -4,7 +4,11 @@ import java.util.Locale;
 import java.text.NumberFormat;
 
 import com.example.evm.entity.vehicle.Vehicle;
+import com.example.evm.entity.vehicle.VehicleDetail;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 public class VehicleResponse {
@@ -19,6 +23,9 @@ public class VehicleResponse {
     private String modelName;
     private String modelDescription;
     private String dealerName;
+    
+    @JsonProperty("vehicleDetails")
+    private VehicleDetailResponse details;
 
     public VehicleResponse() {}
 
@@ -56,4 +63,15 @@ public class VehicleResponse {
             this.dealerName = vehicle.getDealer().getDealerName();
         }
     }
+
+    public VehicleResponse(Vehicle vehicle, VehicleDetail detail) {
+        // 1. Gọi constructor cũ để lấy thông tin cơ bản
+        this(vehicle);
+
+        // 2. Thêm thông tin chi tiết nếu có
+        if (detail != null) {
+            this.details = new VehicleDetailResponse(detail);
+        }
+    }
+
 }

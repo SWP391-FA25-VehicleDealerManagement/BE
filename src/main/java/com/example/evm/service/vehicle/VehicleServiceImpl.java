@@ -6,12 +6,15 @@ import com.example.evm.dto.vehicle.VehicleResponse;
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.vehicle.SalePrice;
 import com.example.evm.entity.vehicle.Vehicle;
+import com.example.evm.entity.vehicle.VehicleDetail;
 import com.example.evm.entity.vehicle.VehicleVariant;
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.repository.dealer.DealerRepository;
 import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
 import com.example.evm.repository.vehicle.SalePriceRepository;
+import com.example.evm.repository.vehicle.VehicleDetailRepository;
+
 import org.springframework.web.multipart.MultipartFile;
 import com.example.evm.service.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +35,7 @@ public class VehicleServiceImpl implements VehicleService {
     private final SalePriceRepository salePriceRepository;
     private final DealerRepository dealerRepository;
     private final FileStorageService fileStorageService;
+    private final VehicleDetailRepository detailRepository;
 
     // 🟢 Lấy danh sách xe còn hoạt động
     @Override
@@ -66,12 +70,23 @@ public class VehicleServiceImpl implements VehicleService {
                 .collect(Collectors.toList());
     }
 
+    //  Lấy xe theo ID
     @Override
     @Transactional(readOnly = true)
     public VehicleResponse getVehicleById(Long id) {
+        // 1. Lấy thông tin Vehicle chính
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
-        return convertToResponse(vehicle);
+
+        // 2. Lấy thông tin VehicleDetail tương ứng (nếu có)
+        VehicleDetail detail = null;
+        if (vehicle.getVariant() != null) {
+            detail = detailRepository.findByVariant_VariantId(vehicle.getVariant().getVariantId())
+                                     .orElse(null); // Trả về null nếu không tìm thấy detail
+        }
+
+        // 3. Gọi CONSTRUCTOR MỚI của VehicleResponse
+        return new VehicleResponse(vehicle, detail);
     }
 
     // 🟠 Tìm kiếm theo tên xe
