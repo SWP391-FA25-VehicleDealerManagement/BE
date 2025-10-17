@@ -177,12 +177,10 @@ public class VehicleServiceImpl implements VehicleService {
                     .orElseThrow(() -> new RuntimeException("Variant not found with id: " + request.getVariantId()));
             vehicle.setVariant(variant);
         }
-        // --- KẾT THÚC PHẦN SỬA LỖI ---
 
 
         Vehicle updated = vehicleRepository.save(vehicle);
 
-        // Lấy detail để trả về (như code trước)
         VehicleDetail detail = null;
         if (updated.getVariant() != null) {
             detail = detailRepository.findByVariant_VariantId(updated.getVariant().getVariantId()).orElse(null);

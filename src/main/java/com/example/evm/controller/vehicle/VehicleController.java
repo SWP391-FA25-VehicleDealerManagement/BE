@@ -99,7 +99,7 @@ public class VehicleController {
     @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<VehicleResponse>> addVehicle(
             @RequestPart("vehicle") VehicleRequest request,
-            @RequestPart("file") MultipartFile file) {
+            @RequestPart("image") MultipartFile file) {
         VehicleResponse created = vehicleService.addVehicle(request, file);
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle added successfully", created));
     }
@@ -110,7 +110,7 @@ public class VehicleController {
     public ResponseEntity<ApiResponse<VehicleResponse>> updateVehicle(
             @PathVariable Long id,
             @RequestPart("vehicle") VehicleRequest request,
-            @RequestPart(value = "file", required = false) MultipartFile file) { // file is optional on update
+            @RequestPart(value = "image", required = false) MultipartFile file) { // file is optional on update
         VehicleResponse updated = vehicleService.updateVehicle(id, request, file);
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle updated successfully", updated));
     }

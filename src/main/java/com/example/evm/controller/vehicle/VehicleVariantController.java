@@ -6,6 +6,8 @@ import com.example.evm.dto.vehicle.VehicleDetailResponse;
 import com.example.evm.dto.vehicle.VehicleVariantRequest;
 import com.example.evm.dto.vehicle.VehicleVariantResponse;
 import com.example.evm.service.vehicle.VehicleVariantService;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,6 +22,7 @@ import com.example.evm.service.storage.FileStorageService;
 import java.io.IOException; 
 import java.nio.file.Files;
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/variants")
@@ -81,12 +84,13 @@ public class VehicleVariantController {
     @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<VehicleVariantResponse>> updateVariant(
-            @PathVariable Long id,
-            @RequestPart("variant") VehicleVariantRequest request,
-            @RequestPart(value = "file", required = false) MultipartFile file) { // Đặt required = false để không bắt buộc phải có file
+        @PathVariable Long id,
+        @RequestPart("variant") VehicleVariantRequest request,
+        
+        @RequestPart(value = "image", required = false) MultipartFile file) { 
 
-        VehicleVariantResponse updatedVariant = variantService.updateVariant(id, request, file);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Variant updated successfully", updatedVariant));
+    VehicleVariantResponse updatedVariant = variantService.updateVariant(id, request, file);
+    return ResponseEntity.ok(new ApiResponse<>(true, "Variant updated successfully", updatedVariant));
     }
 
     // 🚫 DEACTIVATE a variant (soft delete)

@@ -70,26 +70,38 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
     }
 
     @Override
+    @Transactional
     public VehicleVariantResponse updateVariant(Long id, VehicleVariantRequest request, MultipartFile file) {
+        
+        // 1. Tìm đối tượng (entity) đang có trong database
         VehicleVariant existingVariant = variantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Variant not found with id: " + id));
 
-        // Xử lý file ảnh NẾU người dùng có gửi file mới để cập nhật
-        if (file != null && !file.isEmpty()) {
-            String filename = fileStorageService.save(file);
-            String imageUrl = "/api/variants/images/" + filename;
-            existingVariant.setImage(imageUrl); // Cập nhật đường dẫn ảnh mới
+        // 2. Kiểm tra và cập nhật 'name'
+        if (request.getName() != null && !request.getName().isBlank()) {
+            existingVariant.setName(request.getName());
         }
 
-        // Cập nhật các thông tin khác
-        VehicleModel model = modelRepository.findById(request.getModelId())
-                .orElseThrow(() -> new ResourceNotFoundException("Model not found with id: " + request.getModelId()));
+        // 3. Kiểm tra và cập nhật 'modelId'
+        if (request.getModelId() != null) {
+            VehicleModel newModel = modelRepository.findById(request.getModelId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Model not found with id: " + request.getModelId()));
+            existingVariant.setModel(newModel);
+        }
 
-        existingVariant.setName(request.getName());
-        existingVariant.setModel(model);
+        // 4. Kiểm tra và cập nhật 'file' (ảnh)
+        if (file != null && !file.isEmpty()) {
+            
+            String filename = fileStorageService.save(file);
+            String newImageUrl = "/api/variants/images/" + filename;
+            existingVariant.setImage(newImageUrl);
+        }
 
-        VehicleVariant updatedVariant = variantRepository.save(existingVariant);
-        return new VehicleVariantResponse(updatedVariant);
+        // 5. Lưu entity đã được cập nhật vào DB
+        VehicleVariant savedVariant = variantRepository.save(existingVariant);
+
+        // 6. Trả về response
+        return new VehicleVariantResponse(savedVariant);
     }
 
     @Override
