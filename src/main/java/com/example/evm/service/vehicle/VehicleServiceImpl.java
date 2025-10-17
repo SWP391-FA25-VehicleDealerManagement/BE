@@ -146,23 +146,48 @@ public class VehicleServiceImpl implements VehicleService {
         }
 
         // Cập nhật các thông tin khác
-        vehicle.setName(request.getName() != null ? request.getName() : request.getVehicleName());
-        vehicle.setColor(request.getColor());
-        vehicle.setPrice(request.getPrice());
-        vehicle.setStock(request.getStock());
+        String newName = request.getName() != null ? request.getName() : request.getVehicleName(); // Logic cũ của bạn
+        if (newName != null) {
+            vehicle.setName(newName);
+        }
 
+        // Kiểm tra color trước khi cập nhật
+        if (request.getColor() != null) {
+            vehicle.setColor(request.getColor());
+        }
+
+        // Kiểm tra price trước khi cập nhật
+        if (request.getPrice() != null) {
+            vehicle.setPrice(request.getPrice());
+        }
+
+        // Kiểm tra stock trước khi cập nhật
+        if (request.getStock() != null) {
+            vehicle.setStock(request.getStock());
+        }
+
+        // Kiểm tra dealerId trước khi cập nhật
         if (request.getDealerId() != null) {
             dealerRepository.findById(request.getDealerId()).ifPresent(vehicle::setDealer);
         }
 
+        // Kiểm tra variantId trước khi cập nhật
         if (request.getVariantId() != null) {
             VehicleVariant variant = variantRepository.findById(request.getVariantId())
                     .orElseThrow(() -> new RuntimeException("Variant not found with id: " + request.getVariantId()));
             vehicle.setVariant(variant);
         }
+        // --- KẾT THÚC PHẦN SỬA LỖI ---
+
 
         Vehicle updated = vehicleRepository.save(vehicle);
-        return convertToResponse(updated);
+
+        // Lấy detail để trả về (như code trước)
+        VehicleDetail detail = null;
+        if (updated.getVariant() != null) {
+            detail = detailRepository.findByVariant_VariantId(updated.getVariant().getVariantId()).orElse(null);
+        }
+        return new VehicleResponse(updated, detail);
     }
 
     // 🔴 Xóa mềm Vehicle (set status = INACTIVE)

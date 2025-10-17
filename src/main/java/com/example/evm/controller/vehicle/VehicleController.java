@@ -15,11 +15,16 @@ import com.example.evm.service.storage.FileStorageService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 
+import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;      
+
+import java.nio.file.Files;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/vehicles")
 @RequiredArgsConstructor
+@Slf4j
 public class VehicleController {
 
     private final VehicleService vehicleService;
@@ -55,6 +60,30 @@ public class VehicleController {
     public ResponseEntity<ApiResponse<VehicleResponse>> getVehicleById(@PathVariable Long id) {
         VehicleResponse vehicle = vehicleService.getVehicleById(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle retrieved successfully", vehicle));
+    }
+
+    @GetMapping("/images/{filename:.+}")
+    public ResponseEntity<Resource> getImage(@PathVariable String filename) {
+        Resource file = fileStorageService.load(filename);
+        String contentType = "application/octet-stream"; // Loại file mặc định
+        try {
+             // Cố gắng tự động xác định ContentType từ file
+             contentType = Files.probeContentType(file.getFile().toPath());
+        } catch (IOException e) {
+             // Nếu có lỗi, ghi log lại
+             log.error("Could not determine file type for filename: {}", filename, e);
+        }
+
+        // Nếu không xác định được, vẫn dùng loại mặc định
+        if(contentType == null) {
+            contentType = "application/octet-stream";
+        }
+
+        // Trả về file với Content-Type đã được xác định
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
+                .body(file);
     }
 
     // 🔍 SEARCH by name

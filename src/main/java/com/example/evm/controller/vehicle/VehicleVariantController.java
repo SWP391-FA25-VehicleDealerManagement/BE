@@ -13,14 +13,22 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import com.example.evm.service.storage.FileStorageService; 
+import java.io.IOException; 
+import java.nio.file.Files;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/variants")
 @RequiredArgsConstructor
+@Slf4j
 public class VehicleVariantController {
 
     private final VehicleVariantService variantService;
+    private final FileStorageService fileStorageService;
 
     // ➕ TẠO MỚI một biến thể xe
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
@@ -38,6 +46,28 @@ public class VehicleVariantController {
     public ResponseEntity<ApiResponse<List<VehicleVariantResponse>>> getAllVariants() {
         List<VehicleVariantResponse> variants = variantService.getAllVariants();
         return ResponseEntity.ok(new ApiResponse<>(true, "Variants retrieved successfully", variants));
+    }
+
+    @GetMapping("/images/{filename:.+}")
+    public ResponseEntity<Resource> getImage(@PathVariable String filename) {
+        Resource file = fileStorageService.load(filename);
+        String contentType = "application/octet-stream"; // Mặc định
+        try {
+            // Cố gắng tự động xác định ContentType từ file
+            contentType = Files.probeContentType(file.getFile().toPath());
+        } catch (IOException e) {
+            log.error("Could not determine file type for variant image: {}", filename, e);
+        }
+
+        // Nếu không xác định được, vẫn dùng loại mặc định
+        if(contentType == null) {
+            contentType = "application/octet-stream";
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
+                .body(file);
     }
 
     // 🟢 LẤY MỘT biến thể theo ID
