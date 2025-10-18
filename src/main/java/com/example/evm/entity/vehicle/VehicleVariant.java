@@ -26,6 +26,8 @@ public class VehicleVariant {
     @Column(name = "image")
     private String image;
 
+    private String status;
+
     // Variant belongs to one Model
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "model_id", nullable = false)

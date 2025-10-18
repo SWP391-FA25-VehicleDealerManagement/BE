@@ -1,10 +1,11 @@
 package com.example.evm.service.dealer;
 
+import com.example.evm.dto.auth.DealerInfo;
 import com.example.evm.dto.dealer.CreateDealerAccountRequest;
 import com.example.evm.dto.dealer.CreateDealerAccountResponse;
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.user.User;
-import com.example.evm.repository.UserRepository;
+import com.example.evm.repository.auth.UserRepository;
 import com.example.evm.repository.dealer.DealerRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,78 +20,90 @@ public class DealerAccountService {
 
     private static final Logger log = LoggerFactory.getLogger(DealerAccountService.class);
 
-    private final DealerRepository dealerRepository;
     private final UserRepository userRepository;
+    private final DealerRepository dealerRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public DealerAccountService(DealerRepository dealerRepository, UserRepository userRepository,
-            PasswordEncoder passwordEncoder) {
-        this.dealerRepository = dealerRepository;
+    public DealerAccountService(UserRepository userRepository, 
+                               DealerRepository dealerRepository,
+                               PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.dealerRepository = dealerRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * Tạo tài khoản DEALER_MANAGER cho dealer
+     * ✅ Chỉ được tạo 1 DEALER_MANAGER cho mỗi dealer
+     * ✅ ADMIN và EVM_STAFF có thể tạo
+     */
     @Transactional
     public CreateDealerAccountResponse createDealerAccount(CreateDealerAccountRequest request) {
-        // Kiểm tra username đã tồn tại chưa
-        if (userRepository.findByUserName(request.getUsername()).isPresent()) {
-            throw new IllegalArgumentException("Username already exists: " + request.getUsername());
-        }
-
-        // Kiểm tra dealer name đã tồn tại chưa
-        if (dealerRepository.findByDealerName(request.getDealerName()).isPresent()) {
-            throw new IllegalArgumentException("Dealer name already exists: " + request.getDealerName());
-        }
-
-        // Validate role
-        if (!isValidDealerRole(request.getRole())) {
-            throw new IllegalArgumentException("Invalid role. Must be ROLE_DEALER_STAFF or ROLE_DEALER_MANAGER");
-        }
+        CreateDealerAccountResponse response = new CreateDealerAccountResponse();
 
         try {
-            // 1. Tạo Dealer entity
-            Dealer dealer = new Dealer();
-            dealer.setDealerName(request.getDealerName());
-            dealer.setPhone(request.getDealerPhone());
-            dealer.setAddress(request.getDealerAddress());
-            dealer.setCreatedBy("ADMIN"); // hoặc lấy từ authentication context
-            dealer.setCreatedDate(LocalDateTime.now());
+            // 1. Kiểm tra dealer có tồn tại không
+            Dealer dealer = dealerRepository.findById(request.getDealerId())
+                    .orElseThrow(() -> new IllegalArgumentException("Dealer not found with ID: " + request.getDealerId()));
 
-            Dealer savedDealer = dealerRepository.save(dealer);
-            log.info("Created dealer: {}", savedDealer.getDealerName());
+            // ✅ 2. Kiểm tra dealer đã có DEALER_MANAGER chưa
+            long managerCount = userRepository.countByDealerIdAndRole(request.getDealerId(), "DEALER_MANAGER");
+            if (managerCount > 0) {
+                response.setSuccess(false);
+                response.setMessage("Dealer already has a DEALER_MANAGER account. Each dealer can only have one manager.");
+                return response;
+            }
 
-            // 2. Tạo User account
+            // 3. Kiểm tra username đã tồn tại chưa
+            if (userRepository.findByUserName(request.getUsername()).isPresent()) {
+                response.setSuccess(false);
+                response.setMessage("Username already exists: " + request.getUsername());
+                return response;
+            }
+
+            // 4. Tạo User account với role DEALER_MANAGER (không có prefix ROLE_)
             User user = new User();
             user.setUserName(request.getUsername());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
-            user.setFullName(request.getFullName());
-            user.setPhone(request.getUserPhone());
-            user.setEmail(request.getEmail());
-            user.setRole(request.getRole());
-            user.setDealer(savedDealer); // Liên kết với dealer
+            user.setRole("DEALER_MANAGER"); // ✅ Không có prefix ROLE_
+            user.setDealer(dealer);
             user.setCreatedDate(LocalDateTime.now());
 
             User savedUser = userRepository.save(user);
-            log.info("Created user: {} for dealer: {}", savedUser.getUserName(), savedDealer.getDealerName());
+            log.info("✅ Created DEALER_MANAGER account - username: {}, dealerId: {}", 
+                    savedUser.getUserName(), dealer.getDealerId());
 
-            // 3. Tạo response
-            CreateDealerAccountResponse response = new CreateDealerAccountResponse();
-            response.setDealerId(savedDealer.getDealerId());
-            response.setDealerName(savedDealer.getDealerName());
+            // 5. Tạo DealerInfo (bao gồm createdBy và createdDate)
+            DealerInfo dealerInfo = new DealerInfo();
+            dealerInfo.setDealerId(dealer.getDealerId());
+            dealerInfo.setDealerName(dealer.getDealerName());
+            dealerInfo.setPhone(dealer.getPhone());
+            dealerInfo.setAddress(dealer.getAddress());
+            dealerInfo.setCreatedBy(dealer.getCreatedBy()); // ✅ Có createdBy
+            dealerInfo.setCreatedDate(dealer.getCreatedDate()); // ✅ Có createdDate
+
+            // 6. Tạo response
+            response.setSuccess(true);
+            response.setMessage("Dealer manager account created successfully");
             response.setUserId(savedUser.getUserId());
             response.setUsername(savedUser.getUserName());
             response.setRole(savedUser.getRole());
-            response.setMessage("Dealer account created successfully");
+            response.setUserCreatedDate(savedUser.getCreatedDate()); // ✅ Có userCreatedDate
+            response.setDealerInfo(dealerInfo);
 
+            return response;
+
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error: {}", e.getMessage());
+            response.setSuccess(false);
+            response.setMessage(e.getMessage());
             return response;
 
         } catch (Exception e) {
             log.error("Failed to create dealer account", e);
-            throw new RuntimeException("Failed to create dealer account: " + e.getMessage());
+            response.setSuccess(false);
+            response.setMessage("Failed to create dealer account: " + e.getMessage());
+            return response;
         }
-    }
-
-    private boolean isValidDealerRole(String role) {
-        return "ROLE_DEALER_STAFF".equals(role) || "ROLE_DEALER_MANAGER".equals(role);
     }
 }

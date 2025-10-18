@@ -7,6 +7,8 @@ public interface DealerService {
 
     List<Dealer> getAllDealers();
 
+    List<Dealer> getInactiveDealers();
+
     Dealer getDealerById(Long id);
 
     Dealer getDealerByName(String name);
@@ -16,6 +18,8 @@ public interface DealerService {
     Dealer updateDealer(Dealer dealer);
 
     void deleteDealer(Long id);
+
+    void activateDealer(Long id);
 }
 
 

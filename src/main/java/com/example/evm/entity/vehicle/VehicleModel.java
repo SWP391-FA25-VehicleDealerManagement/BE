@@ -18,6 +18,7 @@ public class VehicleModel {
 
     private String name;
     private String description;
+    private String status;
 
     // One Model has many Variants
     @OneToMany(mappedBy = "model", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

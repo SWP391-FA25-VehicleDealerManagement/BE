@@ -33,4 +33,7 @@ public class Vehicle {
     @JoinColumn(name = "dealer_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "vehicles"})
     private Dealer dealer;
+
+    @Column(nullable = false)
+    private String status = "ACTIVE"; // ✅ mặc định ACTIVE
 }

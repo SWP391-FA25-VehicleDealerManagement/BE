@@ -1,5 +1,6 @@
 package com.example.evm.controller.inventory;
 
+import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.dto.inventory.InventoryResponse;
 import com.example.evm.entity.inventory.InventoryStock;
 import com.example.evm.service.inventory.InventoryService;
@@ -18,48 +19,59 @@ public class InventoryController {
 
     private final InventoryService inventoryService;
 
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EVM_STAFF', 'ROLE_DEALER_STAFF', 'ROLE_DEALER_MANAGER')")
+    // 🔹 GET all
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     @GetMapping
-    public ResponseEntity<List<InventoryResponse>> getAll() {
-        return ResponseEntity.ok(inventoryService.getAll());
+    public ResponseEntity<ApiResponse<List<InventoryResponse>>> getAll() {
+        List<InventoryResponse> inventoryList = inventoryService.getAll();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Inventory list retrieved successfully", inventoryList));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EVM_STAFF')")
+    // 🔹 ADD Stock
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @PostMapping
-    public ResponseEntity<String> addStock(@RequestBody InventoryStock stock) {
+    public ResponseEntity<ApiResponse<Void>> addStock(@RequestBody InventoryStock stock) {
         inventoryService.addStock(stock);
-        return ResponseEntity.ok("Inventory added successfully");
+        return ResponseEntity.ok(new ApiResponse<>(true, "Inventory added successfully", null));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EVM_STAFF')")
+    // 🔹 UPDATE Stock
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateStock(@PathVariable Integer id, @RequestBody InventoryStock stock) {
+    public ResponseEntity<ApiResponse<Void>> updateStock(@PathVariable Integer id, @RequestBody InventoryStock stock) {
         inventoryService.updateStock(id, stock);
-        return ResponseEntity.ok("Inventory updated successfully");
+        return ResponseEntity.ok(new ApiResponse<>(true, "Inventory updated successfully", null));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EVM_STAFF')")
+    // 🔹 DELETE Stock
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteStock(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponse<Void>> deleteStock(@PathVariable Integer id) {
         inventoryService.deleteStock(id);
-        return ResponseEntity.ok("Inventory deleted successfully");
+        return ResponseEntity.ok(new ApiResponse<>(true, "Inventory deleted successfully", null));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EVM_STAFF')")
+    // 🔹 ALLOCATE Vehicle
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @PostMapping("/allocate")
-    public ResponseEntity<Map<String, String>> allocateVehicle(@RequestBody Map<String, Integer> request) {
+    public ResponseEntity<ApiResponse<String>> allocateVehicle(@RequestBody Map<String, Integer> request) {
+        // Chú ý: request.get("vehicleId") trả về Integer. Nếu service cần String, cần chuyển đổi.
+        // Giả sử service chấp nhận Integer/Long/String và bạn đang gửi đúng kiểu dữ liệu.
         String message = inventoryService.allocateVehicleToDealer(
                 request.get("vehicleId"), request.get("dealerId"), request.get("quantity")
         );
-        return ResponseEntity.ok(Map.of("message", message));
+        // Trả về message dưới dạng data
+        return ResponseEntity.ok(new ApiResponse<>(true, message, message));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EVM_STAFF')")
+    // 🔹 RECALL Vehicle
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @PostMapping("/recall")
-    public ResponseEntity<Map<String, String>> recallVehicle(@RequestBody Map<String, Integer> request) {
+    public ResponseEntity<ApiResponse<String>> recallVehicle(@RequestBody Map<String, Integer> request) {
         String message = inventoryService.recallVehicleFromDealer(
                 request.get("vehicleId"), request.get("dealerId"), request.get("quantity")
         );
-        return ResponseEntity.ok(Map.of("message", message));
+        // Trả về message dưới dạng data
+        return ResponseEntity.ok(new ApiResponse<>(true, message, message));
     }
 }

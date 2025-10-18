@@ -25,26 +25,37 @@ public class DealerAccountController {
     }
 
     /**
-     * API tạo dealer account (chỉ admin mới có thể gọi)
-     * Tạo đồng thời cả Dealer entity và User account cho dealer
+     * API tạo tài khoản DEALER_MANAGER cho dealer
+     * ✅ ADMIN và EVM_STAFF có thể gọi
+     * ✅ 1 dealer chỉ có thể có 1 DEALER_MANAGER
+     * ✅ Response bao gồm createdBy, createdDate, userCreatedDate
      */
     @PostMapping("/create-dealer-account")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')") // ✅ Thêm EVM_STAFF
     public ResponseEntity<ApiResponse<CreateDealerAccountResponse>> createDealerAccount(
             @Valid @RequestBody CreateDealerAccountRequest request) {
 
         try {
             CreateDealerAccountResponse response = dealerAccountService.createDealerAccount(request);
 
-            ApiResponse<CreateDealerAccountResponse> apiResponse = new ApiResponse<CreateDealerAccountResponse>();
+            // Check if the operation was successful
+            if (!response.isSuccess()) {
+                ApiResponse<CreateDealerAccountResponse> errorResponse = new ApiResponse<>();
+                errorResponse.setSuccess(false);
+                errorResponse.setMessage(response.getMessage());
+                errorResponse.setData(response);
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            ApiResponse<CreateDealerAccountResponse> apiResponse = new ApiResponse<>();
             apiResponse.setSuccess(true);
-            apiResponse.setMessage("Dealer account created successfully");
+            apiResponse.setMessage(response.getMessage());
             apiResponse.setData(response);
 
             return ResponseEntity.ok(apiResponse);
 
         } catch (IllegalArgumentException e) {
-            ApiResponse<CreateDealerAccountResponse> errorResponse = new ApiResponse<CreateDealerAccountResponse>();
+            ApiResponse<CreateDealerAccountResponse> errorResponse = new ApiResponse<>();
             errorResponse.setSuccess(false);
             errorResponse.setMessage(e.getMessage());
             errorResponse.setData(null);
@@ -52,7 +63,7 @@ public class DealerAccountController {
             return ResponseEntity.badRequest().body(errorResponse);
 
         } catch (Exception e) {
-            ApiResponse<CreateDealerAccountResponse> errorResponse = new ApiResponse<CreateDealerAccountResponse>();
+            ApiResponse<CreateDealerAccountResponse> errorResponse = new ApiResponse<>();
             errorResponse.setSuccess(false);
             errorResponse.setMessage("Failed to create dealer account: " + e.getMessage());
             errorResponse.setData(null);
@@ -63,20 +74,20 @@ public class DealerAccountController {
 
     /**
      * API tạo dealer staff account (chỉ admin và EVM staff có thể gọi)
-     * Tạo user account với role ROLE_DEALER_STAFF cho dealer đã tồn tại
+     * Tạo user account với role DEALER_STAFF cho dealer đã tồn tại
      */
     @PostMapping("/create-dealer-staff")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<CreateUserAccountResponse>> createDealerStaff(
             @Valid @RequestBody CreateUserAccountRequest request) {
 
         // Force role to be DEALER_STAFF
-        request.setRole("ROLE_DEALER_STAFF");
+        request.setRole("DEALER_STAFF");
 
         try {
             CreateUserAccountResponse response = userAccountService.createUserAccount(request);
 
-            ApiResponse<CreateUserAccountResponse> apiResponse = new ApiResponse<CreateUserAccountResponse>();
+            ApiResponse<CreateUserAccountResponse> apiResponse = new ApiResponse<>();
             apiResponse.setSuccess(true);
             apiResponse.setMessage("Dealer staff account created successfully");
             apiResponse.setData(response);
@@ -84,7 +95,7 @@ public class DealerAccountController {
             return ResponseEntity.ok(apiResponse);
 
         } catch (IllegalArgumentException e) {
-            ApiResponse<CreateUserAccountResponse> errorResponse = new ApiResponse<CreateUserAccountResponse>();
+            ApiResponse<CreateUserAccountResponse> errorResponse = new ApiResponse<>();
             errorResponse.setSuccess(false);
             errorResponse.setMessage(e.getMessage());
             errorResponse.setData(null);
@@ -92,7 +103,7 @@ public class DealerAccountController {
             return ResponseEntity.badRequest().body(errorResponse);
 
         } catch (Exception e) {
-            ApiResponse<CreateUserAccountResponse> errorResponse = new ApiResponse<CreateUserAccountResponse>();
+            ApiResponse<CreateUserAccountResponse> errorResponse = new ApiResponse<>();
             errorResponse.setSuccess(false);
             errorResponse.setMessage("Failed to create dealer staff account: " + e.getMessage());
             errorResponse.setData(null);
@@ -102,22 +113,22 @@ public class DealerAccountController {
     }
 
     /**
-     * API tạo EVM staff account (chỉ admin có thể gọi)
-     * Tạo user account với role ROLE_EVM_STAFF
+     * API tạo EVM staff account (chỉ admin và EVM staff có thể gọi)
+     * Tạo user account với role EVM_STAFF
      */
     @PostMapping("/create-evm-staff")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')") // ✅ Cho phép EVM_STAFF tạo
     public ResponseEntity<ApiResponse<CreateUserAccountResponse>> createEvmStaff(
             @Valid @RequestBody CreateUserAccountRequest request) {
 
         // Force role to be EVM_STAFF and no dealer
-        request.setRole("ROLE_EVM_STAFF");
+        request.setRole("EVM_STAFF");
         request.setDealerId(null);
 
         try {
             CreateUserAccountResponse response = userAccountService.createUserAccount(request);
 
-            ApiResponse<CreateUserAccountResponse> apiResponse = new ApiResponse<CreateUserAccountResponse>();
+            ApiResponse<CreateUserAccountResponse> apiResponse = new ApiResponse<>();
             apiResponse.setSuccess(true);
             apiResponse.setMessage("EVM staff account created successfully");
             apiResponse.setData(response);
@@ -125,7 +136,7 @@ public class DealerAccountController {
             return ResponseEntity.ok(apiResponse);
 
         } catch (IllegalArgumentException e) {
-            ApiResponse<CreateUserAccountResponse> errorResponse = new ApiResponse<CreateUserAccountResponse>();
+            ApiResponse<CreateUserAccountResponse> errorResponse = new ApiResponse<>();
             errorResponse.setSuccess(false);
             errorResponse.setMessage(e.getMessage());
             errorResponse.setData(null);
@@ -133,7 +144,7 @@ public class DealerAccountController {
             return ResponseEntity.badRequest().body(errorResponse);
 
         } catch (Exception e) {
-            ApiResponse<CreateUserAccountResponse> errorResponse = new ApiResponse<CreateUserAccountResponse>();
+            ApiResponse<CreateUserAccountResponse> errorResponse = new ApiResponse<>();
             errorResponse.setSuccess(false);
             errorResponse.setMessage("Failed to create EVM staff account: " + e.getMessage());
             errorResponse.setData(null);
