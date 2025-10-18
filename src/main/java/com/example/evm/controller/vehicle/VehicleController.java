@@ -31,7 +31,7 @@ public class VehicleController {
     private final FileStorageService fileStorageService;
 
     // 🟢 GET all active vehicles
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
     @GetMapping
     public ResponseEntity<ApiResponse<List<VehicleResponse>>> getAllActiveVehicles() {
         List<VehicleResponse> vehicles = vehicleService.getAllVehicles();
@@ -39,7 +39,7 @@ public class VehicleController {
     }
 
     // 🔴 GET all inactive vehicles
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
     @GetMapping("/inactive")
     public ResponseEntity<ApiResponse<List<VehicleResponse>>> getAllInactiveVehicles() {
         List<VehicleResponse> vehicles = vehicleService.getAllInactiveVehicles();
