@@ -14,4 +14,5 @@ public interface CustomerService {
     Customer updateCustomer(Customer customer);
 
     void deleteCustomer(Long id);
+     List<Customer> getCustomersByDealer(Long dealerId);
 }
