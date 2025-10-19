@@ -1,55 +1,78 @@
-package com.example.evm.service.customer;
+package com.example.evm.controller.customer;
 
+import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.entity.customer.Customer;
-import com.example.evm.repository.customer.CustomerRepository;
-import com.example.evm.repository.dealer.DealerRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import com.example.evm.service.customer.CustomerService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
-@Service
-public class CustomerServiceImpl implements CustomerService {
+@RestController
+@RequestMapping("/api/customers")
+@RequiredArgsConstructor
+public class CustomerController {
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    private final CustomerService customerService;
 
-    @Autowired
-    private DealerRepository dealerRepository;
-
-    @Override
-    public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
+    @GetMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<List<Customer>>> getAllCustomers() {
+        List<Customer> customers = customerService.getAllCustomers();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Customers retrieved successfully", customers));
+    }
+   @GetMapping("/dealer/{dealerId}")
+     @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
+     public ResponseEntity<ApiResponse<List<Customer>>> getCustomerByDealer(@PathVariable Long dealerId){
+                List<Customer> customers = customerService.getCustomersByDealer(dealerId);
+                if (customers.isEmpty()) {
+                return ResponseEntity.ok(new ApiResponse<>(true, "No customers found for this dealer", customers));
+    }
+                return ResponseEntity.ok(new ApiResponse<>(true,"Customers retrived successfully",customers));
+              
+     }
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<Customer>> getCustomerById(@PathVariable Long id) {
+        Customer customer = customerService.getCustomerById(id);
+        return customer != null 
+                ? ResponseEntity.ok(new ApiResponse<>(true, "Customer retrieved successfully", customer))
+                : ResponseEntity.ok(new ApiResponse<>(false, "Customer not found", null));
     }
 
-    @Override
-    public Customer getCustomerById(Long id) {
-        Optional<Customer> customer = customerRepository.findById(id);
-        return customer.orElse(null);
-    }
-
-    @Override
-    public Customer createCustomer(Customer customer) {
-        if (customer.getDealerId() != null && !dealerRepository.existsById(customer.getDealerId())) {
-            throw new IllegalArgumentException("Invalid dealerId: " + customer.getDealerId());
+    @PostMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<Customer>> createCustomer(@RequestBody Customer customer) {
+        try {
+            Customer createdCustomer = customerService.createCustomer(customer);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Customer created successfully", createdCustomer));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
         }
-        return customerRepository.save(customer);
     }
 
-    @Override
-    public Customer updateCustomer(Customer customer) {
-        if (customer.getCustomerId() == null || !customerRepository.existsById(customer.getCustomerId())) {
-            throw new IllegalArgumentException("Customer not found");
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<Customer>> updateCustomer(@PathVariable Long id, @RequestBody Customer customer) {
+        try {
+            customer.setCustomerId(id);
+            Customer updatedCustomer = customerService.updateCustomer(customer);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Customer updated successfully", updatedCustomer));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
         }
-        if (customer.getDealerId() != null && !dealerRepository.existsById(customer.getDealerId())) {
-            throw new IllegalArgumentException("Invalid dealerId: " + customer.getDealerId());
-        }
-        return customerRepository.save(customer);
     }
 
-    @Override
-    public void deleteCustomer(Long id) {
-        customerRepository.deleteById(id);
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable Long id) {
+        try {
+            customerService.deleteCustomer(id);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Customer deleted successfully", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
+        }
     }
 }
