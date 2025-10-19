@@ -23,7 +23,16 @@ public class CustomerController {
         List<Customer> customers = customerService.getAllCustomers();
         return ResponseEntity.ok(new ApiResponse<>(true, "Customers retrieved successfully", customers));
     }
-
+   @GetMapping("/dealer/{dealerId}")
+     @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
+     public ResponseEntity<ApiResponse<List<Customer>>> getCustomerByDealer(@PathVariable Long dealerId){
+                List<Customer> customers = customerService.getCustomersByDealer(dealerId);
+                if (customers.isEmpty()) {
+                return ResponseEntity.ok(new ApiResponse<>(true, "No customers found for this dealer", customers));
+    }
+                return ResponseEntity.ok(new ApiResponse<>(true,"Customers retrived successfully",customers));
+              
+     }
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Customer>> getCustomerById(@PathVariable Long id) {
