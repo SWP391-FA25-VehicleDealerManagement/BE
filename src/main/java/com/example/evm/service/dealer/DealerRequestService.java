@@ -4,10 +4,15 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
 
+import com.example.evm.dto.dealer.DealerRequestDto;
+import com.example.evm.dto.dealer.RequestDetailDto;
+import com.example.evm.dto.dealer.DealerRequestResponse;
+import com.example.evm.dto.dealer.RequestDetailResponse;
 import com.example.evm.entity.dealer.DealerRequest;
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.user.User;
@@ -64,8 +69,69 @@ public class DealerRequestService {
         return request.getRequestDetails();
     }
 
+    // ✅ Method mới: Tạo request từ DTO (chỉ cần IDs)
+    @Transactional
+    public DealerRequestResponse createRequestFromDto(DealerRequestDto dto) {
+        // 1. Validate và lookup entities chỉ bằng ID
+        Dealer dealer = dealerRepository.findById(dto.getDealerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Dealer not found with ID: " + dto.getDealerId()));
+        
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + dto.getUserId()));
+
+        // 2. Tạo DealerRequest entity
+        DealerRequest request = new DealerRequest();
+        request.setDealer(dealer);
+        request.setCreatedBy(user);
+        request.setRequestDate(LocalDateTime.now());
+        request.setRequiredDate(dto.getRequiredDate());
+        request.setPriority(dto.getPriority());
+        request.setNotes(dto.getNotes());
+        request.setStatus("PENDING");
+
+        // 3. Process request details
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        
+        for (RequestDetailDto detailDto : dto.getRequestDetails()) {
+            // Lookup variant chỉ bằng ID
+            VehicleVariant variant = vehicleVariantRepository.findById(detailDto.getVariantId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Vehicle variant not found with ID: " + detailDto.getVariantId()));
+            
+            // Tạo detail entity
+            DealerRequestDetail detail = new DealerRequestDetail();
+            detail.setVehicleVariant(variant);
+            detail.setQuantity(detailDto.getQuantity());
+            detail.setUnitPrice(detailDto.getUnitPrice());
+            detail.setNotes(detailDto.getNotes());
+            detail.setDealerRequest(request);
+            
+            request.getRequestDetails().add(detail);
+            
+            // Calculate line total
+            BigDecimal lineTotal = detailDto.getUnitPrice()
+                    .multiply(BigDecimal.valueOf(detailDto.getQuantity()));
+            totalAmount = totalAmount.add(lineTotal);
+        }
+
+        // 4. Set total amount
+        request.setTotalAmount(totalAmount);
+        
+        // 5. Save
+        DealerRequest savedRequest = dealerRequestRepository.save(request);
+        
+        log.info("Dealer request created: ID {} - Dealer: {} - Total: {}", 
+                savedRequest.getRequestId(), dealer.getDealerName(), totalAmount);
+        
+        // 6. Convert to response DTO
+        return convertToResponseDto(savedRequest);
+    }
+
+    // ✅ Method cũ: Giữ lại để backward compatible
     @Transactional
     public DealerRequest createRequest(DealerRequest request) {
+        // ✅ Backend tự tạo IDs - Force null
+        request.setRequestId(null);
+        
         // Validate entities
         Dealer dealer = dealerRepository.findById(request.getDealer().getDealerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Dealer not found"));
@@ -81,6 +147,9 @@ public class DealerRequestService {
         BigDecimal totalAmount = BigDecimal.ZERO;
         
         for (DealerRequestDetail detail : request.getRequestDetails()) {
+            // ✅ Backend tự tạo detail IDs - Force null
+            detail.setRequestDetailId(null);
+            
             VehicleVariant variant = vehicleVariantRepository.findById(detail.getVehicleVariant().getVariantId())
                     .orElseThrow(() -> new ResourceNotFoundException("Vehicle variant not found"));
             
@@ -101,6 +170,44 @@ public class DealerRequestService {
                 savedRequest.getRequestId(), dealer.getDealerName(), totalAmount);
         
         return savedRequest;
+    }
+    
+    // ✅ Helper: Convert entity to response DTO (chỉ thông tin cần thiết)
+    private DealerRequestResponse convertToResponseDto(DealerRequest request) {
+        DealerRequestResponse response = new DealerRequestResponse();
+        
+        response.setRequestId(request.getRequestId());
+        
+        // Chỉ lấy thông tin tối thiểu
+        response.setDealerName(request.getDealer().getDealerName());
+        response.setUserFullName(request.getCreatedBy().getFullName());
+        response.setUserRole(request.getCreatedBy().getRole());
+        
+        response.setRequestDate(request.getRequestDate());
+        response.setRequiredDate(request.getRequiredDate());
+        response.setStatus(request.getStatus());
+        response.setPriority(request.getPriority());
+        response.setNotes(request.getNotes());
+        response.setTotalAmount(request.getTotalAmount());
+        
+        // Request details - chỉ thông tin cần thiết
+        List<RequestDetailResponse> detailDtos = request.getRequestDetails().stream()
+                .map(detail -> {
+                    RequestDetailResponse detailDto = new RequestDetailResponse();
+                    detailDto.setRequestDetailId(detail.getRequestDetailId());
+                    detailDto.setVariantName(detail.getVehicleVariant().getName());
+                    detailDto.setModelName(detail.getVehicleVariant().getModel() != null ? 
+                            detail.getVehicleVariant().getModel().getName() : null);
+                    detailDto.setQuantity(detail.getQuantity());
+                    detailDto.setUnitPrice(detail.getUnitPrice());
+                    detailDto.setLineTotal(detail.getLineTotal());
+                    return detailDto;
+                })
+                .collect(Collectors.toList());
+        
+        response.setRequestDetails(detailDtos);
+        
+        return response;
     }
 
     @Transactional

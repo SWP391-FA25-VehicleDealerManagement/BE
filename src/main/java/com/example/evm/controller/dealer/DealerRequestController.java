@@ -1,7 +1,10 @@
 package com.example.evm.controller.dealer;
 
 import com.example.evm.dto.auth.ApiResponse;
+import com.example.evm.dto.dealer.DealerRequestDto;
+import com.example.evm.dto.dealer.DealerRequestResponse;
 import com.example.evm.entity.dealer.DealerRequest;
+import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.service.dealer.DealerRequestService;
 
 import org.springframework.http.ResponseEntity;
@@ -30,9 +33,33 @@ public class DealerRequestController {
 
     // ==================== CREATE OPERATIONS ====================
     
+    /**
+     * ✅ Tạo request - chỉ cần truyền IDs
+     * Frontend: dealerId, userId, variantId, quantity, unitPrice
+     * Backend: Tự lookup và trả về fullName, role, dealerName
+     */
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<DealerRequest>> createRequest(
+    public ResponseEntity<ApiResponse<DealerRequestResponse>> createRequest(
+            @Valid @RequestBody DealerRequestDto dto) {
+        try {
+            DealerRequestResponse response = dealerRequestService.createRequestFromDto(dto);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Request created successfully", response));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
+        } catch (Exception e) {
+            log.error("Error creating dealer request", e);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Failed to create request", null));
+        }
+    }
+    
+    /**
+     * ⚠️ API cũ: Deprecated - Dùng cho backward compatibility
+     */
+    @PostMapping("/full")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @Deprecated
+    public ResponseEntity<ApiResponse<DealerRequest>> createRequestFull(
             @Valid @RequestBody DealerRequest request) {
         try {
             DealerRequest createdRequest = dealerRequestService.createRequest(request);
