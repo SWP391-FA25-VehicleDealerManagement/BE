@@ -38,7 +38,7 @@ private Long paymentId;
 @Column(name = "order_id")
 private Long orderId;
 
-@Column(name = "amount" , precision = 10, scale = 2)
+@Column(name = "amount" , precision = 18, scale = 2)
 private BigDecimal amount;
 
 @Column(name = "status", length = 255)

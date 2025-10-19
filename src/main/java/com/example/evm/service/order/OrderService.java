@@ -69,6 +69,9 @@ public class OrderService {
 
     @Transactional
     public Order createOrder(Order order) {
+        // ✅ Backend tự tạo IDs - Force null
+        order.setOrderId(null);
+        
         // Validate entities
         Customer customer = customerRepository.findById(order.getCustomer().getCustomerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
@@ -87,6 +90,9 @@ public class OrderService {
         // Process order details and calculate total
         double totalPrice = 0.0;
         for (OrderDetail detail : order.getOrderDetails()) {
+            // ✅ Backend tự tạo detail IDs - Force null
+            detail.setOrderDetailId(null);
+            
             Vehicle vehicle = vehicleRepository.findById(detail.getVehicle().getVehicleId())
                     .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found"));
             

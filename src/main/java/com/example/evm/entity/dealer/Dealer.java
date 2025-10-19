@@ -11,7 +11,9 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.Id; // ✅ Không dùng @GeneratedValue
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id; 
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
@@ -26,11 +28,13 @@ import lombok.Setter;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class Dealer {
 
-    @Id // ✅ Không có @GeneratedValue - tự quản lý ID
+    @Id 
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "dealer_id")
     private Long dealerId;
 
     @Column(name = "dealerName", nullable = false, length = 255)
+    
     @NotBlank @Size(max = 255)
     private String dealerName;
 

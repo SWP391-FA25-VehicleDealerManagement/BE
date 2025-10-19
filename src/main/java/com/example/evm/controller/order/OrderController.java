@@ -3,6 +3,7 @@ package com.example.evm.controller.order;
 import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.entity.order.Order;
 import com.example.evm.entity.order.OrderDetail;
+import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.service.order.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -82,8 +83,31 @@ public class OrderController {
     @PostMapping("/create")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Order>> createOrder(@RequestBody Order order) {
-        Order createdOrder = orderService.createOrder(order);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Order created successfully", createdOrder));
+        try {
+            // ✅ Backend validates và tự generate IDs
+            Order createdOrder = orderService.createOrder(order);
+            log.info("Order created successfully with ID: {}", createdOrder.getOrderId());
+            
+            return ResponseEntity.ok(new ApiResponse<>(
+                    true, 
+                    "Order created successfully", 
+                    createdOrder
+            ));
+        } catch (ResourceNotFoundException e) {
+            log.error("Resource not found when creating order: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ApiResponse<>(
+                    false, 
+                    "Failed to create order: " + e.getMessage(), 
+                    null
+            ));
+        } catch (Exception e) {
+            log.error("Error creating order", e);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(
+                    false, 
+                    "Failed to create order: " + e.getMessage(), 
+                    null
+            ));
+        }
     }
 
     @PutMapping("/{id}/status")
