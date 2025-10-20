@@ -1,6 +1,7 @@
 package com.example.evm.entity.vehicle;
 
 import com.example.evm.entity.dealer.Dealer;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -29,9 +30,10 @@ public class Vehicle {
     private VehicleVariant variant;
 
     // Vehicle belongs to one Dealer
+    // ✅ Dùng @JsonIgnore để tránh trùng lặp dealer trong Order response
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "vehicles"})
+    @JsonIgnore
     private Dealer dealer;
 
     @Column(nullable = false)

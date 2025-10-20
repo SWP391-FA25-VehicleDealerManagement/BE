@@ -1,10 +1,12 @@
 package com.example.evm.controller.order;
 
 import com.example.evm.dto.auth.ApiResponse;
+import com.example.evm.dto.order.OrderRequestDto;
 import com.example.evm.entity.order.Order;
 import com.example.evm.entity.order.OrderDetail;
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.service.order.OrderService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -80,8 +82,61 @@ public class OrderController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Order details retrieved successfully", details));
     }
 
+    /**
+     * ✅ Tạo order mới - Chỉ cần truyền IDs, backend sẽ mock hết thông tin
+     * Request body:
+     * {
+     *   "customerId": 1,
+     *   "userId": 1,
+     *   "dealerId": 1,
+     *   "paymentMethod": "CASH",
+     *   "orderDetails": [
+     *     {
+     *       "vehicleId": 1,
+     *       "promotionId": 1,  // optional
+     *       "quantity": 1,
+     *       "price": 500000000
+     *     }
+     *   ]
+     * }
+     */
+    @PostMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<Order>> createOrderFromDto(@Valid @RequestBody OrderRequestDto dto) {
+        try {
+            // ✅ Backend tự lookup entities từ IDs và trả về đầy đủ thông tin
+            Order createdOrder = orderService.createOrderFromDto(dto);
+            log.info("Order created successfully with ID: {}", createdOrder.getOrderId());
+            
+            return ResponseEntity.ok(new ApiResponse<>(
+                    true, 
+                    "Order created successfully", 
+                    createdOrder
+            ));
+        } catch (ResourceNotFoundException e) {
+            log.error("Resource not found when creating order: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ApiResponse<>(
+                    false, 
+                    "Failed to create order: " + e.getMessage(), 
+                    null
+            ));
+        } catch (Exception e) {
+            log.error("Error creating order", e);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(
+                    false, 
+                    "Failed to create order: " + e.getMessage(), 
+                    null
+            ));
+        }
+    }
+
+    /**
+     * ⚠️ API cũ - Deprecated
+     * Dùng POST /api/orders thay thế
+     */
     @PostMapping("/create")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @Deprecated
     public ResponseEntity<ApiResponse<Order>> createOrder(@RequestBody Order order) {
         try {
             // ✅ Backend validates và tự generate IDs

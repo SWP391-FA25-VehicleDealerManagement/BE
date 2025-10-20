@@ -1,6 +1,8 @@
 package com.example.evm.service.order;
 
 
+import com.example.evm.dto.order.OrderRequestDto;
+import com.example.evm.dto.order.OrderDetailRequestDto;
 import com.example.evm.entity.order.Order;
 import com.example.evm.entity.order.OrderDetail;
 import com.example.evm.entity.customer.Customer;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -67,7 +70,77 @@ public class OrderService {
         return orderDetailRepository.findByOrderOrderId(orderId);
     }
 
+    /**
+     * ✅ Tạo Order từ DTO - chỉ cần truyền IDs, backend sẽ mock hết thông tin
+     */
     @Transactional
+    public Order createOrderFromDto(OrderRequestDto dto) {
+        // Lookup entities từ IDs
+        Customer customer = customerRepository.findById(dto.getCustomerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + dto.getCustomerId()));
+        
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + dto.getUserId()));
+        
+        Dealer dealer = dealerRepository.findById(dto.getDealerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Dealer not found with id: " + dto.getDealerId()));
+
+        // Tạo Order entity
+        Order order = new Order();
+        order.setCustomer(customer);
+        order.setUser(user);
+        order.setDealer(dealer);
+        order.setPaymentMethod(dto.getPaymentMethod());
+        order.setCreatedDate(LocalDateTime.now());
+        order.setStatus("PENDING");
+
+        // Process order details
+        List<OrderDetail> orderDetails = new ArrayList<>();
+        double totalPrice = 0.0;
+        
+        for (OrderDetailRequestDto detailDto : dto.getOrderDetails()) {
+            Vehicle vehicle = vehicleRepository.findById(detailDto.getVehicleId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + detailDto.getVehicleId()));
+            
+            OrderDetail detail = new OrderDetail();
+            detail.setVehicle(vehicle);
+            detail.setQuantity(detailDto.getQuantity());
+            detail.setPrice(detailDto.getPrice());
+            detail.setOrder(order);
+
+            // Apply promotion if exists
+            if (detailDto.getPromotionId() != null) {
+                Promotion promotion = promotionRepository.findById(detailDto.getPromotionId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Promotion not found with id: " + detailDto.getPromotionId()));
+                detail.setPromotion(promotion);
+                
+                // Apply discount
+                if (promotion.getDiscountRate() != null) {
+                    double discountedPrice = detail.getPrice() * (1 - promotion.getDiscountRate() / 100);
+                    detail.setPrice(discountedPrice);
+                }
+            }
+
+            orderDetails.add(detail);
+            totalPrice += detail.getPrice() * detail.getQuantity();
+        }
+
+        order.setOrderDetails(orderDetails);
+        order.setTotalPrice(totalPrice);
+        
+        Order savedOrder = orderRepository.save(order);
+        
+        log.info("Order created from DTO: ID {} - Customer: {} - Total: {}", 
+                savedOrder.getOrderId(), customer.getCustomerName(), totalPrice);
+        
+        return savedOrder;
+    }
+
+    /**
+     * ⚠️ API cũ - Deprecated, dùng createOrderFromDto thay thế
+     */
+    @Transactional
+    @Deprecated
     public Order createOrder(Order order) {
         // ✅ Backend tự tạo IDs - Force null
         order.setOrderId(null);
