@@ -15,4 +15,5 @@ public interface CustomerService {
 
     void deleteCustomer(Long id);
      List<Customer> getCustomersByDealer(Long dealerId);
+        List<Customer> getCustomersByCreatedBy(String createdBy);
 }
