@@ -52,4 +52,12 @@ public class CustomerServiceImpl implements CustomerService {
     public void deleteCustomer(Long id) {
         customerRepository.deleteById(id);
     }
+
+    @Override
+    public List<Customer> getCustomersByDealer(Long dealerId) {
+        if (!dealerRepository.existsById(dealerId)) {
+            throw new IllegalArgumentException("Invalid dealerId: " + dealerId);
+        }
+        return customerRepository.findByDealerId(dealerId);
+    }
 }
