@@ -50,6 +50,11 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+
+                .requestMatchers("/api/vehicles/images/**").permitAll()
+
+                .requestMatchers("/api/variants/images/**").permitAll()
+
                 // Cho phép preflight request
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 

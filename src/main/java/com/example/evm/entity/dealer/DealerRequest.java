@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.example.evm.entity.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -33,10 +34,12 @@ public class DealerRequest {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id", nullable = false)
+    @JsonIgnore  // ✅ Tránh circular reference và lazy loading issues
     private Dealer dealer;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false) // Người tạo yêu cầu
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore  // ✅ Tránh expose password và lazy loading issues
     private User createdBy;
 
     @Column(name = "request_date")
@@ -69,6 +72,7 @@ public class DealerRequest {
 
     // Quan hệ 1-nhiều với chi tiết yêu cầu
     @OneToMany(mappedBy = "dealerRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore  // ✅ Dùng DTO để trả về, tránh lazy loading
     private List<DealerRequestDetail> requestDetails = new ArrayList<>();
 
     @PrePersist

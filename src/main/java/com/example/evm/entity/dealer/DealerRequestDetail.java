@@ -1,6 +1,7 @@
 package com.example.evm.entity.dealer;
 
 import com.example.evm.entity.vehicle.VehicleVariant;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -27,10 +28,12 @@ public class DealerRequestDetail {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "request_id", nullable = false)
+    @JsonIgnore  // ✅ Tránh circular reference
     private DealerRequest dealerRequest;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id", nullable = false)
+    @JsonIgnore  // ✅ Tránh lazy loading issues, dùng DTO để trả về
     private VehicleVariant vehicleVariant;
 
     @Column(name = "quantity")

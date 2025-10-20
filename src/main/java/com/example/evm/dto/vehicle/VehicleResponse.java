@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 @Data
 public class VehicleResponse {
     private Long vehicleId;
+    private Long variantId;
     private String name;
     private String color;
     private String image;
@@ -51,6 +52,7 @@ public class VehicleResponse {
             // --- KẾT THÚC PHẦN SỬA ĐỔI ĐỊNH DẠNG GIÁ ---
 
         if (vehicle.getVariant() != null) {
+            this.variantId = vehicle.getVariant().getVariantId();
             this.variantName = vehicle.getVariant().getName();
             this.variantImage = vehicle.getVariant().getImage();
             if (vehicle.getVariant().getModel() != null) {

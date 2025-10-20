@@ -3,6 +3,7 @@ package com.example.evm.controller.dealer;
 import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.dto.dealer.DealerRequestDto;
 import com.example.evm.dto.dealer.DealerRequestResponse;
+import com.example.evm.dto.dealer.RequestDetailResponse;
 import com.example.evm.entity.dealer.DealerRequest;
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.service.dealer.DealerRequestService;
@@ -22,7 +23,6 @@ import java.util.Map;
 import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDateTime;
 
-import com.example.evm.entity.dealer.DealerRequestDetail;
 
 @RestController
 @RequestMapping("/api/dealer-requests")
@@ -82,83 +82,55 @@ public class DealerRequestController {
     
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<List<DealerRequest>>> getAllRequests() {
-        List<DealerRequest> requests = dealerRequestService.getAllRequests();
-        return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "All dealer requests retrieved successfully", 
-                requests
-        ));
+    public ResponseEntity<ApiResponse<List<DealerRequestResponse>>> getAllRequests() {
+        List<DealerRequestResponse> requests = dealerRequestService.getAllRequests();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Requests retrieved successfully", requests));
     }
 
     @GetMapping("/dealer/{dealerId}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<List<DealerRequest>>> getRequestsByDealer(
+    public ResponseEntity<ApiResponse<List<DealerRequestResponse>>> getRequestsByDealer(
             @PathVariable Long dealerId) {
-        List<DealerRequest> requests = dealerRequestService.getRequestsByDealer(dealerId);
-        return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Dealer requests retrieved successfully", 
-                requests
-        ));
+        List<DealerRequestResponse> requests = dealerRequestService.getRequestsByDealer(dealerId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Requests retrieved successfully", requests));
     }
 
     @GetMapping("/user/{userId}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<List<DealerRequest>>> getRequestsByUser(
+    public ResponseEntity<ApiResponse<List<DealerRequestResponse>>> getRequestsByUser(
             @PathVariable Long userId) {
-        List<DealerRequest> requests = dealerRequestService.getRequestsByUser(userId);
-        return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "User requests retrieved successfully", 
-                requests
-        ));
+        List<DealerRequestResponse> requests = dealerRequestService.getRequestsByUser(userId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Requests retrieved successfully", requests));
     }
 
     @GetMapping("/status/{status}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<List<DealerRequest>>> getRequestsByStatus(
+    public ResponseEntity<ApiResponse<List<DealerRequestResponse>>> getRequestsByStatus(
             @PathVariable String status) {
-        List<DealerRequest> requests = dealerRequestService.getRequestsByStatus(status);
-        return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Requests by status retrieved successfully", 
-                requests
-        ));
+        List<DealerRequestResponse> requests = dealerRequestService.getRequestsByStatus(status);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Requests retrieved successfully", requests));
     }
 
     @GetMapping("/pending")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<List<DealerRequest>>> getPendingRequests() {
-        List<DealerRequest> requests = dealerRequestService.getPendingRequests();
-        return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Pending requests retrieved successfully", 
-                requests
-        ));
+    public ResponseEntity<ApiResponse<List<DealerRequestResponse>>> getPendingRequests() {
+        List<DealerRequestResponse> requests = dealerRequestService.getPendingRequests();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Requests retrieved successfully", requests));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<DealerRequest>> getRequestById(@PathVariable Long id) {
-        DealerRequest request = dealerRequestService.getRequestById(id);
-        return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Dealer request retrieved successfully", 
-                request
-        ));
+    public ResponseEntity<ApiResponse<DealerRequestResponse>> getRequestById(@PathVariable Long id) {
+        DealerRequestResponse request = dealerRequestService.getRequestById(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Request retrieved successfully", request));
     }
 
     @GetMapping("/{id}/details")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<List<DealerRequestDetail>>> getRequestDetails(
+    public ResponseEntity<ApiResponse<List<RequestDetailResponse>>> getRequestDetails(
             @PathVariable Long id) {
-        List<DealerRequestDetail> details = dealerRequestService.getRequestDetails(id);
-        return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Request details retrieved successfully", 
-                details
-        ));
+        List<RequestDetailResponse> details = dealerRequestService.getRequestDetails(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Details retrieved successfully", details));
     }
 
     @GetMapping("/dealer/{dealerId}/date-range")
