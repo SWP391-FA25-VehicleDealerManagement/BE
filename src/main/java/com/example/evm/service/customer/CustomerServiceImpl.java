@@ -87,4 +87,9 @@ public class CustomerServiceImpl implements CustomerService {
     public List<Customer> getCustomersByDealer(Long dealerId) {
         return customerRepository.findByDealerId(dealerId);
     }
+    
+    @Override
+    public List<Customer> getCustomersByCreatedBy(String createdBy){
+        return customerRepository.findByCreateBy(createdBy);
+    }
 }
