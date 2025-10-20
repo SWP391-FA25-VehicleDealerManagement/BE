@@ -3,7 +3,6 @@ package com.example.evm.service.vehicle;
 import com.example.evm.dto.vehicle.VehicleComparisonDTO;
 import com.example.evm.dto.vehicle.VehicleRequest;
 import com.example.evm.dto.vehicle.VehicleResponse;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;

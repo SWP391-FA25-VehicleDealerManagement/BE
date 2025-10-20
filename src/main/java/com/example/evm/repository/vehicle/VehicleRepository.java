@@ -9,24 +9,36 @@ import java.util.List;
 
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
-    // 🔹 Lấy tất cả xe ACTIVE
-    List<Vehicle> findByStatusIgnoreCase(String status);
+    String NOT_SOLD_CONDITION = "v.vehicleId NOT IN (SELECT od.vehicle.vehicleId FROM OrderDetail od)";
+
+    // 🟢 Lấy tất cả xe ACTIVE (ĐANG TỒN KHO)
+    // Active = (Status='IN STOCK') VÀ (Chưa Bán)
+    @Query("SELECT v FROM Vehicle v JOIN v.stock s " +
+           "WHERE s.status IN ('IN STOCK') AND " + NOT_SOLD_CONDITION)
+    List<Vehicle> findAvailableVehicles();
+
+    // 🔴 Lấy tất cả xe INACTIVE (NGỪNG BÁN)
+    // Inactive = (Status KHÔNG phải 'IN STOCK') VÀ (Chưa Bán)
+    @Query("SELECT v FROM Vehicle v JOIN v.stock s " +
+           "WHERE s.status NOT IN ('IN STOCK') AND " + NOT_SOLD_CONDITION)
+    List<Vehicle> findInactiveVehicles();
+
 
     // 🏢 Lấy tất cả xe ACTIVE theo Dealer ID
-    List<Vehicle> findByDealer_DealerIdAndStatusIgnoreCase(Long dealerId, String status);
+    @Query("SELECT v FROM Vehicle v JOIN v.stock s " +
+           "WHERE s.dealer.dealerId = :dealerId AND s.status IN ('IN STOCK') AND " + NOT_SOLD_CONDITION)
+    List<Vehicle> findAvailableVehiclesByDealerId(@Param("dealerId") Long dealerId);
 
-    // 🔹 Hoặc có thể giữ thêm query riêng cho rõ ràng
-    @Query("SELECT v FROM Vehicle v WHERE v.status = 'ACTIVE'")
-    List<Vehicle> findAllActiveVehicles();
 
-    @Query("SELECT v FROM Vehicle v WHERE v.status = 'INACTIVE'")
-    List<Vehicle> findAllInactiveVehicles();
+    // 🔍 Tìm theo tên Model hoặc Variant (Bỏ qua Active/Inactive)
+    @Query("SELECT v FROM Vehicle v JOIN v.stock s JOIN s.variant va JOIN va.model m " +
+           "WHERE (LOWER(va.name) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(m.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " + NOT_SOLD_CONDITION)
+    List<Vehicle> searchAvailableByModelOrVariantName(@Param("name") String name);
 
-    // 🔍 Tìm theo tên (bất kể hoa thường)
-    @Query("SELECT v FROM Vehicle v WHERE LOWER(v.name) LIKE LOWER(CONCAT('%', :name, '%'))")
-    List<Vehicle> searchByName(@Param("name") String name);
 
-    // 🔍 Nếu bạn muốn tìm trong cả ACTIVE vehicles thôi:
-    @Query("SELECT v FROM Vehicle v WHERE v.status = 'ACTIVE' AND LOWER(v.name) LIKE LOWER(CONCAT('%', :name, '%'))")
-    List<Vehicle> searchActiveByName(@Param("name") String name);
+    // 🔍 Tìm theo tên VÀ chỉ lấy xe ACTIVE (Tồn kho)
+    @Query("SELECT v FROM Vehicle v JOIN v.stock s JOIN s.variant va JOIN va.model m " +
+           "WHERE s.status IN ('IN STOCK') AND " + 
+           "(LOWER(va.name) LIKE LOWER(CONCAT('%', :name, '%')) OR LOWER(m.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " + NOT_SOLD_CONDITION)
+    List<Vehicle> searchActiveByModelOrVariantName(@Param("name") String name);
 }

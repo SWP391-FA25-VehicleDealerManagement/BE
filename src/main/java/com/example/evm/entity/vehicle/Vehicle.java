@@ -1,14 +1,15 @@
 package com.example.evm.entity.vehicle;
 
-import com.example.evm.entity.dealer.Dealer;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.example.evm.entity.inventory.InventoryStock;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "Vehicle")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Data
+@NoArgsConstructor
 public class Vehicle {
 
     @Id
@@ -16,26 +17,19 @@ public class Vehicle {
     @Column(name = "vehicle_id")
     private Long vehicleId;
 
-    @Column(nullable = false)
-    private String name;
-    private String color;
-    private String image;
-    private Double price;
-    private Integer stock;
+    @Column(name = "vin_number", unique = true, nullable = false, length = 100)
+    private String vinNumber;
 
-    // Vehicle belongs to one Variant
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "variant_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "vehicles"})
-    private VehicleVariant variant;
+    @JoinColumn(name = "stock_id", nullable = false)
+    private InventoryStock stock;
 
-    // Vehicle belongs to one Dealer
-    // ✅ Dùng @JsonIgnore để tránh trùng lặp dealer trong Order response
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "dealer_id")
-    @JsonIgnore
-    private Dealer dealer;
+    @Column(name = "license_plate", unique = true, length = 20)
+    private String licensePlate;
 
-    @Column(nullable = false)
-    private String status = "ACTIVE"; // ✅ mặc định ACTIVE
+    @Column(name = "manufacture_date")
+    private LocalDate manufactureDate;
+
+    @Column(name = "warranty_expiry_date")
+    private LocalDate warrantyExpiryDate;
 }

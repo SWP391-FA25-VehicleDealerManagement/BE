@@ -1,9 +1,11 @@
 package com.example.evm.dto.vehicle;
 
 import lombok.Data;
+import java.time.LocalDate;
 
 @Data
 public class VehicleRequest {
+    
     private String name;
     private String color;
     private String image;
@@ -12,8 +14,14 @@ public class VehicleRequest {
     private Long dealerId;
     private Long variantId;
     
-    // Additional fields for compatibility
     private String vehicleName;
     private String vehicleType;
     private String description;
+    
+    private Long stockId; 
+    
+    private String vinNumber;
+    private String licensePlate;
+    private LocalDate manufactureDate;
+    private LocalDate warrantyExpiryDate;
 }

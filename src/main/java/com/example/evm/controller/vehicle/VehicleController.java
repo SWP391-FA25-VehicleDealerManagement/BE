@@ -65,7 +65,7 @@ public class VehicleController {
     @GetMapping("/images/{filename:.+}")
     public ResponseEntity<Resource> getImage(@PathVariable String filename) {
         Resource file = fileStorageService.load(filename);
-        String contentType = "application/octet-stream"; // Loại file mặc định
+        String contentType = "application/octet-stream";
         try {
              // Cố gắng tự động xác định ContentType từ file
              contentType = Files.probeContentType(file.getFile().toPath());
@@ -95,23 +95,21 @@ public class VehicleController {
     }
 
     // ➕ ADD new vehicle
-    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    @PostMapping 
     @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<VehicleResponse>> addVehicle(
-            @RequestPart("vehicle") VehicleRequest request,
-            @RequestPart("image") MultipartFile file) {
-        VehicleResponse created = vehicleService.addVehicle(request, file);
+            @RequestBody VehicleRequest request) {
+        VehicleResponse created = vehicleService.addVehicle(request, null); 
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle added successfully", created));
     }
 
     // 🔄 UPDATE existing vehicle
-    @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    @PutMapping(value = "/{id}")
     @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<VehicleResponse>> updateVehicle(
             @PathVariable Long id,
-            @RequestPart("vehicle") VehicleRequest request,
-            @RequestPart(value = "image", required = false) MultipartFile file) { // file is optional on update
-        VehicleResponse updated = vehicleService.updateVehicle(id, request, file);
+            @RequestBody VehicleRequest request) { 
+        VehicleResponse updated = vehicleService.updateVehicle(id, request, null); 
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle updated successfully", updated));
     }
 

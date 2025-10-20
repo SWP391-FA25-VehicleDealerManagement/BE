@@ -1,5 +1,6 @@
 package com.example.evm.entity.order;
 
+import com.example.evm.entity.inventory.InventoryStock;
 import com.example.evm.entity.promotion.Promotion;
 import com.example.evm.entity.vehicle.Vehicle;
 
@@ -17,7 +18,7 @@ public class OrderDetail {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "orderdetail_id")
-    private Integer orderDetailId;
+    private Long orderDetailId;
 
     // Quan hệ nhiều-1 với Order
     @ManyToOne(fetch = FetchType.LAZY)
@@ -55,9 +56,18 @@ public class OrderDetail {
 
     @Override
     public String toString() {
+        
+        // 🟢 LOGIC ĐÃ SỬA LỖI: Lấy tên Variant thông qua chuỗi quan hệ Stock
+        String vehicleName = "N/A (Vehicle Info Missing)";
+        if (vehicle != null && vehicle.getStock() != null && vehicle.getStock().getVariant() != null) {
+            vehicleName = vehicle.getStock().getVariant().getName();
+        }
+        
         return "OrderDetail{" +
                 "orderDetailId=" + orderDetailId +
-                ", vehicle=" + (vehicle != null ? vehicle.getName() : "null") +
+                // ❌ Dòng bị lỗi đã được sửa:
+                // Lỗi: vehicle.getName()
+                "vehicle=" + vehicleName +
                 ", promotion=" + (promotion != null ? promotion.getTitle() : "null") +
                 ", quantity=" + quantity +
                 ", price=" + price +

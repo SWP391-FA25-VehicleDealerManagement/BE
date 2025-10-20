@@ -50,9 +50,6 @@ public class VehicleDetail {
     @Column(name = "max_power")
     private String maxPower;
 
-    @Column(name = "max_torque")
-    private String maxTorque;
-
     @Column(name = "top_speed_kmh")
     private Integer topSpeedKmh;
 
@@ -86,9 +83,6 @@ public class VehicleDetail {
 
     @Column(name = "has_esc")
     private Boolean hasEsc;
-
-    @Column(name = "has_hill_start_assist")
-    private Boolean hasHillStartAssist;
 
     @Column(name = "has_tpms")
     private Boolean hasTpms;

@@ -1,18 +1,14 @@
-package com.example.evm.entity.vehicle;
+package com.example.evm.entity.vehicle; // Hoặc package entity của bạn
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.*;
-
-import java.util.List;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal; // Import BigDecimal
 
 @Entity
 @Table(name = "VehicleVariant")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class VehicleVariant {
 
     @Id
@@ -20,22 +16,21 @@ public class VehicleVariant {
     @Column(name = "variant_id")
     private Long variantId;
 
-    @Column(name = "name", nullable = false)
-    private String name;
-
-    @Column(name = "image")
-    private String image;
-
-    private String status;
-
-    // Variant belongs to one Model
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "model_id", nullable = false)
-    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "variants" })
-    private VehicleModel model;
+    private VehicleModel model; // <-- Giữ
 
-    // One Variant has many Vehicles
-    @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnoreProperties("variant")
-    private List<Vehicle> vehicles;
+    @Column(name = "name", nullable = false, length = 150)
+    private String name; // <-- Giữ
+
+    // Sửa: Đổi tên cột và trường
+    @Column(name = "image", length = 500) 
+    private String imageUrl; // <-- Sửa tên từ 'image'
+
+    @Column(name = "status", length = 50)
+    private String status; // <-- Giữ (dùng cho soft delete)
+
+    // Thêm: Giá niêm yết
+    @Column(name = "msrp", nullable = false) 
+    private BigDecimal msrp; // <-- Thêm
 }

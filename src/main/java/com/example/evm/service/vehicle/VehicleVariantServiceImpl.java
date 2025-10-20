@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,26 +31,24 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
 
     @Override
     public VehicleVariantResponse createVariant(VehicleVariantRequest request, MultipartFile file) {
-    // 1. GỌI FILESTORAGESERVICE ĐỂ LƯU FILE VÀ LẤY VỀ TÊN FILE
-    String filename = fileStorageService.save(file);
+        // 1 & 2. LƯU FILE VÀ TẠO URL
+        String filename = fileStorageService.save(file);
+        String imageUrl = "/api/variants/images/" + filename;
 
-    // 2. TẠO ĐƯỜNG DẪN URL ĐỂ LƯU VÀO DATABASE
-    String imageUrl = "/api/variants/images/" + filename;
+        // 3. TÌM MODEL (DÒNG XE) TƯƠNG ỨNG
+        VehicleModel model = modelRepository.findById(request.getModelId())
+                .orElseThrow(() -> new ResourceNotFoundException("Model not found with id: " + request.getModelId()));
 
-    // 3. TÌM MODEL (DÒNG XE) TƯƠNG ỨNG
-    VehicleModel model = modelRepository.findById(request.getModelId())
-            .orElseThrow(() -> new ResourceNotFoundException("Model not found with id: " + request.getModelId()));
+        // 4. TẠO ĐỐI TƯỢNG VARIANT MỚI
+        VehicleVariant variant = new VehicleVariant();
+        variant.setName(request.getName());
+        variant.setImageUrl(imageUrl);
+        variant.setModel(model);
+        variant.setStatus("ACTIVE");
 
-    // 4. TẠO ĐỐI TƯỢNG VARIANT MỚI
-    VehicleVariant variant = new VehicleVariant();
-    variant.setName(request.getName());
-    variant.setImage(imageUrl);
-    variant.setModel(model);
-    variant.setStatus("ACTIVE");
-
-    // 5. LƯU VÀO DATABASE VÀ TRẢ VỀ KẾT QUẢ
-    VehicleVariant savedVariant = variantRepository.save(variant);
-    return new VehicleVariantResponse(savedVariant);
+        // 5. LƯU VÀ TRẢ VỀ
+        VehicleVariant savedVariant = variantRepository.save(variant);
+        return new VehicleVariantResponse(savedVariant);
     }
 
     @Override
@@ -72,7 +69,7 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
     @Override
     @Transactional
     public VehicleVariantResponse updateVariant(Long id, VehicleVariantRequest request, MultipartFile file) {
-        
+
         // 1. Tìm đối tượng (entity) đang có trong database
         VehicleVariant existingVariant = variantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Variant not found with id: " + id));
@@ -91,10 +88,10 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
 
         // 4. Kiểm tra và cập nhật 'file' (ảnh)
         if (file != null && !file.isEmpty()) {
-            
+
             String filename = fileStorageService.save(file);
             String newImageUrl = "/api/variants/images/" + filename;
-            existingVariant.setImage(newImageUrl);
+            existingVariant.setImageUrl(newImageUrl);
         }
 
         // 5. Lưu entity đã được cập nhật vào DB
@@ -120,7 +117,7 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
         variantRepository.save(variant);
     }
 
-    @Override  
+    @Override 
     @Transactional
     public VehicleDetailResponse addOrUpdateDetails(Long variantId, VehicleDetailRequest request) {
         // Tìm variant tương ứng
@@ -131,7 +128,7 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
         VehicleDetail detail = detailRepository.findByVariant_VariantId(variantId)
                 .orElse(new VehicleDetail());
 
-        // --- BẮT ĐẦU GÁN GIÁ TRỊ (ĐẦY ĐỦ) ---
+        // --- BẮT ĐẦU GÁN GIÁ TRỊ ---
         detail.setVariant(variant);
 
         // Thông số
@@ -145,7 +142,6 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
         // Động cơ & Vận Hành
         detail.setEngineType(request.getEngineType());
         detail.setMaxPower(request.getMaxPower());
-        detail.setMaxTorque(request.getMaxTorque());
         detail.setTopSpeedKmh(request.getTopSpeedKmh());
         detail.setDrivetrain(request.getDrivetrain());
         detail.setDriveModes(request.getDriveModes());
@@ -163,16 +159,15 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
         detail.setAirbags(request.getAirbags());
         detail.setBrakingSystem(request.getBrakingSystem());
         detail.setHasEsc(request.getHasEsc());
-        detail.setHasHillStartAssist(request.getHasHillStartAssist());
         detail.setHasTpms(request.getHasTpms());
         detail.setHasRearCamera(request.getHasRearCamera());
         detail.setHasChildLock(request.getHasChildLock());
-    
+
         // --- KẾT THÚC GÁN GIÁ TRỊ ---
 
-    VehicleDetail savedDetail = detailRepository.save(detail);
-    return new VehicleDetailResponse(savedDetail);
-    }   
+        VehicleDetail savedDetail = detailRepository.save(detail);
+        return new VehicleDetailResponse(savedDetail);
+    } 
 
     @Override
     @Transactional(readOnly = true)

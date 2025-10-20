@@ -1,152 +1,239 @@
 package com.example.evm.service.inventory;
 
 import com.example.evm.dto.inventory.InventoryResponse;
+import com.example.evm.dto.inventory.AllocationRequest; 
+import com.example.evm.dto.inventory.StockRequest; 
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.inventory.InventoryStock;
-import com.example.evm.entity.vehicle.Vehicle;
+import com.example.evm.entity.inventory.ManufacturerStock; 
+import com.example.evm.entity.vehicle.VehicleVariant;
+import com.example.evm.exception.ResourceNotFoundException; 
 import com.example.evm.repository.dealer.DealerRepository;
-import com.example.evm.repository.inventory.InventoryRepository;
-import com.example.evm.repository.vehicle.VehicleRepository;
+import com.example.evm.repository.inventory.InventoryStockRepository;
+import com.example.evm.repository.inventory.ManufacturerStockRepository; 
+import com.example.evm.repository.vehicle.VehicleVariantRepository; 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class InventoryServiceImpl implements InventoryService {
 
-    private final InventoryRepository inventoryRepository;
-    private final VehicleRepository vehicleRepository;
+    private final InventoryStockRepository inventoryRepository;
+    private final ManufacturerStockRepository manufacturerStockRepo;
+    private final VehicleVariantRepository variantRepository;
     private final DealerRepository dealerRepository;
+
+    // --- 1. KHO ĐẠI LÝ ---
 
     @Override
     @Transactional(readOnly = true)
-    public List<InventoryResponse> getAll() {
+    public List<InventoryResponse> getAllDealerStock() {
         return inventoryRepository.findAllWithRelations()
                 .stream()
-                .map(this::mapToResponse)
-                .toList();
+                .map(this::mapToDealerResponse) 
+                .collect(Collectors.toList());
     }
 
     @Override
-    public InventoryResponse addStock(InventoryStock stock) {
-        Vehicle vehicle = vehicleRepository.findById(stock.getVehicle().getVehicleId())
-                .orElseThrow(() -> new RuntimeException("Vehicle not found"));
-        stock.setVehicle(vehicle);
+    @Transactional
+    public InventoryResponse addOrUpdateDealerStock(StockRequest request) {
+        VehicleVariant variant = variantRepository.findById(request.getVariantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
+        Dealer dealer = dealerRepository.findById(request.getDealerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Dealer not found"));
 
-        if (stock.getDealer() != null && stock.getDealer().getDealerId() != null) {
-            Dealer dealer = dealerRepository.findById(stock.getDealer().getDealerId().longValue())
-                    .orElseThrow(() -> new RuntimeException("Dealer not found"));
-            stock.setDealer(dealer);
-        }
+        InventoryStock stock = inventoryRepository
+                .findByVariantVariantIdAndColorAndDealerDealerId(
+                        request.getVariantId(),
+                        request.getColor(),
+                        request.getDealerId()
+                )
+                .map(existingStock -> {
+                    existingStock.setQuantity(request.getQuantity()); 
+                    
+                    existingStock.setListingPrice(request.getListingPrice());
+                    existingStock.setStatus(request.getStatus());
+                    return existingStock;
+                })
+                .orElseGet(() -> {
+                    InventoryStock newStock = new InventoryStock();
+                    newStock.setVariant(variant);
+                    newStock.setDealer(dealer);
+                    newStock.setColor(request.getColor());
+                    newStock.setQuantity(request.getQuantity());
+                    newStock.setListingPrice(request.getListingPrice());
+                    newStock.setStatus(request.getStatus());
+                    return newStock;
+                });
 
-        InventoryStock saved = inventoryRepository.save(stock);
-        return mapToResponse(saved);
+        InventoryStock savedStock = inventoryRepository.save(stock);
+        return mapToDealerResponse(savedStock);
     }
-
+    
     @Override
-    public InventoryResponse updateStock(Integer id, InventoryStock stock) {
+    public InventoryResponse updateStockStatus(Long id, String status) {
         InventoryStock existing = inventoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Stock not found"));
-
-        existing.setQuantity(stock.getQuantity());
-        existing.setStatus(stock.getStatus());
-        return mapToResponse(inventoryRepository.save(existing));
+                .orElseThrow(() -> new RuntimeException("Dealer stock not found"));
+        existing.setStatus(status);
+        return mapToDealerResponse(inventoryRepository.save(existing));
     }
 
     @Override
-    public void deleteStock(Integer id) {
+    public void deleteStock(Long id) {
         inventoryRepository.deleteById(id);
     }
 
-    // 🚗 Điều phối xe từ kho tổng xuống đại lý
-    @Transactional
+    // --- 2. KHO TỔNG ---
+
     @Override
-    public String allocateVehicleToDealer(Integer vehicleId, Integer dealerId, Integer quantity) {
-        // ép kiểu Integer → Long
-        Long vId = vehicleId.longValue();
-        Long dId = dealerId.longValue();
+    @Transactional(readOnly = true)
+    public List<InventoryResponse> getAllManufacturerStock() {
+        return manufacturerStockRepo.findAllWithRelations() // Sửa: Dùng hàm mới
+                .stream()
+                .map(this::mapToManufacturerResponse)
+                .collect(Collectors.toList());
+    }
 
-        var centralStock = inventoryRepository.findByDealerIsNullAndVehicle_VehicleId(vId)
-                .orElseThrow(() -> new RuntimeException("Vehicle not available in central stock"));
+    @Override
+    @Transactional
+    public InventoryResponse addOrUpdateManufacturerStock(StockRequest request) {
+        VehicleVariant variant = variantRepository.findById(request.getVariantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
 
-        if (centralStock.getQuantity() < quantity) {
+        ManufacturerStock stock = manufacturerStockRepo
+                .findByVariantVariantIdAndColor(request.getVariantId(), request.getColor())
+                .map(existingStock -> {
+                    existingStock.setQuantity(request.getQuantity()); 
+                    
+                    existingStock.setStatus(request.getStatus());
+                    return existingStock;
+                })
+                .orElseGet(() -> {
+                    ManufacturerStock newStock = new ManufacturerStock();
+                    newStock.setVariant(variant);
+                    newStock.setColor(request.getColor());
+                    newStock.setQuantity(request.getQuantity());
+                    newStock.setStatus(request.getStatus()); 
+                    return newStock;
+                });
+        
+        ManufacturerStock savedStock = manufacturerStockRepo.save(stock);
+        return mapToManufacturerResponse(savedStock); 
+    }
+
+    @Override
+    @Transactional
+    public InventoryResponse updateManufacturerStockStatus(Long id, String status) {
+        ManufacturerStock existing = manufacturerStockRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Manufacturer stock item not found"));
+        existing.setStatus(status);
+        ManufacturerStock savedStock = manufacturerStockRepo.save(existing);
+        return mapToManufacturerResponse(savedStock);
+    }
+
+    // --- 3. ĐIỀU PHỐI ---
+
+    @Override
+    @Transactional
+    public InventoryResponse allocateStockToDealer(AllocationRequest request) {
+        
+        Dealer dealer = dealerRepository.findById(request.getDealerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Dealer not found"));
+        VehicleVariant variant = variantRepository.findById(request.getVariantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
+
+        // 1. TRỪ KHO TỔNG
+        ManufacturerStock centralStock = manufacturerStockRepo
+                .findByVariantVariantIdAndColor(request.getVariantId(), request.getColor())
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found in central stock"));
+
+        if (centralStock.getQuantity() < request.getQuantity()) {
             throw new RuntimeException("Not enough stock in central warehouse");
         }
+        centralStock.setQuantity(centralStock.getQuantity() - request.getQuantity());
+        manufacturerStockRepo.save(centralStock);
 
-        Dealer dealer = dealerRepository.findById(dId)
-                .orElseThrow(() -> new RuntimeException("Dealer not found"));
-        Vehicle vehicle = centralStock.getVehicle();
-
-        var dealerStock = inventoryRepository.findByDealerAndVehicle(dealer, vehicle)
+        // 2. CỘNG KHO ĐẠI LÝ
+        InventoryStock dealerStock = inventoryRepository
+                .findByVariantVariantIdAndColorAndDealerDealerId(
+                        request.getVariantId(),
+                        request.getColor(),
+                        request.getDealerId()
+                )
                 .orElseGet(() -> {
                     InventoryStock newStock = new InventoryStock();
+                    newStock.setVariant(variant);
                     newStock.setDealer(dealer);
-                    newStock.setVehicle(vehicle);
-                    newStock.setQuantity(0);
-                    newStock.setStatus("AVAILABLE");
-                    return inventoryRepository.save(newStock);
+                    newStock.setColor(request.getColor());
+                    newStock.setQuantity(0); 
+                    newStock.setStatus("In Stock");
+                    newStock.setListingPrice(variant.getMsrp()); 
+                    return newStock;
                 });
-
-        // cập nhật số lượng
-        centralStock.setQuantity(centralStock.getQuantity() - quantity);
-        dealerStock.setQuantity(dealerStock.getQuantity() + quantity);
-
-        inventoryRepository.save(centralStock);
-        inventoryRepository.save(dealerStock);
-        return "Allocated " + quantity + " vehicles to dealer " + dealer.getDealerName();
+        
+        dealerStock.setQuantity(dealerStock.getQuantity() + request.getQuantity());
+        InventoryStock savedDealerStock = inventoryRepository.save(dealerStock);
+        
+        return mapToDealerResponse(savedDealerStock);
     }
 
-    // 🔁 Thu hồi xe từ đại lý về kho tổng
-    @Transactional
     @Override
-    public String recallVehicleFromDealer(Integer vehicleId, Integer dealerId, Integer quantity) {
-        Long vId = vehicleId.longValue();
-        Long dId = dealerId.longValue();
+    @Transactional
+    public String recallStockFromDealer(AllocationRequest request) {
 
-        Dealer dealer = dealerRepository.findById(dId)
-                .orElseThrow(() -> new RuntimeException("Dealer not found"));
-        Vehicle vehicle = vehicleRepository.findById(vId)
-                .orElseThrow(() -> new RuntimeException("Vehicle not found"));
+        // 1. TRỪ KHO ĐẠI LÝ
+        InventoryStock dealerStock = inventoryRepository
+                .findByVariantVariantIdAndColorAndDealerDealerId(
+                        request.getVariantId(),
+                        request.getColor(),
+                        request.getDealerId()
+                )
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found in dealer stock"));
 
-        var dealerStock = inventoryRepository.findByDealerAndVehicle(dealer, vehicle)
-                .orElseThrow(() -> new RuntimeException("Vehicle not found in dealer inventory"));
-
-        if (dealerStock.getQuantity() < quantity) {
+        if (dealerStock.getQuantity() < request.getQuantity()) {
             throw new RuntimeException("Not enough stock at dealer to recall");
         }
-
-        var centralStock = inventoryRepository.findByDealerIsNullAndVehicle_VehicleId(vId)
-                .orElseGet(() -> {
-                    InventoryStock newStock = new InventoryStock();
-                    newStock.setDealer(null);
-                    newStock.setVehicle(vehicle);
-                    newStock.setQuantity(0);
-                    newStock.setStatus("AVAILABLE");
-                    return inventoryRepository.save(newStock);
-                });
-
-        dealerStock.setQuantity(dealerStock.getQuantity() - quantity);
-        centralStock.setQuantity(centralStock.getQuantity() + quantity);
-
+        dealerStock.setQuantity(dealerStock.getQuantity() - request.getQuantity());
         inventoryRepository.save(dealerStock);
-        inventoryRepository.save(centralStock);
-        return "Recalled " + quantity + " vehicles from dealer " + dealer.getDealerName();
+
+        // 2. CỘNG KHO TỔNG
+        ManufacturerStock centralStock = manufacturerStockRepo
+                .findByVariantVariantIdAndColor(request.getVariantId(), request.getColor())
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found in central stock (cannot recall)"));
+
+        centralStock.setQuantity(centralStock.getQuantity() + request.getQuantity());
+        manufacturerStockRepo.save(centralStock);
+
+        return "Recalled " + request.getQuantity() + " items to central warehouse.";
     }
 
-    // ✅ Map entity → DTO
-    private InventoryResponse mapToResponse(InventoryStock stock) {
-        Vehicle v = stock.getVehicle();
-        return InventoryResponse.builder()
-                .stockId(stock.getStockId())
-                .quantity(stock.getQuantity())
-                .status(stock.getStatus())
-                .vehicleName(v != null ? v.getName() : null)
-                .variantName(v != null && v.getVariant() != null ? v.getVariant().getName() : "N/A")
-                .color(v != null ? v.getColor() : null)
-                .dealerName(stock.getDealer() != null ? stock.getDealer().getDealerName() : "Central Warehouse")
-                .build();
+
+    // --- HÀM PRIVATE MAPPER ---
+
+    private InventoryResponse mapToDealerResponse(InventoryStock stock) {
+        return new InventoryResponse(stock); 
+    }
+    
+    private InventoryResponse mapToManufacturerResponse(ManufacturerStock stock) {
+        InventoryResponse res = new InventoryResponse();
+        res.setInventoryId(stock.getManufacturerStockId()); 
+        res.setColor(stock.getColor());
+        res.setQuantity(stock.getQuantity());
+        res.setStatus(stock.getStatus());
+        res.setDealerName("KHO TỔNG"); 
+        
+        if (stock.getVariant() != null) {
+            res.setVariantName(stock.getVariant().getName());
+            if (stock.getVariant().getModel() != null) {
+                res.setModelName(stock.getVariant().getModel().getName());
+            }
+        }
+        res.setListingPrice("N/A"); 
+        return res;
     }
 }
