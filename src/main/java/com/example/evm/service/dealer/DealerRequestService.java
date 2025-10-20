@@ -39,34 +39,65 @@ public class DealerRequestService {
     private final UserRepository userRepository;
     private final VehicleVariantRepository vehicleVariantRepository;
 
-    public List<DealerRequest> getAllRequests() {
-        return dealerRequestRepository.findAll();
+    // ✅ Trả về DTO để tránh lazy proxy errors
+    public List<DealerRequestResponse> getAllRequests() {
+        return dealerRequestRepository.findAll().stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
     }
 
-    public List<DealerRequest> getRequestsByDealer(Long dealerId) {
-        return dealerRequestRepository.findByDealerDealerId(dealerId);
+    public List<DealerRequestResponse> getRequestsByDealer(Long dealerId) {
+        return dealerRequestRepository.findByDealerDealerId(dealerId).stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
     }
 
-    public List<DealerRequest> getRequestsByUser(Long userId) {
-        return dealerRequestRepository.findByCreatedByUserId(userId);
+    public List<DealerRequestResponse> getRequestsByUser(Long userId) {
+        return dealerRequestRepository.findByCreatedByUserId(userId).stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
     }
 
-    public List<DealerRequest> getRequestsByStatus(String status) {
-        return dealerRequestRepository.findByStatus(status);
+    public List<DealerRequestResponse> getRequestsByStatus(String status) {
+        return dealerRequestRepository.findByStatus(status).stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
     }
 
-    public List<DealerRequest> getPendingRequests() {
-        return dealerRequestRepository.findPendingRequests();
+    public List<DealerRequestResponse> getPendingRequests() {
+        return dealerRequestRepository.findPendingRequests().stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
     }
 
-    public DealerRequest getRequestById(Long id) {
+    public DealerRequestResponse getRequestById(Long id) {
+        DealerRequest request = getRequestEntityById(id);
+        return convertToResponseDto(request);
+    }
+    
+    // ✅ Internal method để lấy entity (dùng cho update/delete)
+    private DealerRequest getRequestEntityById(Long id) {
         return dealerRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Dealer request not found with id: " + id));
     }
 
-    public List<DealerRequestDetail> getRequestDetails(Long requestId) {
-        DealerRequest request = getRequestById(requestId);
-        return request.getRequestDetails();
+    public List<RequestDetailResponse> getRequestDetails(Long requestId) {
+        DealerRequest request = dealerRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Dealer request not found with id: " + requestId));
+        
+        return request.getRequestDetails().stream()
+                .map(detail -> {
+                    RequestDetailResponse dto = new RequestDetailResponse();
+                    dto.setRequestDetailId(detail.getRequestDetailId());
+                    dto.setVariantName(detail.getVehicleVariant().getName());
+                    dto.setModelName(detail.getVehicleVariant().getModel() != null ? 
+                            detail.getVehicleVariant().getModel().getName() : null);
+                    dto.setQuantity(detail.getQuantity());
+                    dto.setUnitPrice(detail.getUnitPrice());
+                    dto.setLineTotal(detail.getLineTotal());
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     // ✅ Method mới: Tạo request từ DTO (chỉ cần IDs)
@@ -212,7 +243,7 @@ public class DealerRequestService {
 
     @Transactional
     public DealerRequest updateRequestStatus(Long id, String status, String approvedBy) {
-        DealerRequest request = getRequestById(id);
+        DealerRequest request = getRequestEntityById(id);
         request.setStatus(status);
         
         if ("APPROVED".equals(status)) {
@@ -230,7 +261,7 @@ public class DealerRequestService {
 
     @Transactional
     public DealerRequest updateRequest(DealerRequest requestDetails) {
-        DealerRequest request = getRequestById(requestDetails.getRequestId());
+        DealerRequest request = getRequestEntityById(requestDetails.getRequestId());
         
         if (requestDetails.getRequiredDate() != null) {
             request.setRequiredDate(requestDetails.getRequiredDate());
@@ -273,7 +304,7 @@ public class DealerRequestService {
 
     @Transactional
     public void deleteRequest(Long id) {
-        DealerRequest request = getRequestById(id);
+        DealerRequest request = getRequestEntityById(id);
         
         // ✅ KHÔNG xóa VehicleVariant! 
         // Request details sẽ tự động xóa bởi CascadeType.ALL trong DealerRequest entity
