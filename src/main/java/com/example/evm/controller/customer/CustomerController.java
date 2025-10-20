@@ -43,7 +43,11 @@ public class CustomerController {
             Long dealerId = currentUser.getDealer().getDealerId();
             log.info("Fetching customers for dealer: {}", dealerId);
             customers = customerService.getCustomersByDealer(dealerId);
-        } else {
+        }
+            else if ("EVM_STAFF".equals(currentUser.getRole())) {
+            customers = customerService.getCustomersByCreatedBy("evmStaff");
+           }
+        else {
             // ADMIN hoặc EVM_STAFF có thể xem tất cả customers
             log.info("Fetching all customers for user with role: {}", currentUser.getRole());
             customers = customerService.getAllCustomers();
