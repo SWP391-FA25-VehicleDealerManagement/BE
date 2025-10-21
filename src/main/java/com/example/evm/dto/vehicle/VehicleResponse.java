@@ -17,7 +17,6 @@ public class VehicleResponse {
     // --- FIELDS TỪ ENTITY VEHICLE (CÁ NHÂN) ---
     private Long vehicleId;
     private String vinNumber;
-    private String licensePlate;
     private LocalDate manufactureDate;
     private LocalDate warrantyExpiryDate;
 
@@ -34,7 +33,6 @@ public class VehicleResponse {
     public VehicleResponse(Vehicle vehicle) {
         this.vehicleId = vehicle.getVehicleId();
         this.vinNumber = vehicle.getVinNumber();
-        this.licensePlate = vehicle.getLicensePlate();
         this.manufactureDate = vehicle.getManufactureDate();
         this.warrantyExpiryDate = vehicle.getWarrantyExpiryDate();
 

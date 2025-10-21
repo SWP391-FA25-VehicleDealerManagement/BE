@@ -40,7 +40,7 @@ public class InventoryController {
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
     @PostMapping("/dealer")
     public ResponseEntity<ApiResponse<InventoryResponse>> addOrUpdateDealerStock(
-            @Valid @RequestBody StockRequest request) { // Sửa: Dùng DTO
+            @Valid @RequestBody StockRequest request) {
         
         InventoryResponse response = inventoryService.addOrUpdateDealerStock(request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer stock updated successfully", response));

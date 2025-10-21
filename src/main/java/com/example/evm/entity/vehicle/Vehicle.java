@@ -24,9 +24,6 @@ public class Vehicle {
     @JoinColumn(name = "stock_id", nullable = false)
     private InventoryStock stock;
 
-    @Column(name = "license_plate", unique = true, length = 20)
-    private String licensePlate;
-
     @Column(name = "manufacture_date")
     private LocalDate manufactureDate;
 
