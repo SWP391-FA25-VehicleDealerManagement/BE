@@ -21,7 +21,6 @@ public class VehicleRequest {
     private Long stockId; 
     
     private String vinNumber;
-    private String licensePlate;
     private LocalDate manufactureDate;
     private LocalDate warrantyExpiryDate;
 }

@@ -1,5 +1,5 @@
 package com.example.evm.repository.debt;  
-// Đặt package chứa repository liên quan đến "debt" (khoản nợ).
+
 
 import java.time.LocalDate;
 import java.util.List;

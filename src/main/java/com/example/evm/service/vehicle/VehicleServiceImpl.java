@@ -112,7 +112,6 @@ public class VehicleServiceImpl implements VehicleService {
 
         Vehicle vehicle = new Vehicle();
         vehicle.setVinNumber(request.getVinNumber());
-        vehicle.setLicensePlate(request.getLicensePlate());
         
         // Liên kết Stock
         vehicle.setStock(stock); 
@@ -140,9 +139,8 @@ public class VehicleServiceImpl implements VehicleService {
              vehicle.setStock(newStock);
         }
 
-        // Cập nhật các trường riêng của Vehicle (VIN, License Plate, Dates)
+        // Cập nhật các trường riêng của Vehicle (VIN, Dates)
         if (request.getVinNumber() != null) vehicle.setVinNumber(request.getVinNumber());
-        if (request.getLicensePlate() != null) vehicle.setLicensePlate(request.getLicensePlate());
         if (request.getManufactureDate() != null) vehicle.setManufactureDate(request.getManufactureDate());
         if (request.getWarrantyExpiryDate() != null) vehicle.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
 
