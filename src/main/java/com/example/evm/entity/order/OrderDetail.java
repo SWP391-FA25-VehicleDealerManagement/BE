@@ -59,8 +59,8 @@ public class OrderDetail {
         
         // 🟢 LOGIC ĐÃ SỬA LỖI: Lấy tên Variant thông qua chuỗi quan hệ Stock
         String vehicleName = "N/A (Vehicle Info Missing)";
-        if (vehicle != null && vehicle.getStock() != null && vehicle.getStock().getVariant() != null) {
-            vehicleName = vehicle.getStock().getVariant().getName();
+        if (vehicle != null && vehicle.getInventoryStock() != null && vehicle.getInventoryStock().getVariant() != null) {
+            vehicleName = vehicle.getInventoryStock().getVariant().getName();
         }
         
         return "OrderDetail{" +

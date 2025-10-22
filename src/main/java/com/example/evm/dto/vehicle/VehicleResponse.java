@@ -22,9 +22,9 @@ public class VehicleResponse {
 
     // --- FIELDS TỪ INVENTORYSTOCK (ĐƯỢC MAP QUA MỐI QUAN HỆ) ---
     private String color;           
-    private Long variantId;         
-    private String variantName;     
-    private String modelName;
+    private Long variantId;  
+    private String modelName;       
+    private String variantName;
 
     @JsonProperty("vehicleDetails") 
     private VehicleDetailResponse details;
@@ -37,19 +37,19 @@ public class VehicleResponse {
         this.warrantyExpiryDate = vehicle.getWarrantyExpiryDate();
 
         // ⚠️ KIỂM TRA QUAN TRỌNG: Đảm bảo InventoryStock không null trước khi truy cập
-        if (vehicle.getStock() != null) {
+        if (vehicle.getInventoryStock() != null) {
             
             // 1. Lấy thông tin Màu sắc (từ InventoryStock)
-            this.color = vehicle.getStock().getColor(); 
-            
+            this.color = vehicle.getInventoryStock().getColor();
+
             // 2. Lấy thông tin Variant và Model
-            if (vehicle.getStock().getVariant() != null) {
-                this.variantId = vehicle.getStock().getVariant().getVariantId();
-                this.variantName = vehicle.getStock().getVariant().getName();
-                
+            if (vehicle.getInventoryStock().getVariant() != null) {
+                this.variantId = vehicle.getInventoryStock().getVariant().getVariantId();
+                this.variantName = vehicle.getInventoryStock().getVariant().getName();
+
                 // Lấy thông tin Model từ Variant
-                if (vehicle.getStock().getVariant().getModel() != null) {
-                    this.modelName = vehicle.getStock().getVariant().getModel().getName();
+                if (vehicle.getInventoryStock().getVariant().getModel() != null) {
+                    this.modelName = vehicle.getInventoryStock().getVariant().getModel().getName();
                 }
             }
         }

@@ -5,6 +5,7 @@ import com.example.evm.dto.inventory.AllocationRequest;
 import com.example.evm.dto.inventory.InventoryResponse;
 import com.example.evm.dto.inventory.StockRequest;
 import com.example.evm.dto.inventory.ManufacturerStockRequest;
+import com.example.evm.dto.inventory.ManufacturerStockResponse;
 import com.example.evm.service.inventory.InventoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -75,32 +76,32 @@ public class InventoryController {
     // 🔹 GET tất cả KHO TỔNG
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @GetMapping("/manufacturer")
-    public ResponseEntity<ApiResponse<List<InventoryResponse>>> getAllManufacturerStock() {
-        List<InventoryResponse> inventoryList = inventoryService.getAllManufacturerStock();
+    public ResponseEntity<ApiResponse<List<ManufacturerStockResponse>>> getAllManufacturerStock() {
+        List<ManufacturerStockResponse> inventoryList = inventoryService.getAllManufacturerStock();
         return ResponseEntity.ok(new ApiResponse<>(true, "Manufacturer stock list retrieved", inventoryList));
     }
 
     // 🔹 NHẬP XE (từ nhà máy) vào KHO TỔNG
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @PostMapping("/manufacturer")
-    public ResponseEntity<ApiResponse<InventoryResponse>> addOrUpdateManufacturerStock(
+    public ResponseEntity<ApiResponse<ManufacturerStockResponse>> addOrUpdateManufacturerStock(
             @Valid @RequestBody ManufacturerStockRequest request) { 
 
         StockRequest stockRequestForService = mapToStockRequest(request); 
 
-        InventoryResponse response = inventoryService.addOrUpdateManufacturerStock(stockRequestForService);
+        ManufacturerStockResponse response = inventoryService.addOrUpdateManufacturerStock(stockRequestForService);
         return ResponseEntity.ok(new ApiResponse<>(true, "Manufacturer stock updated", response));
     }
     
     // 🔹 CẬP NHẬT TRẠNG THÁI KHO TỔNG (VD: "In Production" -> "Ready")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @PatchMapping("/manufacturer/{id}/status")
-    public ResponseEntity<ApiResponse<InventoryResponse>> updateManufacturerStockStatus(
+    public ResponseEntity<ApiResponse<ManufacturerStockResponse>> updateManufacturerStockStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {
         
         String newStatus = body.get("status");
-        InventoryResponse response = inventoryService.updateManufacturerStockStatus(id, newStatus);
+        ManufacturerStockResponse response = inventoryService.updateManufacturerStockStatus(id, newStatus);
         return ResponseEntity.ok(new ApiResponse<>(true, "Manufacturer stock status updated", response));
     }
 

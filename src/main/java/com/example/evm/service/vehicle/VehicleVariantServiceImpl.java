@@ -45,6 +45,7 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
         variant.setImageUrl(imageUrl);
         variant.setModel(model);
         variant.setStatus("ACTIVE");
+        variant.setMsrp(request.getMsrp());
 
         // 5. LƯU VÀ TRẢ VỀ
         VehicleVariant savedVariant = variantRepository.save(variant);
@@ -84,6 +85,10 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
             VehicleModel newModel = modelRepository.findById(request.getModelId())
                     .orElseThrow(() -> new ResourceNotFoundException("Model not found with id: " + request.getModelId()));
             existingVariant.setModel(newModel);
+        }
+
+        if (request.getMsrp() != null) {
+            existingVariant.setMsrp(request.getMsrp());
         }
 
         // 4. Kiểm tra và cập nhật 'file' (ảnh)

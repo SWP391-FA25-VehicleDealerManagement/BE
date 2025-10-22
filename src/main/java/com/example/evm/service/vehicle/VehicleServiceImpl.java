@@ -39,10 +39,10 @@ public class VehicleServiceImpl implements VehicleService {
     private VehicleResponse convertToResponse(Vehicle vehicle) {
         // Lấy VehicleDetail tương ứng
         VehicleDetail detail = null;
-        if (vehicle.getStock() != null && vehicle.getStock().getVariant() != null) {
+        if (vehicle.getInventoryStock() != null && vehicle.getInventoryStock().getVariant() != null) {
             // Lấy Detail dựa trên Variant ID trong Stock
-            detail = detailRepository.findByVariant_VariantId(vehicle.getStock().getVariant().getVariantId())
-                                     .orElse(null); 
+            detail = detailRepository.findByVariant_VariantId(vehicle.getInventoryStock().getVariant().getVariantId())
+                                     .orElse(null);
         }
         return new VehicleResponse(vehicle, detail);
     }
@@ -84,9 +84,9 @@ public class VehicleServiceImpl implements VehicleService {
 
         // Logic lấy detail đã được chuyển sang convertToResponse
         VehicleDetail detail = null;
-        if (vehicle.getStock() != null && vehicle.getStock().getVariant() != null) {
-            detail = detailRepository.findByVariant_VariantId(vehicle.getStock().getVariant().getVariantId())
-                                     .orElse(null); 
+        if (vehicle.getInventoryStock() != null && vehicle.getInventoryStock().getVariant() != null) {
+            detail = detailRepository.findByVariant_VariantId(vehicle.getInventoryStock().getVariant().getVariantId())
+                                     .orElse(null);
         }
         return new VehicleResponse(vehicle, detail);
     }
@@ -105,47 +105,93 @@ public class VehicleServiceImpl implements VehicleService {
     @Override
     @Transactional
     public VehicleResponse addVehicle(VehicleRequest request, MultipartFile file) {
+
+        // --- 1. KIỂM TRA ĐẦU VÀO & TÌM LIÊN KẾT ---
+        if (vehicleRepository.existsByVinNumber(request.getVinNumber())) {
+            throw new IllegalArgumentException("VIN already exists: " + request.getVinNumber());
+        }
         
         // Cần Stock ID để thêm xe
         InventoryStock stock = inventoryStockRepository.findById(request.getStockId())
              .orElseThrow(() -> new ResourceNotFoundException("Inventory Stock not found with id: " + request.getStockId()));
 
+        // TÌM VARIANT (Bước quan trọng bị thiếu)
+        VehicleVariant variant = variantRepository.findById(request.getVariantId())
+             .orElseThrow(() -> new ResourceNotFoundException("Variant not found: " + request.getVariantId()));
+
+        // Optional: Kiểm tra stockId có khớp variantId không
+        if (stock.getVariant() == null || !stock.getVariant().getVariantId().equals(request.getVariantId())) {
+             throw new IllegalArgumentException("Stock ID " + request.getStockId() + " does not match Variant ID " + request.getVariantId());
+        }     
+
         Vehicle vehicle = new Vehicle();
         vehicle.setVinNumber(request.getVinNumber());
-        
-        // Liên kết Stock
-        vehicle.setStock(stock); 
-        
-        // Các thuộc tính riêng khác của Vehicle
+        vehicle.setInventoryStock(stock); 
+        vehicle.setVariant(variant);
         vehicle.setManufactureDate(request.getManufactureDate()); 
         vehicle.setWarrantyExpiryDate(request.getWarrantyExpiryDate()); 
 
         Vehicle saved = vehicleRepository.save(vehicle);
+        log.info("Added vehicle with VIN: {}", saved.getVinNumber());
         return convertToResponse(saved);
     }
 
     // 🔹 Cập nhật Vehicle (Logic đã đơn giản hóa)
     @Override
     @Transactional
-    public VehicleResponse updateVehicle(Long id, VehicleRequest request, MultipartFile file) {
+    // Bỏ MultipartFile nếu không dùng
+    public VehicleResponse updateVehicle(Long id, VehicleRequest request , MultipartFile file) {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
 
+        // --- CẬP NHẬT CÁC TRƯỜNG TỪ REQUEST (PARTIAL UPDATE) ---
 
-        // 🟢 Cập nhật Stock ID nếu có thay đổi cấu hình tồn kho
-        if (request.getStockId() != null && !request.getStockId().equals(vehicle.getStock().getStockId())) {
-             InventoryStock newStock = inventoryStockRepository.findById(request.getStockId())
-                .orElseThrow(() -> new ResourceNotFoundException("Inventory Stock not found with id: " + request.getStockId()));
-             vehicle.setStock(newStock);
+        // 1. Cập nhật Variant (Nếu có và khác)
+        if (request.getVariantId() != null && !request.getVariantId().equals(vehicle.getVariant().getVariantId())) {
+             VehicleVariant newVariant = variantRepository.findById(request.getVariantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Variant not found: " + request.getVariantId()));
+            vehicle.setVariant(newVariant);
         }
 
-        // Cập nhật các trường riêng của Vehicle (VIN, Dates)
-        if (request.getVinNumber() != null) vehicle.setVinNumber(request.getVinNumber());
-        if (request.getManufactureDate() != null) vehicle.setManufactureDate(request.getManufactureDate());
-        if (request.getWarrantyExpiryDate() != null) vehicle.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
+        // 2. Cập nhật Stock ID (Nếu có và khác)
+        InventoryStock currentStock = vehicle.getInventoryStock(); // Lấy stock hiện tại
+        Long currentStockId = (currentStock != null) ? currentStock.getStockId() : null; // Lấy ID (có thể null)
 
+        if (request.getStockId() != null && !request.getStockId().equals(currentStockId)) {
+            InventoryStock newStock = inventoryStockRepository.findById(request.getStockId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Inventory Stock not found: " + request.getStockId()));
+            
+            // Optional: Kiểm tra stock mới có khớp variant không
+            if (newStock.getVariant() == null || !newStock.getVariant().getVariantId().equals(vehicle.getVariant().getVariantId())) {
+                throw new IllegalArgumentException("New Stock ID " + request.getStockId() + " does not match current Variant ID " + vehicle.getVariant().getVariantId());
+            }
+            vehicle.setInventoryStock(newStock);
+
+        } else if (request.getStockId() == null && currentStockId != null) {
+            vehicle.setInventoryStock(null);
+        }
+
+
+        // 3. Cập nhật VIN (Nếu có và khác) - Kiểm tra trùng lặp
+        if (request.getVinNumber() != null && !request.getVinNumber().equals(vehicle.getVinNumber())) {
+             if (vehicleRepository.existsByVinNumber(request.getVinNumber())) {
+                 throw new IllegalArgumentException("New VIN already exists: " + request.getVinNumber());
+             }
+             vehicle.setVinNumber(request.getVinNumber());
+        }
+
+        // 4. Cập nhật các trường Date (Nếu có)
+        if (request.getManufactureDate() != null) {
+            vehicle.setManufactureDate(request.getManufactureDate());
+        }
+        if (request.getWarrantyExpiryDate() != null) {
+            vehicle.setWarrantyExpiryDate(request.getWarrantyExpiryDate());
+        }
+
+
+        // --- LƯU VÀ TRẢ VỀ ---
         Vehicle updated = vehicleRepository.save(vehicle);
-        return convertToResponse(updated);
+        return convertToResponse(updated); // Dùng hàm map của bạn
     }
 
     // 🔴 Xóa mềm Vehicle (status đã chuyển sang Stock)
@@ -155,7 +201,7 @@ public class VehicleServiceImpl implements VehicleService {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
 
-        InventoryStock stock = vehicle.getStock();
+        InventoryStock stock = vehicle.getInventoryStock();
         if (stock != null) {
             stock.setStatus("INACTIVE"); 
             inventoryStockRepository.save(stock);
@@ -170,7 +216,7 @@ public class VehicleServiceImpl implements VehicleService {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
 
-        InventoryStock stock = vehicle.getStock();
+        InventoryStock stock = vehicle.getInventoryStock();
         if (stock != null) {
             stock.setStatus("ACTIVE");
             inventoryStockRepository.save(stock);

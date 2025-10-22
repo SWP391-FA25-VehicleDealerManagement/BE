@@ -2,6 +2,7 @@ package com.example.evm.service.inventory;
 
 import com.example.evm.dto.inventory.AllocationRequest;
 import com.example.evm.dto.inventory.InventoryResponse;
+import com.example.evm.dto.inventory.ManufacturerStockResponse;
 import com.example.evm.dto.inventory.StockRequest;
 
 import java.util.List;
@@ -20,11 +21,11 @@ public interface InventoryService {
 
     // --- 2. KHO TỔNG ---
 
-    List<InventoryResponse> getAllManufacturerStock();
+    List<ManufacturerStockResponse> getAllManufacturerStock();
 
-    InventoryResponse addOrUpdateManufacturerStock(StockRequest request); // <-- THÊM HÀM NÀY
+    ManufacturerStockResponse addOrUpdateManufacturerStock(StockRequest request); // <-- THÊM HÀM NÀY
 
-    InventoryResponse updateManufacturerStockStatus(Long id, String status); // <-- THÊM HÀM NÀY
+    ManufacturerStockResponse updateManufacturerStockStatus(Long id, String status); // <-- THÊM HÀM NÀY
 
     // --- 3. ĐIỀU PHỐI ---
 
