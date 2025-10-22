@@ -24,11 +24,11 @@ public class VehicleResponse {
     private LocalDate manufactureDate;
     private LocalDate warrantyExpiryDate;
 
-    // --- FIELDS TỪ INVENTORYSTOCK (ĐƯỢC MAP QUA MỐI QUAN HỆ) ---
-    private String color;           
-    private Long variantId;  
+    // --- FIELDS TỪ INVENTORYSTOCK (ĐƯỢC MAP QUA MỐI QUAN HỆ) ---           
+    private Long variantId;
     private String modelName;       
     private String variantName;
+    private String color;
     private String listingPrice;
     private String imageUrl;
 
