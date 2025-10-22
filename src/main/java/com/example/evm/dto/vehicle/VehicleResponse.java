@@ -5,7 +5,11 @@ import com.example.evm.entity.vehicle.VehicleDetail;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDate; 
+
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.util.Locale; 
 
 /**
  * DTO representing a specific Vehicle, mapping details from Vehicle and InventoryStock.
@@ -25,6 +29,8 @@ public class VehicleResponse {
     private Long variantId;  
     private String modelName;       
     private String variantName;
+    private String listingPrice;
+    private String imageUrl;
 
     @JsonProperty("vehicleDetails") 
     private VehicleDetailResponse details;
@@ -42,10 +48,20 @@ public class VehicleResponse {
             // 1. Lấy thông tin Màu sắc (từ InventoryStock)
             this.color = vehicle.getInventoryStock().getColor();
 
+            if (vehicle.getInventoryStock().getListingPrice() != null) {
+                BigDecimal price = vehicle.getInventoryStock().getListingPrice();
+                NumberFormat formatter = NumberFormat.getNumberInstance(Locale.US);
+                String formattedPrice = formatter.format(price.doubleValue());
+                this.listingPrice = formattedPrice + " VND"; 
+            } else {
+                this.listingPrice = "N/A";
+            }
+
             // 2. Lấy thông tin Variant và Model
             if (vehicle.getInventoryStock().getVariant() != null) {
                 this.variantId = vehicle.getInventoryStock().getVariant().getVariantId();
                 this.variantName = vehicle.getInventoryStock().getVariant().getName();
+                this.imageUrl = vehicle.getInventoryStock().getVariant().getImageUrl();
 
                 // Lấy thông tin Model từ Variant
                 if (vehicle.getInventoryStock().getVariant().getModel() != null) {
