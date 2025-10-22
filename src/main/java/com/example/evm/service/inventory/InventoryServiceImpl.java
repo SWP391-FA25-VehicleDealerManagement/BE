@@ -219,26 +219,6 @@ public class InventoryServiceImpl implements InventoryService {
     private InventoryResponse mapToDealerResponse(InventoryStock stock) {
         return new InventoryResponse(stock); 
     }
-    
-    /*
-    private InventoryResponse mapToManufacturerResponse(ManufacturerStock stock) {
-        InventoryResponse res = new InventoryResponse();
-        res.setInventoryId(stock.getManufacturerStockId()); 
-        res.setColor(stock.getColor());
-        res.setQuantity(stock.getQuantity());
-        res.setStatus(stock.getStatus());
-        res.setDealerName("KHO TỔNG"); 
-        
-        if (stock.getVariant() != null) {
-            res.setVariantName(stock.getVariant().getName());
-            if (stock.getVariant().getModel() != null) {
-                res.setModelName(stock.getVariant().getModel().getName());
-            }
-        }
-        res.setListingPrice("N/A"); 
-        return res;
-    }
-    */
 
     private ManufacturerStockResponse mapToManufacturerResponse(ManufacturerStock stock) { 
         ManufacturerStockResponse res = new ManufacturerStockResponse();
@@ -249,6 +229,7 @@ public class InventoryServiceImpl implements InventoryService {
         res.setStatus(stock.getStatus());
         
         if (stock.getVariant() != null) {
+            res.setVariantId(stock.getVariant().getVariantId());
             res.setVariantName(stock.getVariant().getName());
             if (stock.getVariant().getModel() != null) {
                 res.setModelName(stock.getVariant().getModel().getName());

@@ -5,13 +5,14 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@JsonPropertyOrder({ "id", "modelName", "variantName", "color", "quantity", "status" })
+@JsonPropertyOrder({ "id","variantId", "modelName", "variantName", "color", "quantity", "status" })
 @Data
 @NoArgsConstructor
 public class ManufacturerStockResponse {
 
     @JsonProperty("manufacturerStockId")
     private Long id;
+    private Long variantId;
     private Integer quantity;
     private String status;
     private String color;
