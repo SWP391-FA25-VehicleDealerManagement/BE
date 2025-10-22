@@ -6,21 +6,29 @@ import com.example.evm.dto.vehicle.VehicleDetailResponse;
 import com.example.evm.dto.vehicle.VehicleVariantRequest;
 import com.example.evm.dto.vehicle.VehicleVariantResponse;
 import com.example.evm.service.vehicle.VehicleVariantService;
+import com.example.evm.service.storage.FileStorageService; 
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import com.example.evm.service.storage.FileStorageService; 
-import java.io.IOException; 
+
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.util.List;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 
 
 @RestController
@@ -36,11 +44,25 @@ public class VehicleVariantController {
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<VehicleVariantResponse>> createVariant(
-        @RequestPart("variant") VehicleVariantRequest request,
-        @RequestPart("file") MultipartFile file) {
+            @Parameter(in = ParameterIn.DEFAULT, description = "Tên phiên bản")
+            @RequestParam("name") @NotBlank String name,
 
-    VehicleVariantResponse createdVariant = variantService.createVariant(request, file);
-    return ResponseEntity.ok(new ApiResponse<>(true, "Variant created successfully", createdVariant));
+            @Parameter(in = ParameterIn.DEFAULT, description = "ID của Model")
+            @RequestParam("modelId") @NotNull Long modelId,
+
+            @Parameter(in = ParameterIn.DEFAULT, description = "Giá niêm yết (MSRP)")
+            @RequestParam("msrp") @NotNull BigDecimal msrp,
+
+            @Parameter(description = "File ảnh")
+            @RequestParam(value = "file", required = true) MultipartFile file) {
+
+            VehicleVariantRequest requestDto = new VehicleVariantRequest();
+            requestDto.setName(name);
+            requestDto.setModelId(modelId);
+            requestDto.setMsrp(msrp);
+
+        VehicleVariantResponse createdVariant = variantService.createVariant(requestDto, file);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Variant created successfully", createdVariant));
     }
 
     // 🟢 LẤY TẤT CẢ các biến thể
@@ -83,12 +105,26 @@ public class VehicleVariantController {
     @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<VehicleVariantResponse>> updateVariant(
-        @PathVariable Long id,
-        @RequestPart("variant") VehicleVariantRequest request,
-        
-        @RequestPart(value = "image", required = false) MultipartFile file) { 
+        @Parameter(description = "ID của Variant cần cập nhật") @PathVariable Long id,
 
-    VehicleVariantResponse updatedVariant = variantService.updateVariant(id, request, file);
+        @Parameter(in = ParameterIn.DEFAULT, description = "Tên phiên bản mới (tùy chọn)")
+        @RequestParam(value = "name", required = false) String name,
+
+        @Parameter(in = ParameterIn.DEFAULT, description = "ID Model mới (tùy chọn)")
+        @RequestParam(value = "modelId", required = false) Long modelId,
+
+        @Parameter(in = ParameterIn.DEFAULT, description = "Giá niêm yết mới (tùy chọn)")
+        @RequestParam(value = "msrp", required = false) BigDecimal msrp,
+
+        @Parameter(description = "File ảnh mới (tùy chọn)")
+        @RequestParam(value = "image", required = false) MultipartFile file) { 
+
+        VehicleVariantRequest requestDto = new VehicleVariantRequest();
+        if (name != null) requestDto.setName(name);
+        if (modelId != null) requestDto.setModelId(modelId);
+        if (msrp != null) requestDto.setMsrp(msrp);
+
+    VehicleVariantResponse updatedVariant = variantService.updateVariant(id, requestDto, file);
     return ResponseEntity.ok(new ApiResponse<>(true, "Variant updated successfully", updatedVariant));
     }
 
