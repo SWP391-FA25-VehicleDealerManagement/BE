@@ -249,6 +249,7 @@ public class InventoryServiceImpl implements InventoryService {
         res.setStatus(stock.getStatus());
         
         if (stock.getVariant() != null) {
+            res.setVariantId(stock.getVariant().getVariantId());  // ✅ Thêm variant_id
             res.setVariantName(stock.getVariant().getName());
             if (stock.getVariant().getModel() != null) {
                 res.setModelName(stock.getVariant().getModel().getName());

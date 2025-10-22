@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class RequestDetailResponse {
     private Long requestDetailId;
+    private Long variantId;  // ✅ Thêm variant_id
     private String variantName;
     private String modelName;
     private Integer quantity;

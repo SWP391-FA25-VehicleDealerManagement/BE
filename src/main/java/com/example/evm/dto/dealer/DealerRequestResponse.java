@@ -15,6 +15,7 @@ public class DealerRequestResponse {
     private Long requestId;
     
     // Chỉ thông tin cần thiết
+    private Long dealerId;  // ✅ Thêm dealer_id
     private String dealerName;
     private String userFullName;
     private String userRole;
