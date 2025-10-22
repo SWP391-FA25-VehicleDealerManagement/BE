@@ -1,6 +1,5 @@
 package com.example.evm.entity.order;
 
-import com.example.evm.entity.inventory.InventoryStock;
 import com.example.evm.entity.promotion.Promotion;
 import com.example.evm.entity.vehicle.Vehicle;
 
@@ -57,7 +56,7 @@ public class OrderDetail {
     @Override
     public String toString() {
         
-        // 🟢 LOGIC ĐÃ SỬA LỖI: Lấy tên Variant thông qua chuỗi quan hệ Stock
+        // 🟢 Lấy tên Variant thông qua chuỗi quan hệ Stock
         String vehicleName = "N/A (Vehicle Info Missing)";
         if (vehicle != null && vehicle.getInventoryStock() != null && vehicle.getInventoryStock().getVariant() != null) {
             vehicleName = vehicle.getInventoryStock().getVariant().getName();
@@ -65,8 +64,6 @@ public class OrderDetail {
         
         return "OrderDetail{" +
                 "orderDetailId=" + orderDetailId +
-                // ❌ Dòng bị lỗi đã được sửa:
-                // Lỗi: vehicle.getName()
                 "vehicle=" + vehicleName +
                 ", promotion=" + (promotion != null ? promotion.getTitle() : "null") +
                 ", quantity=" + quantity +
