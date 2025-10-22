@@ -4,7 +4,9 @@ import com.example.evm.entity.vehicle.VehicleVariant;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
+@JsonPropertyOrder({ "variantId", "modelName", "name", "msrp", "status", "defaultImageUrl" })
 @Data
 @NoArgsConstructor
 public class VehicleVariantResponse {

@@ -1,6 +1,7 @@
 package com.example.evm.service.inventory;
 
 import com.example.evm.dto.inventory.InventoryResponse;
+import com.example.evm.dto.inventory.ManufacturerStockResponse;
 import com.example.evm.dto.inventory.AllocationRequest; 
 import com.example.evm.dto.inventory.StockRequest; 
 import com.example.evm.entity.dealer.Dealer;
@@ -92,8 +93,8 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<InventoryResponse> getAllManufacturerStock() {
-        return manufacturerStockRepo.findAllWithRelations() // Sửa: Dùng hàm mới
+    public List<ManufacturerStockResponse> getAllManufacturerStock() {
+        return manufacturerStockRepo.findAllWithRelations()
                 .stream()
                 .map(this::mapToManufacturerResponse)
                 .collect(Collectors.toList());
@@ -101,7 +102,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
-    public InventoryResponse addOrUpdateManufacturerStock(StockRequest request) {
+    public ManufacturerStockResponse addOrUpdateManufacturerStock(StockRequest request) {
         VehicleVariant variant = variantRepository.findById(request.getVariantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
 
@@ -128,7 +129,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
-    public InventoryResponse updateManufacturerStockStatus(Long id, String status) {
+    public ManufacturerStockResponse updateManufacturerStockStatus(Long id, String status) {
         ManufacturerStock existing = manufacturerStockRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Manufacturer stock item not found"));
         existing.setStatus(status);
@@ -219,6 +220,7 @@ public class InventoryServiceImpl implements InventoryService {
         return new InventoryResponse(stock); 
     }
     
+    /*
     private InventoryResponse mapToManufacturerResponse(ManufacturerStock stock) {
         InventoryResponse res = new InventoryResponse();
         res.setInventoryId(stock.getManufacturerStockId()); 
@@ -234,6 +236,25 @@ public class InventoryServiceImpl implements InventoryService {
             }
         }
         res.setListingPrice("N/A"); 
+        return res;
+    }
+    */
+
+    private ManufacturerStockResponse mapToManufacturerResponse(ManufacturerStock stock) { 
+        ManufacturerStockResponse res = new ManufacturerStockResponse();
+        
+        res.setId(stock.getManufacturerStockId());
+        res.setColor(stock.getColor());
+        res.setQuantity(stock.getQuantity());
+        res.setStatus(stock.getStatus());
+        
+        if (stock.getVariant() != null) {
+            res.setVariantName(stock.getVariant().getName());
+            if (stock.getVariant().getModel() != null) {
+                res.setModelName(stock.getVariant().getModel().getName());
+            }
+        }
+        
         return res;
     }
 }

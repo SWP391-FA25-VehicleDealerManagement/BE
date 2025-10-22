@@ -1,7 +1,9 @@
 package com.example.evm.dto.inventory;
 
 // Import Entity (đường dẫn này phải đúng)
-import com.example.evm.entity.inventory.InventoryStock; 
+import com.example.evm.entity.inventory.InventoryStock;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,19 +11,20 @@ import lombok.NoArgsConstructor;
 import java.text.NumberFormat;
 import java.util.Locale;
 
-
+@JsonPropertyOrder({ "inventoryId", "modelName", "variantName", "color", "listingPrice","quantity", "status", "dealerName" })
 @Data
 @NoArgsConstructor
 public class InventoryResponse {
 
+    @JsonProperty("stockId")
     private Long inventoryId;
     private Integer quantity;
     private String status;
     private String color;
     private String listingPrice;
 
-    private String variantName;
     private String modelName;
+    private String variantName;
     private String dealerName;
 
 

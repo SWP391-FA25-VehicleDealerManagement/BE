@@ -22,7 +22,11 @@ public class Vehicle {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "stock_id", nullable = false)
-    private InventoryStock stock;
+    private InventoryStock inventoryStock;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id", nullable = false)
+    private VehicleVariant variant;
 
     @Column(name = "manufacture_date")
     private LocalDate manufactureDate;
