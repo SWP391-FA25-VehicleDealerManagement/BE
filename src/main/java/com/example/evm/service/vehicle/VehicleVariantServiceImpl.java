@@ -137,36 +137,80 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
         detail.setVariant(variant);
 
         // Thông số
-        detail.setDimensionsMm(request.getDimensionsMm());
-        detail.setWheelbaseMm(request.getWheelbaseMm());
-        detail.setGroundClearanceMm(request.getGroundClearanceMm());
-        detail.setCurbWeightKg(request.getCurbWeightKg());
-        detail.setSeatingCapacity(request.getSeatingCapacity());
-        detail.setTrunkCapacityLiters(request.getTrunkCapacityLiters());
+        if (request.getDimensionsMm() != null) {
+            detail.setDimensionsMm(request.getDimensionsMm());
+        }
+        if (request.getWheelbaseMm() != null) {
+            detail.setWheelbaseMm(request.getWheelbaseMm());
+        }
+        if (request.getGroundClearanceMm() != null) {
+            detail.setGroundClearanceMm(request.getGroundClearanceMm());
+        }   
+        if (request.getCurbWeightKg() != null) {
+            detail.setCurbWeightKg(request.getCurbWeightKg());
+        }
+        if (request.getSeatingCapacity() != null) {
+            detail.setSeatingCapacity(request.getSeatingCapacity());
+        }
+        if (request.getTrunkCapacityLiters() != null) {
+            detail.setTrunkCapacityLiters(request.getTrunkCapacityLiters());
+        }
 
         // Động cơ & Vận Hành
-        detail.setEngineType(request.getEngineType());
-        detail.setMaxPower(request.getMaxPower());
-        detail.setTopSpeedKmh(request.getTopSpeedKmh());
-        detail.setDrivetrain(request.getDrivetrain());
-        detail.setDriveModes(request.getDriveModes());
+        if (request.getEngineType() != null) {
+            detail.setEngineType(request.getEngineType());
+        }
+        if (request.getMaxPower() != null) {
+            detail.setMaxPower(request.getMaxPower());
+        }
+        if (request.getTopSpeedKmh() != null) {
+            detail.setTopSpeedKmh(request.getTopSpeedKmh());
+        }
+        if (request.getDrivetrain() != null) {
+            detail.setDrivetrain(request.getDrivetrain());
+        }
+        if (request.getDriveModes() != null) {
+            detail.setDriveModes(request.getDriveModes());
+        }
 
         // Pin & Khả năng di chuyển
-        detail.setBatteryCapacityKwh(request.getBatteryCapacityKwh());
-        detail.setRangePerChargeKm(request.getRangePerChargeKm());
-        detail.setChargingTime(request.getChargingTime());
+        if (request.getBatteryCapacityKwh() != null) {
+            detail.setBatteryCapacityKwh(request.getBatteryCapacityKwh());
+        }
+        if (request.getRangePerChargeKm() != null) {
+            detail.setRangePerChargeKm(request.getRangePerChargeKm());
+        }
+        if (request.getChargingTime() != null) {
+            detail.setChargingTime(request.getChargingTime());
+        }
 
         // Thiết kế
-        detail.setExteriorFeatures(request.getExteriorFeatures());
-        detail.setInteriorFeatures(request.getInteriorFeatures());
+        if (request.getExteriorFeatures() != null) {
+            detail.setExteriorFeatures(request.getExteriorFeatures());
+        }
+        if (request.getInteriorFeatures() != null) {
+            detail.setInteriorFeatures(request.getInteriorFeatures());
+        }
 
         // Tính năng an toàn
-        detail.setAirbags(request.getAirbags());
-        detail.setBrakingSystem(request.getBrakingSystem());
-        detail.setHasEsc(request.getHasEsc());
-        detail.setHasTpms(request.getHasTpms());
-        detail.setHasRearCamera(request.getHasRearCamera());
-        detail.setHasChildLock(request.getHasChildLock());
+        if (request.getAirbags() != null) {
+            detail.setAirbags(request.getAirbags());
+        }
+        if (request.getBrakingSystem() != null) {
+            detail.setBrakingSystem(request.getBrakingSystem());
+        }
+        if (request.getHasEsc() != null) {
+            detail.setHasEsc(request.getHasEsc());
+        }
+        if (request.getHasTpms() != null) {
+            detail.setHasTpms(request.getHasTpms());
+        }   
+        if (request.getHasRearCamera() != null) {
+            detail.setHasRearCamera(request.getHasRearCamera());
+        }
+        if (request.getHasChildLock() != null) {
+            detail.setHasChildLock(request.getHasChildLock());
+        }
 
         // --- KẾT THÚC GÁN GIÁ TRỊ ---
 
