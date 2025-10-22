@@ -62,7 +62,7 @@ public class InventoryController {
     // 🔹 XÓA một mặt hàng khỏi kho ĐẠI LÝ
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @DeleteMapping("/dealer/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteDealerStock(@PathVariable Long id) { // Sửa: Dùng Long
+    public ResponseEntity<ApiResponse<Void>> deleteDealerStock(@PathVariable Long id) {
         inventoryService.deleteStock(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer stock item deleted", null));
     }
