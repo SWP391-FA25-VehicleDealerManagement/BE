@@ -18,6 +18,14 @@ public interface InventoryStockRepository extends JpaRepository<InventoryStock, 
            "LEFT JOIN FETCH v.model m " +
            "LEFT JOIN FETCH s.dealer d")
     List<InventoryStock> findAllWithRelations();
+    
+    // ✅ Lấy kho của dealer cụ thể (với relations)
+    @Query("SELECT s FROM InventoryStock s " +
+           "LEFT JOIN FETCH s.variant v " +
+           "LEFT JOIN FETCH v.model m " +
+           "LEFT JOIN FETCH s.dealer d " +
+           "WHERE d.dealerId = :dealerId")
+    List<InventoryStock> findByDealerIdWithRelations(Long dealerId);
 
     Optional<InventoryStock> findByVariantVariantIdAndColorAndDealerDealerId(
         Long variantId, String color, Long dealerId

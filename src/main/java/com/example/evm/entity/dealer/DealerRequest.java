@@ -63,6 +63,9 @@ public class DealerRequest {
     @Column(name = "approved_by")
     private String approvedBy;
 
+    @Column(name = "shipped_date")
+    private LocalDateTime shippedDate;  // ✅ Ngày giao hàng cho đại lý
+
     @Column(name = "delivery_date")
     private LocalDateTime deliveryDate;
 

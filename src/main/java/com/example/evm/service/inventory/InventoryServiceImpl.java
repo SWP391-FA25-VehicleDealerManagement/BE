@@ -1,33 +1,41 @@
 package com.example.evm.service.inventory;
 
+import com.example.evm.dto.inventory.AllocationResponse;
 import com.example.evm.dto.inventory.InventoryResponse;
 import com.example.evm.dto.inventory.ManufacturerStockResponse;
 import com.example.evm.dto.inventory.AllocationRequest; 
 import com.example.evm.dto.inventory.StockRequest; 
 import com.example.evm.entity.dealer.Dealer;
+import com.example.evm.entity.dealer.DealerRequest;
 import com.example.evm.entity.inventory.InventoryStock;
 import com.example.evm.entity.inventory.ManufacturerStock; 
 import com.example.evm.entity.vehicle.VehicleVariant;
 import com.example.evm.exception.ResourceNotFoundException; 
 import com.example.evm.repository.dealer.DealerRepository;
+import com.example.evm.repository.dealer.DealerRequestRepository;
 import com.example.evm.repository.inventory.InventoryStockRepository;
 import com.example.evm.repository.inventory.ManufacturerStockRepository; 
 import com.example.evm.repository.vehicle.VehicleVariantRepository; 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryStockRepository inventoryRepository;
     private final ManufacturerStockRepository manufacturerStockRepo;
     private final VehicleVariantRepository variantRepository;
     private final DealerRepository dealerRepository;
+    private final DealerRequestRepository dealerRequestRepository;
 
     // --- 1. KHO ĐẠI LÝ ---
 
@@ -37,6 +45,15 @@ public class InventoryServiceImpl implements InventoryService {
         return inventoryRepository.findAllWithRelations()
                 .stream()
                 .map(this::mapToDealerResponse) 
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<InventoryResponse> getDealerStockByDealerId(Long dealerId) {
+        return inventoryRepository.findByDealerIdWithRelations(dealerId)
+                .stream()
+                .map(this::mapToDealerResponse)
                 .collect(Collectors.toList());
     }
 
@@ -141,7 +158,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
-    public InventoryResponse allocateStockToDealer(AllocationRequest request) {
+    public AllocationResponse allocateStockToDealer(AllocationRequest request) {
         
         Dealer dealer = dealerRepository.findById(request.getDealerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Dealer not found"));
@@ -180,7 +197,92 @@ public class InventoryServiceImpl implements InventoryService {
         dealerStock.setQuantity(dealerStock.getQuantity() + request.getQuantity());
         InventoryStock savedDealerStock = inventoryRepository.save(dealerStock);
         
-        return mapToDealerResponse(savedDealerStock);
+        // 3. ✅ TỰ ĐỘNG UPDATE STATUS CỦA DEALER REQUEST (APPROVED → SHIPPED)
+        DealerRequest updatedRequest = updateRelatedDealerRequestStatus(
+                request.getDealerId(), 
+                request.getVariantId(), 
+                request.getColor(), 
+                request.getQuantity()
+        );
+        
+        // 4. ✅ BUILD RESPONSE DTO
+        return buildAllocationResponse(savedDealerStock, updatedRequest, dealer.getDealerName());
+    }
+    
+    /**
+     * Tìm và update status của DealerRequest liên quan khi allocate xe
+     * Logic: Tìm request đã APPROVED, có chứa variant + color tương ứng
+     * → Đổi status thành "SHIPPED" 
+     * 
+     * @return DealerRequest đã được update, hoặc null nếu không tìm thấy
+     */
+    private DealerRequest updateRelatedDealerRequestStatus(Long dealerId, Long variantId, String color, Integer allocatedQty) {
+        // Tìm các request đã APPROVED của dealer này
+        List<DealerRequest> approvedRequests = dealerRequestRepository
+                .findByDealerDealerIdAndStatus(dealerId, "APPROVED");
+        
+        if (approvedRequests.isEmpty()) {
+            log.info("⚠️ Không tìm thấy DealerRequest APPROVED nào cho dealer {} để update status", dealerId);
+            return null;
+        }
+        
+        // Tìm request có chứa variant + color phù hợp
+        for (DealerRequest request : approvedRequests) {
+            boolean hasMatchingDetail = request.getRequestDetails().stream()
+                    .anyMatch(detail -> 
+                        detail.getVehicleVariant().getVariantId().equals(variantId) &&
+                        detail.getColor().equalsIgnoreCase(color)
+                    );
+            
+            if (hasMatchingDetail) {
+                // Đổi status sang SHIPPED
+                request.setStatus("SHIPPED");
+                request.setShippedDate(LocalDateTime.now());
+                DealerRequest savedRequest = dealerRequestRepository.save(request);
+                
+                log.info("✅ Đã update DealerRequest {} → status = SHIPPED (Dealer: {}, Variant: {}, Color: {})", 
+                        request.getRequestId(), dealerId, variantId, color);
+                
+                // Trả về request đầu tiên tìm thấy
+                return savedRequest;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Build AllocationResponse DTO với đầy đủ thông tin cho FE
+     */
+    private AllocationResponse buildAllocationResponse(InventoryStock dealerStock, 
+                                                        DealerRequest updatedRequest, 
+                                                        String dealerName) {
+        AllocationResponse response = new AllocationResponse();
+        
+        // 1. Thông tin kho đại lý
+        response.setDealerStock(mapToDealerResponse(dealerStock));
+        
+        // 2. Thông tin request đã update (nếu có)
+        if (updatedRequest != null) {
+            AllocationResponse.DealerRequestInfo requestInfo = new AllocationResponse.DealerRequestInfo();
+            requestInfo.setRequestId(updatedRequest.getRequestId());
+            requestInfo.setStatus(updatedRequest.getStatus());
+            requestInfo.setDealerName(dealerName);
+            
+            // Format ngày giờ
+            if (updatedRequest.getShippedDate() != null) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                requestInfo.setShippedDate(updatedRequest.getShippedDate().format(formatter));
+            }
+            
+            response.setUpdatedRequest(requestInfo);
+            response.setMessage("✅ Phân bổ thành công! Request #" + updatedRequest.getRequestId() + 
+                              " đã chuyển sang trạng thái 'Đang vận chuyển'");
+        } else {
+            response.setMessage("✅ Phân bổ thành công! (Không tìm thấy request liên quan để cập nhật)");
+        }
+        
+        return response;
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.example.evm.controller.inventory;
 
 import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.dto.inventory.AllocationRequest;
+import com.example.evm.dto.inventory.AllocationResponse;
 import com.example.evm.dto.inventory.InventoryResponse;
 import com.example.evm.dto.inventory.StockRequest;
 import com.example.evm.dto.inventory.ManufacturerStockRequest;
@@ -35,6 +36,16 @@ public class InventoryController {
     public ResponseEntity<ApiResponse<List<InventoryResponse>>> getAllDealerStock() {
         List<InventoryResponse> inventoryList = inventoryService.getAllDealerStock();
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer inventory list retrieved", inventoryList));
+    }
+    
+    // 🔹 GET kho của dealer cụ thể (theo dealerId)
+    // ✅ API này lấy từ InventoryStock thay vì Vehicle
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @GetMapping("/dealer/{dealerId}")
+    public ResponseEntity<ApiResponse<List<InventoryResponse>>> getDealerStockByDealerId(
+            @PathVariable Long dealerId) {
+        List<InventoryResponse> inventoryList = inventoryService.getDealerStockByDealerId(dealerId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Dealer inventory retrieved successfully", inventoryList));
     }
 
     // 🔹 THÊM HÀNG vào kho ĐẠI LÝ (hoặc cộng dồn nếu đã có)
@@ -112,13 +123,14 @@ public class InventoryController {
     */
 
     // 🔹 ĐIỀU PHỐI (Kho tổng -> Đại lý)
+    // ✅ Tự động update status DealerRequest: APPROVED → SHIPPED
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @PostMapping("/allocate")
-    public ResponseEntity<ApiResponse<InventoryResponse>> allocateStock(
+    public ResponseEntity<ApiResponse<AllocationResponse>> allocateStock(
             @Valid @RequestBody AllocationRequest request) {
         
-        InventoryResponse response = inventoryService.allocateStockToDealer(request);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Stock allocated successfully to dealer", response));
+        AllocationResponse response = inventoryService.allocateStockToDealer(request);
+        return ResponseEntity.ok(new ApiResponse<>(true, response.getMessage(), response));
     }
 
     // 🔹 THU HỒI (Đại lý -> Kho tổng)

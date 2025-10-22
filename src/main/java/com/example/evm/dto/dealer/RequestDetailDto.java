@@ -14,6 +14,9 @@ public class RequestDetailDto {
     @NotNull(message = "Variant ID is required")
     private Long variantId;
     
+    @NotNull(message = "Color is required")
+    private String color;  // ✅ Thêm trường màu sắc
+    
     @NotNull(message = "Quantity is required")
     private Integer quantity;
     

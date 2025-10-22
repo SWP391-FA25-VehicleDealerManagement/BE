@@ -36,6 +36,9 @@ public class DealerRequestDetail {
     @JsonIgnore  // ✅ Tránh lazy loading issues, dùng DTO để trả về
     private VehicleVariant vehicleVariant;
 
+    @Column(name = "color", length = 50)
+    private String color;  // ✅ Thêm trường màu sắc
+
     @Column(name = "quantity")
     private Integer quantity;  // ✅ Đổi lại thành Integer (không phải LongLong)
 

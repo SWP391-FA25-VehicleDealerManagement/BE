@@ -26,7 +26,9 @@ import com.example.evm.repository.dealer.DealerRepository;
 import com.example.evm.repository.auth.UserRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
 import com.example.evm.repository.inventory.ManufacturerStockRepository;
+import com.example.evm.repository.inventory.InventoryStockRepository;
 import com.example.evm.entity.inventory.ManufacturerStock;
+import com.example.evm.entity.inventory.InventoryStock;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +43,7 @@ public class DealerRequestService {
     private final UserRepository userRepository;
     private final VehicleVariantRepository vehicleVariantRepository;
     private final ManufacturerStockRepository manufacturerStockRepository;
+    private final InventoryStockRepository inventoryStockRepository;
 
     // ✅ Trả về DTO để tránh lazy proxy errors
     public List<DealerRequestResponse> getAllRequests() {
@@ -96,6 +99,7 @@ public class DealerRequestService {
                     dto.setVariantName(detail.getVehicleVariant().getName());
                     dto.setModelName(detail.getVehicleVariant().getModel() != null ? 
                             detail.getVehicleVariant().getModel().getName() : null);
+                    dto.setColor(detail.getColor());  // ✅ Thêm màu sắc
                     dto.setQuantity(detail.getQuantity());
                     dto.setUnitPrice(detail.getUnitPrice());
                     dto.setLineTotal(detail.getLineTotal());
@@ -135,6 +139,7 @@ public class DealerRequestService {
             // Tạo detail entity
             DealerRequestDetail detail = new DealerRequestDetail();
             detail.setVehicleVariant(variant);
+            detail.setColor(detailDto.getColor());  // ✅ Set màu sắc
             detail.setQuantity(detailDto.getQuantity());
             detail.setUnitPrice(detailDto.getUnitPrice());
             detail.setNotes(detailDto.getNotes());
@@ -235,6 +240,7 @@ public class DealerRequestService {
                     detailDto.setVariantName(detail.getVehicleVariant().getName());
                     detailDto.setModelName(detail.getVehicleVariant().getModel() != null ? 
                             detail.getVehicleVariant().getModel().getName() : null);
+                    detailDto.setColor(detail.getColor());  // ✅ Thêm màu sắc
                     detailDto.setQuantity(detail.getQuantity());
                     detailDto.setUnitPrice(detail.getUnitPrice());
                     detailDto.setLineTotal(detail.getLineTotal());
@@ -267,71 +273,46 @@ public class DealerRequestService {
     public DealerRequest updateRequestStatus(Long id, String status, String approvedBy) {
         DealerRequest request = getRequestEntityById(id);
         
-        // ✅ KIỂM TRA KHO TRƯỚC KHI APPROVE (Logic mới)
+        // ✅ XỬ LÝ THEO TỪNG STATUS
         if ("APPROVED".equals(status)) {
-            // Duyệt qua từng detail để kiểm tra stock
+            // Chỉ kiểm tra có đủ hàng không, KHÔNG trừ kho (allocate sẽ trừ)
             for (DealerRequestDetail detail : request.getRequestDetails()) {
                 Long variantId = detail.getVehicleVariant().getVariantId();
+                String color = detail.getColor();
                 Integer requestedQty = detail.getQuantity();
                 
-                // Tính tổng số xe có sẵn trong ManufacturerStock cho variant này (tất cả màu)
-                List<ManufacturerStock> stocks = manufacturerStockRepository.findAll().stream()
-                        .filter(stock -> stock.getVariant() != null 
-                                && stock.getVariant().getVariantId().equals(variantId))
-                        .toList();
+                // Tìm ManufacturerStock theo variant + color
+                ManufacturerStock stock = manufacturerStockRepository.findAll().stream()
+                        .filter(s -> s.getVariant() != null 
+                                && s.getVariant().getVariantId().equals(variantId)
+                                && s.getColor().equalsIgnoreCase(color))
+                        .findFirst()
+                        .orElse(null);
                 
-                int totalAvailable = stocks.stream()
-                        .mapToInt(ManufacturerStock::getQuantity)
-                        .sum();
+                int totalAvailable = (stock != null) ? stock.getQuantity() : 0;
                 
                 // Kiểm tra đủ hàng không
                 if (totalAvailable < requestedQty) {
                     String variantName = detail.getVehicleVariant().getName();
                     throw new IllegalArgumentException(
-                        String.format("❌ Không đủ xe trong kho! Variant '%s' - Yêu cầu: %d xe, Có sẵn: %d xe", 
-                            variantName, requestedQty, totalAvailable)
+                        String.format("❌ Không đủ xe trong kho! Variant '%s' - Màu '%s' - Yêu cầu: %d xe, Có sẵn: %d xe", 
+                            variantName, color, requestedQty, totalAvailable)
                     );
                 }
                 
-                log.info("✅ Variant {} - Requested: {}, Available: {}", variantId, requestedQty, totalAvailable);
-            }
-            
-            // ✅ Nếu đủ hàng → Trừ quantity từ ManufacturerStock
-            for (DealerRequestDetail detail : request.getRequestDetails()) {
-                Long variantId = detail.getVehicleVariant().getVariantId();
-                Integer requestedQty = detail.getQuantity();
-                
-                // Lấy danh sách stocks của variant này, ưu tiên màu có nhiều xe nhất
-                List<ManufacturerStock> stocks = manufacturerStockRepository.findAll().stream()
-                        .filter(stock -> stock.getVariant() != null 
-                                && stock.getVariant().getVariantId().equals(variantId)
-                                && stock.getQuantity() > 0)
-                        .sorted((a, b) -> b.getQuantity().compareTo(a.getQuantity())) // Sort giảm dần
-                        .toList();
-                
-                int remaining = requestedQty;
-                
-                // Trừ dần từ các stock cho đến khi đủ
-                for (ManufacturerStock stock : stocks) {
-                    if (remaining <= 0) break;
-                    
-                    int deduct = Math.min(stock.getQuantity(), remaining);
-                    stock.setQuantity(stock.getQuantity() - deduct);
-                    remaining -= deduct;
-                    
-                    manufacturerStockRepository.save(stock);
-                    log.info("📦 Trừ {} xe từ ManufacturerStock ID {} (Color: {})", 
-                            deduct, stock.getManufacturerStockId(), stock.getColor());
-                }
+                log.info("✅ Variant {} - Color {} - Requested: {}, Available: {}", variantId, color, requestedQty, totalAvailable);
             }
             
             // Set approved info
             request.setApprovedDate(LocalDateTime.now());
             request.setApprovedBy(approvedBy);
-            log.info("✅ Request {} APPROVED - Đã trừ xe từ kho", id);
+            log.info("✅ Request {} APPROVED - Chờ phân bổ để trừ kho", id);
             
         } else if ("DELIVERED".equals(status)) {
+            // ✅ DELIVERED: Tự động cộng xe vào kho đại lý
+            addStockToDealerOnDelivery(request);
             request.setDeliveryDate(LocalDateTime.now());
+            log.info("✅ Request {} DELIVERED - Đã cộng xe vào kho đại lý", id);
         }
         
         request.setStatus(status);
@@ -393,5 +374,45 @@ public class DealerRequestService {
         dealerRequestRepository.delete(request);
         
         log.info("Dealer request deleted: {} with {} details", id, request.getRequestDetails().size());
+    }
+    
+    /**
+     * Tự động cộng xe vào kho đại lý khi status = DELIVERED
+     * Logic: Duyệt qua từng detail, cộng quantity vào InventoryStock
+     * Nếu chưa có stock (variant + color + dealer), tạo mới
+     */
+    private void addStockToDealerOnDelivery(DealerRequest request) {
+        Dealer dealer = request.getDealer();
+        
+        for (DealerRequestDetail detail : request.getRequestDetails()) {
+            VehicleVariant variant = detail.getVehicleVariant();
+            String color = detail.getColor();
+            Integer quantity = detail.getQuantity();
+            
+            // Tìm hoặc tạo mới InventoryStock
+            InventoryStock dealerStock = inventoryStockRepository
+                    .findByVariantVariantIdAndColorAndDealerDealerId(
+                            variant.getVariantId(),
+                            color,
+                            dealer.getDealerId()
+                    )
+                    .orElseGet(() -> {
+                        InventoryStock newStock = new InventoryStock();
+                        newStock.setVariant(variant);
+                        newStock.setDealer(dealer);
+                        newStock.setColor(color);
+                        newStock.setQuantity(0);
+                        newStock.setStatus("In Stock");
+                        newStock.setListingPrice(variant.getMsrp());
+                        return newStock;
+                    });
+            
+            // Cộng số lượng xe
+            dealerStock.setQuantity(dealerStock.getQuantity() + quantity);
+            inventoryStockRepository.save(dealerStock);
+            
+            log.info("📦 Cộng {} xe vào kho đại lý {} (Variant: {}, Color: {}, Stock ID: {})", 
+                    quantity, dealer.getDealerName(), variant.getName(), color, dealerStock.getStockId());
+        }
     }
 }
