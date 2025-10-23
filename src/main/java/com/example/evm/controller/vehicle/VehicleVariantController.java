@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.util.List;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -151,13 +152,23 @@ public class VehicleVariantController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Details retrieved successfully", details));
     }
 
-    // 🔄 THÊM/CẬP NHẬT thông số kỹ thuật cho một variant
+    // 🔄 THÊM thông số kỹ thuật cho một variant
     @PostMapping("/{variantId}/details")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<VehicleDetailResponse>> addOrUpdateVariantDetails(
+    public ResponseEntity<ApiResponse<VehicleDetailResponse>> createDetails(
             @PathVariable Long variantId,
             @RequestBody VehicleDetailRequest request) {
-        VehicleDetailResponse details = variantService.addOrUpdateDetails(variantId, request);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Details added/updated successfully", details));
+        VehicleDetailResponse details = variantService.createDetails(variantId, request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Details created successfully", details));
+    }
+
+    // Sửa thông số kỹ thuật cho một variant
+    @PutMapping("/{variantId}/details")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<VehicleDetailResponse>> updateDetails(
+            @PathVariable Long variantId,
+            @Valid @RequestBody VehicleDetailRequest request) {
+        VehicleDetailResponse updatedDetails = variantService.updateDetails(variantId, request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle details updated successfully", updatedDetails));
     }
 }

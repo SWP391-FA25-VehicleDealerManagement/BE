@@ -17,6 +17,7 @@ public interface VehicleVariantService {
     void deactivateVariant(Long id);
     void activateVariant(Long id);
 
-    VehicleDetailResponse addOrUpdateDetails(Long variantId, VehicleDetailRequest request);
+    VehicleDetailResponse createDetails(Long variantId, VehicleDetailRequest request);
+    VehicleDetailResponse updateDetails(Long variantId, VehicleDetailRequest request);
     VehicleDetailResponse getDetailsByVariantId(Long variantId);
 }

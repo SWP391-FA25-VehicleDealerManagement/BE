@@ -5,9 +5,10 @@ import com.example.evm.dto.inventory.AllocationRequest;
 import com.example.evm.dto.inventory.AllocationResponse;
 import com.example.evm.dto.inventory.InventoryResponse;
 import com.example.evm.dto.inventory.StockRequest;
-import com.example.evm.dto.inventory.ManufacturerStockRequest;
 import com.example.evm.dto.inventory.ManufacturerStockResponse;
 import com.example.evm.service.inventory.InventoryService;
+import com.example.evm.dto.inventory.UpdateStockRequest;
+import com.example.evm.dto.inventory.UpdateManufacturerStockRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -49,12 +50,20 @@ public class InventoryController {
     }
 
     // 🔹 THÊM HÀNG vào kho ĐẠI LÝ (hoặc cộng dồn nếu đã có)
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
     @PostMapping("/dealer")
-    public ResponseEntity<ApiResponse<InventoryResponse>> addOrUpdateDealerStock(
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<InventoryResponse>> createDealerStock( // <-- Đổi tên hàm
             @Valid @RequestBody StockRequest request) {
-        
-        InventoryResponse response = inventoryService.addOrUpdateDealerStock(request);
+        InventoryResponse response = inventoryService.createDealerStock(request); // <-- Gọi hàm create
+        return ResponseEntity.ok(new ApiResponse<>(true, "Dealer stock created successfully", response));
+    }
+
+    @PutMapping("/dealer/{id}") // <-- Dùng PUT và có ID
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<InventoryResponse>> updateDealerStock(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateStockRequest request) { // <-- Dùng DTO Update
+        InventoryResponse response = inventoryService.updateDealerStock(id, request); // <-- Gọi hàm update
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer stock updated successfully", response));
     }
 
@@ -93,14 +102,20 @@ public class InventoryController {
     }
 
     // 🔹 NHẬP XE (từ nhà máy) vào KHO TỔNG
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     @PostMapping("/manufacturer")
-    public ResponseEntity<ApiResponse<ManufacturerStockResponse>> addOrUpdateManufacturerStock(
-            @Valid @RequestBody ManufacturerStockRequest request) { 
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<ManufacturerStockResponse>> createManufacturerStock(
+            @Valid @RequestBody StockRequest request) { // Vẫn dùng StockRequest cho Create
+        ManufacturerStockResponse response = inventoryService.createManufacturerStock(request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Manufacturer stock created", response));
+    }
 
-        StockRequest stockRequestForService = mapToStockRequest(request); 
-
-        ManufacturerStockResponse response = inventoryService.addOrUpdateManufacturerStock(stockRequestForService);
+    @PutMapping("/manufacturer/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<ManufacturerStockResponse>> updateManufacturerStock(
+             @PathVariable Long id,
+             @Valid @RequestBody UpdateManufacturerStockRequest request) { 
+        ManufacturerStockResponse response = inventoryService.updateManufacturerStock(id, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Manufacturer stock updated", response));
     }
     
@@ -128,9 +143,8 @@ public class InventoryController {
     @PostMapping("/allocate")
     public ResponseEntity<ApiResponse<AllocationResponse>> allocateStock(
             @Valid @RequestBody AllocationRequest request) {
-        
         AllocationResponse response = inventoryService.allocateStockToDealer(request);
-        return ResponseEntity.ok(new ApiResponse<>(true, response.getMessage(), response));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Stock allocated successfully to dealer", response)); 
     }
 
     // 🔹 THU HỒI (Đại lý -> Kho tổng)
@@ -141,14 +155,5 @@ public class InventoryController {
         
         String message = inventoryService.recallStockFromDealer(request);
         return ResponseEntity.ok(new ApiResponse<>(true, message, message));
-    }
-
-    private StockRequest mapToStockRequest(ManufacturerStockRequest manuRequest) {
-        StockRequest stockReq = new StockRequest();
-        stockReq.setVariantId(manuRequest.getVariantId());
-        stockReq.setColor(manuRequest.getColor());
-        stockReq.setQuantity(manuRequest.getQuantity());
-        stockReq.setStatus(manuRequest.getStatus());
-        return stockReq;
     }
 }

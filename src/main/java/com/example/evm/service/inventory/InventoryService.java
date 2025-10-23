@@ -5,6 +5,8 @@ import com.example.evm.dto.inventory.AllocationResponse;
 import com.example.evm.dto.inventory.InventoryResponse;
 import com.example.evm.dto.inventory.ManufacturerStockResponse;
 import com.example.evm.dto.inventory.StockRequest;
+import com.example.evm.dto.inventory.UpdateStockRequest;
+import com.example.evm.dto.inventory.UpdateManufacturerStockRequest;
 
 import java.util.List;
 
@@ -21,7 +23,9 @@ public interface InventoryService {
      */
     List<InventoryResponse> getDealerStockByDealerId(Long dealerId);
     
-    InventoryResponse addOrUpdateDealerStock(StockRequest request);
+    InventoryResponse createDealerStock(StockRequest request);
+
+    InventoryResponse updateDealerStock(Long id, UpdateStockRequest request);
 
     InventoryResponse updateStockStatus(Long id, String status);
 
@@ -31,9 +35,11 @@ public interface InventoryService {
 
     List<ManufacturerStockResponse> getAllManufacturerStock();
 
-    ManufacturerStockResponse addOrUpdateManufacturerStock(StockRequest request); // <-- THÊM HÀM NÀY
+    ManufacturerStockResponse createManufacturerStock(StockRequest request);
 
-    ManufacturerStockResponse updateManufacturerStockStatus(Long id, String status); // <-- THÊM HÀM NÀY
+    ManufacturerStockResponse updateManufacturerStock(Long id, UpdateManufacturerStockRequest request);
+
+    ManufacturerStockResponse updateManufacturerStockStatus(Long id, String status);
 
     // --- 3. ĐIỀU PHỐI ---
 

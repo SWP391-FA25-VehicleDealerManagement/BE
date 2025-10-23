@@ -16,6 +16,8 @@ import com.example.evm.repository.dealer.DealerRequestRepository;
 import com.example.evm.repository.inventory.InventoryStockRepository;
 import com.example.evm.repository.inventory.ManufacturerStockRepository; 
 import com.example.evm.repository.vehicle.VehicleVariantRepository; 
+import com.example.evm.dto.inventory.UpdateStockRequest;
+import com.example.evm.dto.inventory.UpdateManufacturerStockRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -59,7 +61,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
-    public InventoryResponse addOrUpdateDealerStock(StockRequest request) {
+    public InventoryResponse createDealerStock(StockRequest request) {
         VehicleVariant variant = variantRepository.findById(request.getVariantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
         Dealer dealer = dealerRepository.findById(request.getDealerId())
@@ -92,6 +94,26 @@ public class InventoryServiceImpl implements InventoryService {
         InventoryStock savedStock = inventoryRepository.save(stock);
         return mapToDealerResponse(savedStock);
     }
+
+    @Override
+    @Transactional
+    public InventoryResponse updateDealerStock(Long id, UpdateStockRequest request) {
+        // 1. Tìm bản ghi theo ID
+        InventoryStock existingStock = inventoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Dealer stock not found with id: " + id));
+
+        // 2. Cập nhật các trường từ DTO mới (Partial Update)
+        existingStock.setQuantity(request.getQuantity());
+        if (request.getListingPrice() != null) {
+            existingStock.setListingPrice(request.getListingPrice());
+        }
+        if (request.getStatus() != null) {
+            existingStock.setStatus(request.getStatus());
+        }
+
+        InventoryStock savedStock = inventoryRepository.save(existingStock);
+        return mapToDealerResponse(savedStock);
+    }
     
     @Override
     public InventoryResponse updateStockStatus(Long id, String status) {
@@ -119,7 +141,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
-    public ManufacturerStockResponse addOrUpdateManufacturerStock(StockRequest request) {
+    public ManufacturerStockResponse createManufacturerStock(StockRequest request) {
         VehicleVariant variant = variantRepository.findById(request.getVariantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
 
@@ -142,6 +164,23 @@ public class InventoryServiceImpl implements InventoryService {
         
         ManufacturerStock savedStock = manufacturerStockRepo.save(stock);
         return mapToManufacturerResponse(savedStock); 
+    }
+
+    @Override
+    @Transactional
+    public ManufacturerStockResponse updateManufacturerStock(Long id, UpdateManufacturerStockRequest request) {
+        // 1. Tìm theo ID
+        ManufacturerStock existingStock = manufacturerStockRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Manufacturer stock not found with id: " + id));
+
+        // 2. Cập nhật (Partial Update)
+        existingStock.setQuantity(request.getQuantity());
+        if (request.getStatus() != null) {
+            existingStock.setStatus(request.getStatus());
+        }
+
+        ManufacturerStock savedStock = manufacturerStockRepo.save(existingStock);
+        return mapToManufacturerResponse(savedStock);
     }
 
     @Override

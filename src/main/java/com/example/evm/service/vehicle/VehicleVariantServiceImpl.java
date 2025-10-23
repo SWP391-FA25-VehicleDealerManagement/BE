@@ -13,6 +13,8 @@ import com.example.evm.repository.vehicle.VehicleModelRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
 import com.example.evm.service.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.annotation.Transactional;
@@ -122,21 +124,70 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
         variantRepository.save(variant);
     }
 
-    @Override 
+    @Override
     @Transactional
-    public VehicleDetailResponse addOrUpdateDetails(Long variantId, VehicleDetailRequest request) {
-        // Tìm variant tương ứng
+    public VehicleDetailResponse createDetails(Long variantId, VehicleDetailRequest request) {
+        // 1. Kiểm tra xem Detail đã tồn tại cho variantId này chưa
+        boolean detailExists = detailRepository.existsById(variantId);
+        if (detailExists) {
+            throw new DataIntegrityViolationException(
+                    "VehicleDetail already exists for Variant ID: " + variantId + ". Use PUT to update."
+            );
+        }
+
+        // 2. Tìm variant cha (bắt buộc)
         VehicleVariant variant = variantRepository.findById(variantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Variant not found with id: " + variantId));
+                .orElseThrow(() -> new ResourceNotFoundException("Variant not found: " + variantId));
 
-        // Kiểm tra xem detail đã tồn tại chưa, nếu chưa thì tạo mới
-        VehicleDetail detail = detailRepository.findByVariant_VariantId(variantId)
-                .orElse(new VehicleDetail());
-
-        // --- BẮT ĐẦU GÁN GIÁ TRỊ ---
+        // 3. TẠO MỚI VehicleDetail
+        VehicleDetail detail = new VehicleDetail();
         detail.setVariant(variant);
 
-        // Thông số
+        // --- 4. GÁN GIÁ TRỊ TỪ REQUEST (Gán toàn bộ, không cần check null) ---
+        detail.setDimensionsMm(request.getDimensionsMm());
+        detail.setWheelbaseMm(request.getWheelbaseMm());
+        detail.setGroundClearanceMm(request.getGroundClearanceMm());
+        detail.setCurbWeightKg(request.getCurbWeightKg());
+        detail.setSeatingCapacity(request.getSeatingCapacity());
+        detail.setTrunkCapacityLiters(request.getTrunkCapacityLiters());
+        detail.setEngineType(request.getEngineType());
+        detail.setMaxPower(request.getMaxPower());
+        detail.setTopSpeedKmh(request.getTopSpeedKmh());
+        detail.setDrivetrain(request.getDrivetrain());
+        detail.setDriveModes(request.getDriveModes());
+        detail.setBatteryCapacityKwh(request.getBatteryCapacityKwh());
+        detail.setRangePerChargeKm(request.getRangePerChargeKm());
+        detail.setChargingTime(request.getChargingTime());
+        detail.setExteriorFeatures(request.getExteriorFeatures());
+        detail.setInteriorFeatures(request.getInteriorFeatures());
+        detail.setAirbags(request.getAirbags());
+        detail.setBrakingSystem(request.getBrakingSystem());
+        detail.setHasEsc(request.getHasEsc() != null ? request.getHasEsc() : false);
+        detail.setHasTpms(request.getHasTpms() != null ? request.getHasTpms() : false);
+        detail.setHasRearCamera(request.getHasRearCamera() != null ? request.getHasRearCamera() : false);
+        detail.setHasChildLock(request.getHasChildLock() != null ? request.getHasChildLock() : false);
+        // --- HẾT GÁN GIÁ TRỊ ---
+
+        // 5. Lưu lại detail MỚI
+        VehicleDetail savedDetail = detailRepository.save(detail);
+
+        // 6. Trả về Response DTO
+        return new VehicleDetailResponse(savedDetail);
+    }
+
+    @Override
+    @Transactional
+    public VehicleDetailResponse updateDetails(Long variantId, VehicleDetailRequest request) {
+        // 1. Tìm Detail hiện có
+        VehicleDetail detail = detailRepository.findById(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "VehicleDetail not found for Variant ID: " + variantId + ". Cannot update."
+                ));
+
+        VehicleVariant variant = variantRepository.findById(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Variant not found: " + variantId)); // Should not happen if detail exists
+        detail.setVariant(variant); // Đảm bảo liên kết đúng
+
         if (request.getDimensionsMm() != null) {
             detail.setDimensionsMm(request.getDimensionsMm());
         }
@@ -212,11 +263,9 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
             detail.setHasChildLock(request.getHasChildLock());
         }
 
-        // --- KẾT THÚC GÁN GIÁ TRỊ ---
-
         VehicleDetail savedDetail = detailRepository.save(detail);
         return new VehicleDetailResponse(savedDetail);
-    } 
+    }
 
     @Override
     @Transactional(readOnly = true)

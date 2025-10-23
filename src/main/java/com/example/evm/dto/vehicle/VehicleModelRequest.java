@@ -6,4 +6,7 @@ import lombok.Data;
 public class VehicleModelRequest {
     private String name;
     private String description;
+    private String manufacturer;
+    private Integer year;
+    private String body_type;
 }
