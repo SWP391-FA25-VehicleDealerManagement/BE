@@ -1,10 +1,18 @@
-package com.example.evm.entity.vehicle; // Hoặc package entity của bạn
+package com.example.evm.entity.vehicle;
 
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.math.BigDecimal; // Import BigDecimal
+import java.math.BigDecimal;
 
+/**
+ * Entity VehicleVariant - Đại diện cho phiên bản xe (variant)
+ * 
+ * Quan hệ:
+ * - VehicleVariant (N) ──> (1) VehicleModel
+ * - VehicleVariant (1) ──< (1) VehicleDetail (thông số kỹ thuật)
+ * - VehicleVariant (1) ──< (N) Vehicle (nhiều xe cùng variant)
+ */
 @Entity
 @Table(name = "VehicleVariant")
 @Data
@@ -18,19 +26,22 @@ public class VehicleVariant {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "model_id", nullable = false)
-    private VehicleModel model; // <-- Giữ
+    private VehicleModel model;
 
     @Column(name = "name", nullable = false, length = 150)
-    private String name; // <-- Giữ
+    private String name; // Ví dụ: "VF 8 Eco", "VF 9 Plus"
 
-    // Sửa: Đổi tên cột và trường
     @Column(name = "image", length = 500) 
-    private String imageUrl; // <-- Sửa tên từ 'image'
+    private String imageUrl; // Hình ảnh variant
 
     @Column(name = "status", length = 50)
-    private String status; // <-- Giữ (dùng cho soft delete)
+    private String status; // "ACTIVE", "INACTIVE" (soft delete)
 
-    // Thêm: Giá niêm yết
     @Column(name = "msrp", nullable = false) 
-    private BigDecimal msrp; // <-- Thêm
+    private BigDecimal msrp; // Giá niêm yết (Manufacturer's Suggested Retail Price)
+
+    // ===== QUAN HỆ 1-1 VỚI VEHICLEDETAIL =====
+    // Một variant có một bộ thông số kỹ thuật
+    @OneToOne(mappedBy = "variant", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private VehicleDetail detail;
 }

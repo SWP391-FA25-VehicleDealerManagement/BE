@@ -56,10 +56,10 @@ public class OrderDetail {
     @Override
     public String toString() {
         
-        // 🟢 Lấy tên Variant thông qua chuỗi quan hệ Stock
+        // 🟢 Lấy tên Variant trực tiếp từ Vehicle (Schema mới)
         String vehicleName = "N/A (Vehicle Info Missing)";
-        if (vehicle != null && vehicle.getInventoryStock() != null && vehicle.getInventoryStock().getVariant() != null) {
-            vehicleName = vehicle.getInventoryStock().getVariant().getName();
+        if (vehicle != null && vehicle.getVariant() != null) {
+            vehicleName = vehicle.getVariant().getName();
         }
         
         return "OrderDetail{" +

@@ -1,38 +1,49 @@
 package com.example.evm.dto.inventory;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
- * DTO Response cho API phân bổ xe (Allocate Stock)
- * Trả về thông tin kho đại lý + thông tin request đã được update
+ * DTO AllocationResponse - Response cho allocate/recall xe (Schema mới)
  */
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class AllocationResponse {
     
-    // Thông tin kho đại lý sau khi phân bổ
-    private InventoryResponse dealerStock;
-    
-    // Thông tin DealerRequest đã được update (nếu có)
-    private DealerRequestInfo updatedRequest;
-    
-    // Message thông báo
+    /**
+     * Message kết quả
+     */
     private String message;
     
     /**
-     * Nested class chứa thông tin cơ bản của DealerRequest
+     * Số lượng xe đã xử lý
      */
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class DealerRequestInfo {
-        private Long requestId;
-        private String status;  // "SHIPPED"
-        private String shippedDate;  // Thời gian giao hàng
-        private String dealerName;
-    }
+    private Integer quantity;
+    
+    /**
+     * Danh sách Vehicle IDs đã allocate/recall
+     */
+    private List<Long> vehicleIds;
+    
+    /**
+     * Dealer ID
+     */
+    private Long dealerId;
+    
+    /**
+     * Variant ID
+     */
+    private Long variantId;
+    
+    /**
+     * Màu xe
+     */
+    private String color;
 }
 

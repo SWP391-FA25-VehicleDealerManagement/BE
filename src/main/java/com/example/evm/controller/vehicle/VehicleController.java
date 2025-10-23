@@ -1,140 +1,131 @@
 package com.example.evm.controller.vehicle;
 
 import com.example.evm.dto.auth.ApiResponse;
+import com.example.evm.dto.vehicle.StockSummaryResponse;
+import com.example.evm.dto.vehicle.VehicleFullResponse;
 import com.example.evm.dto.vehicle.VehicleRequest;
-import com.example.evm.dto.vehicle.VehicleResponse;
-import com.example.evm.dto.vehicle.VehicleComparisonDTO;
 import com.example.evm.service.vehicle.VehicleService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.http.MediaType;
-import com.example.evm.service.storage.FileStorageService;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
 
-import lombok.extern.slf4j.Slf4j;
-import java.io.IOException;      
-
-import java.nio.file.Files;
 import java.util.List;
 
+/**
+ * Controller VehicleController - APIs quản lý xe
+ * 
+ * Endpoints:
+ * - POST /api/vehicles - Tạo xe mới
+ * - GET /api/vehicles/{id} - Lấy full info 1 xe
+ * - GET /api/vehicles/manufacturer/stock - Tổng hợp kho tổng
+ * - GET /api/vehicles/manufacturer/vehicles - Chi tiết xe trong kho tổng
+ * - GET /api/vehicles/dealer/{dealerId}/stock - Tổng hợp kho dealer
+ * - GET /api/vehicles/dealer/{dealerId}/vehicles - Chi tiết xe dealer
+ */
+@Slf4j
 @RestController
 @RequestMapping("/api/vehicles")
 @RequiredArgsConstructor
-@Slf4j
 public class VehicleController {
 
     private final VehicleService vehicleService;
-    private final FileStorageService fileStorageService;
 
-    // 🟢 GET all active vehicles
-    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<VehicleResponse>>> getAllActiveVehicles() {
-        List<VehicleResponse> vehicles = vehicleService.getAllVehicles();
-        return ResponseEntity.ok(new ApiResponse<>(true, "Active vehicles retrieved successfully", vehicles));
-    }
-
-    // 🔴 GET all inactive vehicles
-    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
-    @GetMapping("/inactive")
-    public ResponseEntity<ApiResponse<List<VehicleResponse>>> getAllInactiveVehicles() {
-        List<VehicleResponse> vehicles = vehicleService.getAllInactiveVehicles();
-        return ResponseEntity.ok(new ApiResponse<>(true, "Inactive vehicles retrieved successfully", vehicles));
-    }
-
-    // 🏢 GET vehicles by dealer ID
-    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
-    @GetMapping("/dealer/{dealerId}")
-    public ResponseEntity<ApiResponse<List<VehicleResponse>>> getVehiclesByDealerId(@PathVariable Long dealerId) {
-        List<VehicleResponse> vehicles = vehicleService.getVehiclesByDealerId(dealerId);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicles for dealer retrieved successfully", vehicles));
-    }
-
-    // 🆔 GET vehicle by ID
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<VehicleResponse>> getVehicleById(@PathVariable Long id) {
-        VehicleResponse vehicle = vehicleService.getVehicleById(id);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle retrieved successfully", vehicle));
-    }
-
-    @GetMapping("/images/{filename:.+}")
-    public ResponseEntity<Resource> getImage(@PathVariable String filename) {
-        Resource file = fileStorageService.load(filename);
-        String contentType = "application/octet-stream";
-        try {
-             // Cố gắng tự động xác định ContentType từ file
-             contentType = Files.probeContentType(file.getFile().toPath());
-        } catch (IOException e) {
-             // Nếu có lỗi, ghi log lại
-             log.error("Could not determine file type for filename: {}", filename, e);
-        }
-
-        // Nếu không xác định được, vẫn dùng loại mặc định
-        if(contentType == null) {
-            contentType = "application/octet-stream";
-        }
-
-        // Trả về file với Content-Type đã được xác định
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
-                .body(file);
-    }
-
-    // 🔍 SEARCH by name
-    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
-    @GetMapping("/search")
-    public ResponseEntity<ApiResponse<List<VehicleResponse>>> searchVehiclesByName(@RequestParam String name) {
-        List<VehicleResponse> vehicles = vehicleService.searchVehiclesByName(name);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Search completed successfully", vehicles));
-    }
-
-    // ➕ ADD new vehicle
-    @PostMapping 
-    @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<VehicleResponse>> addVehicle(
-            @RequestBody VehicleRequest request) {
-        VehicleResponse created = vehicleService.addVehicle(request, null); 
-        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle added successfully", created));
-    }
-
-    // 🔄 UPDATE existing vehicle
-    @PutMapping(value = "/{id}")
-    @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<VehicleResponse>> updateVehicle(
-            @PathVariable Long id,
-            @RequestBody VehicleRequest request) { 
-        VehicleResponse updated = vehicleService.updateVehicle(id, request, null); 
-        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle updated successfully", updated));
-    }
-
-    // 🚫 DEACTIVATE vehicle (soft delete)
-    @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'ADMIN', 'EVM_STAFF')")
-    @PutMapping("/deactivate/{id}")
-    public ResponseEntity<ApiResponse<Void>> deactivateVehicle(@PathVariable Long id) {
-        vehicleService.deactivateVehicle(id);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle deactivated successfully", null));
-    }
-
-    // ✅ ACTIVATE vehicle again
+    /**
+     * Tạo xe mới (tự động vào kho tổng)
+     */
+    @PostMapping
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    @PutMapping("/activate/{id}")
-    public ResponseEntity<ApiResponse<Void>> activateVehicle(@PathVariable Long id) {
-        vehicleService.activateVehicle(id);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle activated successfully", null));
+    public ResponseEntity<ApiResponse<VehicleFullResponse>> createVehicle(
+            @Valid @RequestBody VehicleRequest request) {
+        
+        log.info("Creating vehicle - variantId: {}, color: {}", request.getVariantId(), request.getColor());
+        
+        VehicleFullResponse response = vehicleService.createVehicle(request);
+        
+        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle created successfully", response));
     }
 
-    // ⚖️ COMPARE variants
-    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER')")
-    @GetMapping("/compare")
-    public ResponseEntity<ApiResponse<List<VehicleComparisonDTO>>> compareVehicles(
-            @RequestParam List<Long> variantIds) {
+    /**
+     * Lấy thông tin chi tiết 1 xe (kèm full info)
+     */
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<VehicleFullResponse>> getVehicleById(@PathVariable Long id) {
+        
+        log.info("Fetching vehicle by id: {}", id);
+        
+        VehicleFullResponse response = vehicleService.getVehicleById(id);
+        
+        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle retrieved successfully", response));
+    }
 
-        List<VehicleComparisonDTO> comparisonData = vehicleService.compareVariants(variantIds);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle comparison data retrieved successfully", comparisonData));
+    // ===== APIs KHO TỔNG =====
+
+    /**
+     * Lấy tổng hợp kho tổng (GROUP BY variant + color)
+     */
+    @GetMapping("/manufacturer/stock")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<List<StockSummaryResponse>>> getManufacturerStockSummary() {
+        
+        log.info("Fetching manufacturer stock summary");
+        
+        List<StockSummaryResponse> response = vehicleService.getManufacturerStockSummary();
+        
+        return ResponseEntity.ok(new ApiResponse<>(true, 
+            "Manufacturer stock summary retrieved successfully", response));
+    }
+
+    /**
+     * Lấy chi tiết tất cả xe trong kho tổng (với VIN)
+     */
+    @GetMapping("/manufacturer/vehicles")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<List<VehicleFullResponse>>> getManufacturerVehicles() {
+        
+        log.info("Fetching all manufacturer vehicles");
+        
+        List<VehicleFullResponse> response = vehicleService.getAllManufacturerVehicles();
+        
+        return ResponseEntity.ok(new ApiResponse<>(true, 
+            "Manufacturer vehicles retrieved successfully", response));
+    }
+
+    // ===== APIs KHO DEALER =====
+
+    /**
+     * Lấy tổng hợp kho dealer (GROUP BY variant + color)
+     */
+    @GetMapping("/dealer/{dealerId}/stock")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<List<StockSummaryResponse>>> getDealerStockSummary(
+            @PathVariable Long dealerId) {
+        
+        log.info("Fetching dealer stock summary for dealer: {}", dealerId);
+        
+        List<StockSummaryResponse> response = vehicleService.getDealerStockSummary(dealerId);
+        
+        return ResponseEntity.ok(new ApiResponse<>(true, 
+            "Dealer stock summary retrieved successfully", response));
+    }
+
+    /**
+     * Lấy chi tiết tất cả xe của dealer (với VIN)
+     */
+    @GetMapping("/dealer/{dealerId}/vehicles")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<List<VehicleFullResponse>>> getDealerVehicles(
+            @PathVariable Long dealerId) {
+        
+        log.info("Fetching all dealer vehicles for dealer: {}", dealerId);
+        
+        List<VehicleFullResponse> response = vehicleService.getDealerVehicles(dealerId);
+        
+        return ResponseEntity.ok(new ApiResponse<>(true, 
+            "Dealer vehicles retrieved successfully", response));
     }
 }
+

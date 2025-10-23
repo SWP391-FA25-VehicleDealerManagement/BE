@@ -13,21 +13,13 @@ import java.util.Optional;
 @Repository
 public interface InventoryStockRepository extends JpaRepository<InventoryStock, Long> {
 
-    @Query("SELECT s FROM InventoryStock s " +
-           "LEFT JOIN FETCH s.variant v " +
-           "LEFT JOIN FETCH v.model m " +
-           "LEFT JOIN FETCH s.dealer d")
-    List<InventoryStock> findAllWithRelations();
+    /**
+     * Tìm InventoryStock theo dealer ID (cho schema mới)
+     */
+    Optional<InventoryStock> findByDealerDealerId(Long dealerId);
     
-    // ✅ Lấy kho của dealer cụ thể (với relations)
-    @Query("SELECT s FROM InventoryStock s " +
-           "LEFT JOIN FETCH s.variant v " +
-           "LEFT JOIN FETCH v.model m " +
-           "LEFT JOIN FETCH s.dealer d " +
-           "WHERE d.dealerId = :dealerId")
-    List<InventoryStock> findByDealerIdWithRelations(Long dealerId);
-
-    Optional<InventoryStock> findByVariantVariantIdAndColorAndDealerDealerId(
-        Long variantId, String color, Long dealerId
-    );
+    /**
+     * Tìm tất cả InventoryStock theo dealer ID
+     */
+    List<InventoryStock> findAllByDealerDealerId(Long dealerId);
 }
