@@ -6,7 +6,6 @@ import java.time.LocalDate;
 @Data
 public class VehicleRequest {
     
-    private String color;
     private Long variantId;
     private Long stockId; 
     
