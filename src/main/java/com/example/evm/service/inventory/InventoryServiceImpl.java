@@ -351,7 +351,59 @@ public class InventoryServiceImpl implements InventoryService {
         centralStock.setQuantity(centralStock.getQuantity() + request.getQuantity());
         manufacturerStockRepo.save(centralStock);
 
+        // 3. ✅ TỰ ĐỘNG UPDATE STATUS CỦA DEALER REQUEST (SHIPPED → APPROVED)
+        revertShippedRequestStatus(
+                request.getDealerId(), 
+                request.getVariantId(), 
+                request.getColor()
+        );
+
         return "Recalled " + request.getQuantity() + " items to central warehouse.";
+    }
+    
+    /**
+     * Thu hồi xe → đổi status của DealerRequest từ SHIPPED về APPROVED
+     * Logic: Tìm request đang SHIPPED, có chứa variant + color tương ứng
+     * → Đổi status về "APPROVED" và xóa shippedDate
+     * 
+     * @param dealerId ID của dealer
+     * @param variantId ID của variant
+     * @param color Màu xe
+     */
+    private void revertShippedRequestStatus(Long dealerId, Long variantId, String color) {
+        // Tìm các request đang SHIPPED của dealer này
+        List<DealerRequest> shippedRequests = dealerRequestRepository
+                .findByDealerDealerIdAndStatus(dealerId, "SHIPPED");
+        
+        if (shippedRequests.isEmpty()) {
+            log.info("⚠️ Không tìm thấy DealerRequest SHIPPED nào cho dealer {} để hoàn trạng thái", dealerId);
+            return;
+        }
+        
+        // Tìm request có chứa variant + color phù hợp
+        for (DealerRequest request : shippedRequests) {
+            boolean hasMatchingDetail = request.getRequestDetails().stream()
+                    .anyMatch(detail -> 
+                        detail.getVehicleVariant().getVariantId().equals(variantId) &&
+                        detail.getColor().equalsIgnoreCase(color)
+                    );
+            
+            if (hasMatchingDetail) {
+                // Đổi status về APPROVED và xóa shippedDate
+                request.setStatus("APPROVED");
+                request.setShippedDate(null); // Reset ngày giao hàng
+                dealerRequestRepository.save(request);
+                
+                log.info("✅ Đã hoàn trạng thái DealerRequest {} → status = APPROVED (Thu hồi xe: Dealer: {}, Variant: {}, Color: {})", 
+                        request.getRequestId(), dealerId, variantId, color);
+                
+                // Chỉ update request đầu tiên tìm thấy
+                return;
+            }
+        }
+        
+        log.info("⚠️ Không tìm thấy DealerRequest SHIPPED nào phù hợp (Dealer: {}, Variant: {}, Color: {})", 
+                dealerId, variantId, color);
     }
 
 
