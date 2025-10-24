@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RequestDetailResponse {
-    private Long requestDetailId;
+    private Long detailId;
     private Long variantId;  // ✅ Thêm variant_id
     private String variantName;
     private String modelName;

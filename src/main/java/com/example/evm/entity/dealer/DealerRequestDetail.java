@@ -23,8 +23,8 @@ public class DealerRequestDetail {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "request_detail_id")
-    private Long requestDetailId;
+    @Column(name = "detail_id")
+    private Long detailId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "request_id", nullable = false)

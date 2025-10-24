@@ -237,7 +237,7 @@ public class DealerRequestService {
         return request.getRequestDetails().stream()
                 .map(detail -> {
                     RequestDetailResponse detailResponse = new RequestDetailResponse();
-                    detailResponse.setRequestDetailId(detail.getRequestDetailId());
+                    detailResponse.setDetailId(detail.getDetailId());
                     detailResponse.setVariantId(detail.getVehicleVariant().getVariantId());
                     detailResponse.setVariantName(detail.getVehicleVariant().getName());
                     detailResponse.setModelName(detail.getVehicleVariant().getModel().getName());
