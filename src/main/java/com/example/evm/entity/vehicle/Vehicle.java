@@ -57,7 +57,7 @@ public class Vehicle {
 
     // Xe đang ở kho dealer (nullable - nếu null thì xe không ở kho dealer)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "stock_id")
+    @JoinColumn(name = "inventory_stock_id")
     private InventoryStock inventoryStock;
     
     /**
