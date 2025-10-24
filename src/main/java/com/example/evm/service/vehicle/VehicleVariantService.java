@@ -20,4 +20,5 @@ public interface VehicleVariantService {
     VehicleDetailResponse createDetails(Long variantId, VehicleDetailRequest request);
     VehicleDetailResponse updateDetails(Long variantId, VehicleDetailRequest request);
     VehicleDetailResponse getDetailsByVariantId(Long variantId);
+    void deleteVariant(Long id);
 }

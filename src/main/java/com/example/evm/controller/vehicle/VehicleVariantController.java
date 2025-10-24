@@ -171,4 +171,14 @@ public class VehicleVariantController {
         VehicleDetailResponse updatedDetails = variantService.updateDetails(variantId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle details updated successfully", updatedDetails));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<Void>> deleteVariant(
+            @Parameter(description = "ID của Variant cần xóa hẳn") @PathVariable Long id
+    ) {
+        // Service sẽ kiểm tra xem variant có đang được Vehicle sử dụng không
+        variantService.deleteVariant(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Variant permanently deleted", null));
+    }
 }

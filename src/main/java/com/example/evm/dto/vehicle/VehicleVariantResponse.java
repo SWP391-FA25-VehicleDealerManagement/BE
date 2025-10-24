@@ -6,11 +6,12 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-@JsonPropertyOrder({ "variantId", "modelName", "name", "msrp", "status", "defaultImageUrl" })
+@JsonPropertyOrder({ "variantId", "modelId", "modelName", "name", "msrp", "status", "defaultImageUrl" })
 @Data
 @NoArgsConstructor
 public class VehicleVariantResponse {
     private Long variantId;
+    private Long modelId;
     private String name;
     private String defaultImageUrl;
     private String status;
@@ -24,6 +25,7 @@ public class VehicleVariantResponse {
         this.status = variant.getStatus();
         this.msrp = variant.getMsrp();
         if (variant.getModel() != null) {
+            this.modelId = variant.getModel().getModelId();
             this.modelName = variant.getModel().getName();
         }
     }

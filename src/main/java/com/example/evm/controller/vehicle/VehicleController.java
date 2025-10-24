@@ -32,6 +32,14 @@ import java.util.List;
 public class VehicleController {
 
     private final VehicleService vehicleService;
+    
+    // Lấy tất cả xe
+    @GetMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')") // Quyền phù hợp
+    public ResponseEntity<ApiResponse<List<VehicleFullResponse>>> getAllVehicles() {
+        List<VehicleFullResponse> vehicles = vehicleService.getAllVehicles();
+        return ResponseEntity.ok(new ApiResponse<>(true, "All vehicles retrieved successfully", vehicles));
+    }
 
     /**
      * Tạo xe mới (tự động vào kho tổng)

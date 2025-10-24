@@ -8,11 +8,13 @@ import com.example.evm.entity.vehicle.VehicleDetail;
 import com.example.evm.entity.vehicle.VehicleModel;
 import com.example.evm.entity.vehicle.VehicleVariant;
 import com.example.evm.exception.ResourceNotFoundException;
+import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.vehicle.VehicleDetailRepository;
 import com.example.evm.repository.vehicle.VehicleModelRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
 import com.example.evm.service.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -24,12 +26,14 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class VehicleVariantServiceImpl implements VehicleVariantService {
 
     private final VehicleVariantRepository variantRepository;
     private final VehicleModelRepository modelRepository;
     private final FileStorageService fileStorageService;
     private final VehicleDetailRepository detailRepository;
+    private final VehicleRepository vehicleRepository;
 
     @Override
     public VehicleVariantResponse createVariant(VehicleVariantRequest request, MultipartFile file) {
@@ -273,5 +277,25 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
         VehicleDetail detail = detailRepository.findByVariant_VariantId(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Details not found for variant id: " + variantId));
         return new VehicleDetailResponse(detail);
+    }
+
+    @Override
+    @Transactional
+    public void deleteVariant(Long id) {
+        // 1. Kiểm tra xem Variant có đang được Vehicle nào sử dụng không
+        if (vehicleRepository.existsByVariantVariantId(id)) {
+            // Nếu đang được sử dụng -> Báo lỗi, không cho xóa
+            throw new DataIntegrityViolationException(
+                "Không thể xóa. Phiên bản (Variant) này đang được liên kết với ít nhất một xe (Vehicle) cụ thể."
+            );
+        }
+
+        log.info("Deleting VehicleVariant with ID: {}", id);
+
+        if (detailRepository.existsById(id)) {
+            detailRepository.deleteById(id);
+            log.info("Deleted associated VehicleDetail for Variant ID: {}", id);
+        }
+        variantRepository.deleteById(id);
     }
 }
