@@ -45,3 +45,9 @@ public class VehicleVariant {
     @OneToOne(mappedBy = "variant", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private VehicleDetail detail;
 }
+
+
+
+
+
+

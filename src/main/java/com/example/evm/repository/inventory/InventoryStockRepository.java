@@ -4,7 +4,6 @@ import com.example.evm.entity.inventory.InventoryStock;
 // import com.example.evm.entity.dealer.Dealer; // <-- Không cần thiết cho các hàm này nữa
 // import com.example.evm.entity.vehicle.Vehicle; // <-- Xóa hoàn toàn
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
