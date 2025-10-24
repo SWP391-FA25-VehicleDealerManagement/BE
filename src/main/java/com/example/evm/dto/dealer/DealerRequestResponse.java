@@ -14,12 +14,14 @@ import java.util.List;
 public class DealerRequestResponse {
     private Long requestId;
     
-    // Chỉ thông tin cần thiết
-    private Long dealerId;  // ✅ Thêm dealer_id
+    // Dealer & User info
+    private Long dealerId;
     private String dealerName;
+    private Long userId;
     private String userFullName;
     private String userRole;
     
+    // Request info
     private LocalDateTime requestDate;
     private LocalDateTime requiredDate;
     private String status;
@@ -27,6 +29,13 @@ public class DealerRequestResponse {
     private String notes;
     private BigDecimal totalAmount;
     
+    // Workflow tracking
+    private LocalDateTime approvedDate;
+    private String approvedBy;
+    private LocalDateTime shippedDate;
+    private LocalDateTime deliveryDate;
+    
+    // Details
     private List<RequestDetailResponse> requestDetails;
 }
 

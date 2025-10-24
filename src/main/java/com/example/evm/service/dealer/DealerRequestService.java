@@ -202,17 +202,31 @@ public class DealerRequestService {
     private DealerRequestResponse convertToResponseDto(DealerRequest request) {
         DealerRequestResponse response = new DealerRequestResponse();
         response.setRequestId(request.getRequestId());
+        
+        // Dealer & User info
         response.setDealerId(request.getDealer().getDealerId());
         response.setDealerName(request.getDealer().getDealerName());
+        response.setUserId(request.getCreatedBy().getUserId());
         response.setUserFullName(request.getCreatedBy().getFullName());
         response.setUserRole(request.getCreatedBy().getRole());
+        
+        // Request info
         response.setRequestDate(request.getRequestDate());
         response.setRequiredDate(request.getRequiredDate());
         response.setStatus(request.getStatus());
         response.setPriority(request.getPriority());
         response.setNotes(request.getNotes());
         response.setTotalAmount(request.getTotalAmount());
+        
+        // Workflow tracking
+        response.setApprovedDate(request.getApprovedDate());
+        response.setApprovedBy(request.getApprovedBy());
+        response.setShippedDate(request.getShippedDate());
+        response.setDeliveryDate(request.getDeliveryDate());
+        
+        // Details
         response.setRequestDetails(getRequestDetails(request));
+        
         return response;
     }
 
