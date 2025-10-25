@@ -137,20 +137,9 @@ public class DealerRequestController {
     }
 
     /**
-     * Mark request as shipped
-     * POST /api/dealer-requests/{id}/ship
-     */
-    @PostMapping("/{id}/ship")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<DealerRequestResponse>> shipRequest(@PathVariable Long id) {
-        log.info("Marking request {} as shipped", id);
-        DealerRequestResponse response = dealerRequestService.updateRequestStatus(id, "SHIPPED", "system");
-        return ResponseEntity.ok(new ApiResponse<>(true, "Request marked as shipped", response));
-    }
-
-    /**
      * Mark request as delivered
      * POST /api/dealer-requests/{id}/deliver
+     * Note: Status SHIPPED is automatically set by allocate API
      */
     @PostMapping("/{id}/deliver")
     @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'DEALER_STAFF')")
