@@ -36,6 +36,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public Payment createPayment(Payment payment) {
+        payment.setPaymentId(null);
         if(payment.getPaymentDate() == null){
                 payment.setPaymentDate(LocalDateTime.now());
         }
