@@ -26,7 +26,7 @@ public class CustomerController {
     private final AuthService authService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<List<Customer>>> getAllCustomers(Authentication authentication) {
         // Lấy thông tin user hiện tại
         UserInfo currentUser = authService.getCurrentUser(authentication.getName());
@@ -57,14 +57,14 @@ public class CustomerController {
     }
 
     @GetMapping("/dealer/{dealerId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<List<Customer>>> getCustomersByDealer(@PathVariable Long dealerId) {
         List<Customer> customers = customerService.getCustomersByDealer(dealerId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Customers retrieved successfully", customers));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Customer>> getCustomerById(
             @PathVariable Long id,
             Authentication authentication) {
@@ -96,7 +96,7 @@ public class CustomerController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority( 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Customer>> createCustomer(
             @Valid @RequestBody Customer customer,
             Authentication authentication) {
@@ -111,6 +111,8 @@ public class CustomerController {
                         .body(new ApiResponse<>(false, "User is not assigned to any dealer", null));
                 }
                 customer.setDealerId(currentUser.getDealer().getDealerId());
+                customer.setCreateBy(currentUser.getUserName());
+
                 log.info("Auto-assigned dealer {} to customer", currentUser.getDealer().getDealerId());
             }
             
@@ -126,7 +128,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority( 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Customer>> updateCustomer(
             @PathVariable Long id, 
             @Valid @RequestBody Customer customer,
@@ -171,7 +173,7 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable Long id) {
         try {
             customerService.deleteCustomer(id);
