@@ -209,17 +209,21 @@ public class VehicleServiceImpl implements VehicleService {
      * Format: VIN + Model Code (5 chars) + Random (8 chars)
      */
     private String generateVIN(VehicleVariant variant) {
-        String modelCode = variant.getModel().getName()
-            .replaceAll("\\s+", "")
-            .toUpperCase()
-            .substring(0, Math.min(5, variant.getModel().getName().length()));
-        
-        String randomPart = UUID.randomUUID().toString()
+    // Lấy tên model, bỏ khoảng trắng, giới hạn 5 ký tự
+    String modelName = (variant.getModel() != null && variant.getModel().getName() != null)
+            ? variant.getModel().getName().replaceAll("\\s+", "").toUpperCase()
+            : "MODEL";
+
+    String modelCode = modelName.substring(0, Math.min(5, modelName.length()));
+
+    // Tạo phần random 8 ký tự
+    String randomPart = UUID.randomUUID()
+            .toString()
             .replaceAll("-", "")
             .substring(0, 8)
             .toUpperCase();
-        
-        return "VIN" + modelCode + randomPart;
+
+    return "VIN" + modelCode + randomPart;
     }
 }
 
