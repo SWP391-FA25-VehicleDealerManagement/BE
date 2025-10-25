@@ -10,7 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
 @Entity
 @Table(name = "Customer")
 @Getter
@@ -23,6 +22,9 @@ public class Customer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "customer_id")
     private Long customerId;
+
+    @Column(name = "dealer_id")
+    private Long dealerId;
 
     @Column(name = "customerName", nullable = false, length = 255)
     @NotBlank(message = "Customer name is required")
@@ -37,15 +39,16 @@ public class Customer {
     @Size(max = 50, message = "Phone must not exceed 50 characters")
     private String phone;
 
-    @Column(name = "dealer_id")
-    private Long dealerId;
 
+
+    // 🔹 Liên kết đến dealer — để backend tự gán dealer khi tạo customer
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id", insertable = false, updatable = false)
     @JsonIgnore
     private Dealer dealer;
 
+    // 🔹 Ai là người tạo customer này
     @Column(name = "createBy", length = 100)
-    @Size (max = 100, message = "Create By must not exceed 100 characters")
+    @Size(max = 100, message = "Created By must not exceed 100 characters")
     private String createBy;
 }
