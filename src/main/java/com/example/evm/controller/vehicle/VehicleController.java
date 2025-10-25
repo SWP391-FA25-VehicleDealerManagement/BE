@@ -70,6 +70,14 @@ public class VehicleController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle retrieved successfully", response));
     }
 
+    @DeleteMapping("/{vehicleId}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<?> deleteVehicle(@PathVariable Long vehicleId) {
+        vehicleService.deleteVehicle(vehicleId);
+        return ResponseEntity.ok("Vehicle deleted successfully.");
+    }
+
+
     // ===== APIs KHO TỔNG =====
 
     /**

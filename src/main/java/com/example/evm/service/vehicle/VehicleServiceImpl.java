@@ -37,6 +37,7 @@ public class VehicleServiceImpl implements VehicleService {
     private final VehicleRepository vehicleRepository;
     private final VehicleVariantRepository variantRepository;
     private final ManufacturerStockRepository manufacturerStockRepository;
+    private final com.example.evm.repository.order.OrderDetailRepository orderDetailRepository;
 
     // Get all vehicles
     @Override
@@ -161,6 +162,24 @@ public class VehicleServiceImpl implements VehicleService {
                 .build())
             .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional
+    public void deleteVehicle(Long vehicleId) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with ID: " + vehicleId));
+
+        // 1️⃣ Kiểm tra liên kết với OrderDetail
+        boolean hasOrder = orderDetailRepository.existsByVehicle_VehicleId(vehicleId);
+        if (hasOrder) {
+            throw new IllegalStateException("Cannot delete vehicle because it is linked to existing orders.");
+        }
+
+        // 4️⃣ Xóa
+        vehicleRepository.delete(vehicle);
+        log.info("✅ Vehicle ID {} deleted successfully.", vehicleId);
+    }
+
 
     // ===== HELPER METHODS =====
 

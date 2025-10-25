@@ -9,6 +9,7 @@ public interface VehicleService { // Đặt tên Interface
 
     List<VehicleFullResponse> getAllVehicles();
     VehicleFullResponse createVehicle(VehicleRequest request);
+    void deleteVehicle(Long vehicleId);
     VehicleFullResponse getVehicleById(Long id);
     List<VehicleFullResponse> getAllManufacturerVehicles();
     List<StockSummaryResponse> getManufacturerStockSummary();
