@@ -1,5 +1,6 @@
 package com.example.evm.repository.auth;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,7 +17,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT COUNT(u) FROM User u WHERE u.dealer.dealerId = :dealerId AND u.role = :role")
     long countByDealerIdAndRole(@Param("dealerId") Long dealerId, @Param("role") String role);
     
-    // ✅ Tìm DEALER_MANAGER của dealer
+    // ✅ Tìm DEALER_MANAGER của dealer (1 kết quả)
     @Query("SELECT u FROM User u WHERE u.dealer.dealerId = :dealerId AND u.role = :role")
     Optional<User> findByDealerIdAndRole(@Param("dealerId") Long dealerId, @Param("role") String role);
+    
+    // ✅ Lấy danh sách tất cả users của dealer
+    @Query("SELECT u FROM User u WHERE u.dealer.dealerId = :dealerId")
+    List<User> findByDealerDealerId(@Param("dealerId") Long dealerId);
+    
+    // ✅ Lấy danh sách users theo dealer và role (nhiều kết quả)
+    @Query("SELECT u FROM User u WHERE u.dealer.dealerId = :dealerId AND u.role = :role")
+    List<User> findByDealerDealerIdAndRole(@Param("dealerId") Long dealerId, @Param("role") String role);
 }

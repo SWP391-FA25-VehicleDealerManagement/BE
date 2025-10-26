@@ -2,6 +2,7 @@ package com.example.evm.service.admin;
 
 import com.example.evm.dto.admin.CreateUserAccountRequest;
 import com.example.evm.dto.admin.CreateUserAccountResponse;
+import com.example.evm.dto.admin.UserAccountInfoResponse;
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.user.User;
 import com.example.evm.repository.auth.UserRepository;
@@ -76,13 +77,14 @@ public class UserAccountService {
             User savedUser = userRepository.save(user);
             log.info("Created user: {} with role: {}", savedUser.getUserName(), savedUser.getRole());
 
-            // Tạo response
+            // Tạo response - ✅ KHÔNG bao gồm password
             CreateUserAccountResponse response = new CreateUserAccountResponse();
             response.setUserId(savedUser.getUserId());
             response.setUsername(savedUser.getUserName());
             response.setRole(savedUser.getRole());
             response.setFullName(savedUser.getFullName());
             response.setEmail(savedUser.getEmail());
+            response.setPhone(savedUser.getPhone());  // ✅ Thêm phone
 
             if (savedUser.getDealer() != null) {
                 response.setDealerId(savedUser.getDealer().getDealerId());
@@ -107,5 +109,83 @@ public class UserAccountService {
 
     private boolean isDealerRole(String role) {
         return "ROLE_DEALER_STAFF".equals(role) || "ROLE_DEALER_MANAGER".equals(role);
+    }
+
+    // ================== LẤY THÔNG TIN USER ACCOUNT ==================
+
+    /**
+     * Lấy thông tin user account theo ID
+     */
+    public UserAccountInfoResponse getUserAccountById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
+        
+        return convertToInfoResponse(user);
+    }
+
+    /**
+     * Lấy danh sách tất cả user accounts của dealer
+     */
+    public java.util.List<UserAccountInfoResponse> getDealerAccounts(Long dealerId) {
+        // Verify dealer exists
+        dealerRepository.findById(dealerId)
+                .orElseThrow(() -> new IllegalArgumentException("Dealer not found with id: " + dealerId));
+        
+        java.util.List<User> users = userRepository.findByDealerDealerId(dealerId);
+        
+        return users.stream()
+                .map(this::convertToInfoResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Lấy thông tin DEALER_MANAGER của dealer
+     */
+    public UserAccountInfoResponse getDealerManager(Long dealerId) {
+        // Verify dealer exists
+        dealerRepository.findById(dealerId)
+                .orElseThrow(() -> new IllegalArgumentException("Dealer not found with id: " + dealerId));
+        
+        User manager = userRepository.findByDealerIdAndRole(dealerId, "DEALER_MANAGER")
+                .orElseThrow(() -> new IllegalArgumentException("Dealer manager not found for dealer id: " + dealerId));
+        
+        return convertToInfoResponse(manager);
+    }
+
+    /**
+     * Lấy danh sách DEALER_STAFF của dealer
+     */
+    public java.util.List<UserAccountInfoResponse> getDealerStaff(Long dealerId) {
+        // Verify dealer exists
+        dealerRepository.findById(dealerId)
+                .orElseThrow(() -> new IllegalArgumentException("Dealer not found with id: " + dealerId));
+        
+        java.util.List<User> staff = userRepository.findByDealerDealerIdAndRole(dealerId, "DEALER_STAFF");
+        
+        return staff.stream()
+                .map(this::convertToInfoResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Convert User entity to UserAccountInfoResponse (không bao gồm password)
+     */
+    private UserAccountInfoResponse convertToInfoResponse(User user) {
+        UserAccountInfoResponse response = new UserAccountInfoResponse();
+        response.setUserId(user.getUserId());
+        response.setUsername(user.getUserName());
+        response.setRole(user.getRole());
+        response.setFullName(user.getFullName());
+        response.setEmail(user.getEmail());
+        response.setPhone(user.getPhone());
+        response.setCreatedDate(user.getCreatedDate());
+        response.setDateModified(user.getDateModified());
+        
+        if (user.getDealer() != null) {
+            response.setDealerId(user.getDealer().getDealerId());
+            response.setDealerName(user.getDealer().getDealerName());
+        }
+        
+        return response;
     }
 }
