@@ -2,6 +2,7 @@ package com.example.evm.entity.order;
 
 import com.example.evm.entity.promotion.Promotion;
 import com.example.evm.entity.vehicle.Vehicle;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,16 +21,19 @@ public class OrderDetail {
     private Long orderDetailId;
 
     // Quan hệ nhiều-1 với Order
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
     // Quan hệ nhiều-1 với Vehicle
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id", nullable = false)
     private Vehicle vehicle;
 
     // Quan hệ nhiều-1 với Promotion (có thể null nếu không có khuyến mãi)
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "promotion_id")
     private Promotion promotion;
@@ -69,5 +73,18 @@ public class OrderDetail {
                 ", quantity=" + quantity +
                 ", price=" + price +
                 '}';
+    }
+
+    // Helper methods để expose ID
+    public Long getOrderId() {
+        return order != null ? order.getOrderId() : null;
+    }
+
+    public Long getVehicleId() {
+        return vehicle != null ? vehicle.getVehicleId() : null;
+    }
+
+    public Long getPromotionId() {
+        return promotion != null ? promotion.getPromoId() : null;
     }
 }

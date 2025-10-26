@@ -1,5 +1,6 @@
 package com.example.evm.entity.order;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -25,16 +26,19 @@ public class Order {
     private Long orderId;
 
     // Quan hệ với Customer
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
     // Quan hệ với User (nhân viên tạo đơn)
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     // Quan hệ với Dealer
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id", nullable = false)
     private Dealer dealer;
@@ -52,6 +56,7 @@ public class Order {
     private String status = "PENDING"; // PENDING, CONFIRMED, DELIVERED, CANCELLED
 
     // Quan hệ 1-nhiều với OrderDetail
+    @JsonIgnore
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderDetail> orderDetails = new ArrayList<>();
 
@@ -77,5 +82,18 @@ public class Order {
         return orderDetails.stream()
                 .mapToDouble(detail -> detail.getPrice() * detail.getQuantity())
                 .sum();
+    }
+
+    // Helper methods để expose ID
+    public Long getCustomerId() {
+        return customer != null ? customer.getCustomerId() : null;
+    }
+
+    public Long getUserId() {
+        return user != null ? user.getUserId() : null;
+    }
+
+    public Long getDealerId() {
+        return dealer != null ? dealer.getDealerId() : null;
     }
 }
