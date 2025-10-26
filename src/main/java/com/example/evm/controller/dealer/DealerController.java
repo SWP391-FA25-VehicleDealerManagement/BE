@@ -1,6 +1,7 @@
 package com.example.evm.controller.dealer;
 
 import com.example.evm.dto.auth.ApiResponse;
+import com.example.evm.dto.dealer.CreateDealerRequest;
 import com.example.evm.entity.dealer.Dealer;
 
 import com.example.evm.service.dealer.DealerService;
@@ -53,8 +54,15 @@ public class DealerController {
     }
 
     @PostMapping("/create")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<Dealer>> createDealer(@Valid @RequestBody Dealer dealer) {
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<Dealer>> createDealer(@Valid @RequestBody CreateDealerRequest request) {
+        // Convert DTO to Entity
+        Dealer dealer = new Dealer();
+        dealer.setDealerName(request.getDealerName());
+        dealer.setPhone(request.getPhone());
+        dealer.setAddress(request.getAddress());
+        dealer.setCreatedBy(request.getCreatedBy());
+        
         Dealer createdDealer = dealerService.createDealer(dealer);
         return ResponseEntity.ok(new ApiResponse<>(true, "Dealer created successfully", createdDealer));
     }
