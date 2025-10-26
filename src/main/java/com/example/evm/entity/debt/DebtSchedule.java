@@ -3,6 +3,7 @@ package com.example.evm.entity.debt;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -29,6 +30,7 @@ public class DebtSchedule {
     @Column(name = "schedule_id")
     private Long scheduleId;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "debt_id", nullable = false)
     private Debt debt;
@@ -88,5 +90,10 @@ public class DebtSchedule {
         } else {
             status = "PENDING";
         }
+    }
+
+    // Helper method để expose debtId
+    public Long getDebtId() {
+        return debt != null ? debt.getDebtId() : null;
     }
 }

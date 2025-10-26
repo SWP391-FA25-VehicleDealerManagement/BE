@@ -1,5 +1,6 @@
 package com.example.evm.entity.debt;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.Data;
@@ -27,10 +28,12 @@ public class DebtPayment {
     @Column(name = "payment_id")
     private Long paymentId;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "debt_id", nullable = false)
     private Debt debt;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id")
     private DebtSchedule debtSchedule;
@@ -58,5 +61,14 @@ public class DebtPayment {
         if (paymentDate == null) {
             paymentDate = LocalDateTime.now();
         }
+    }
+
+    // Helper methods để expose ID
+    public Long getDebtId() {
+        return debt != null ? debt.getDebtId() : null;
+    }
+
+    public Long getScheduleId() {
+        return debtSchedule != null ? debtSchedule.getScheduleId() : null;
     }
 }
