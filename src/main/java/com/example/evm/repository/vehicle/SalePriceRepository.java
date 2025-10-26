@@ -1,8 +1,9 @@
 package com.example.evm.repository.vehicle;
 
-import com.example.evm.entity.vehicle.SalePrice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import com.example.evm.entity.salePrice.SalePrice;
 
 import java.util.Optional;
 

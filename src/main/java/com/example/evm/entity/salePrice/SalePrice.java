@@ -1,6 +1,8 @@
-package com.example.evm.entity.vehicle;
+package com.example.evm.entity.salePrice;
 
 import com.example.evm.entity.dealer.Dealer;
+import com.example.evm.entity.vehicle.VehicleVariant;
+
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;

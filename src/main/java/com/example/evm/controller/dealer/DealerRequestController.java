@@ -113,14 +113,9 @@ public class DealerRequestController {
      */
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<DealerRequestResponse>> approveRequest(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> approvalData) {
-        
-        String approvedBy = approvalData.getOrDefault("approvedBy", "system");
-        log.info("Approving request {} by {}", id, approvedBy);
-        
-        DealerRequestResponse response = dealerRequestService.updateRequestStatus(id, "APPROVED", approvedBy);
+    public ResponseEntity<ApiResponse<DealerRequestResponse>> approveRequest(@PathVariable Long id) {
+        log.info("Approving request {}", id);
+        DealerRequestResponse response = dealerRequestService.updateRequestStatus(id, "APPROVED", "system");
         return ResponseEntity.ok(new ApiResponse<>(true, "Request approved successfully", response));
     }
 
