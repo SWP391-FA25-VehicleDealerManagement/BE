@@ -96,4 +96,25 @@ public class Order {
     public Long getDealerId() {
         return dealer != null ? dealer.getDealerId() : null;
     }
+
+    // Override getter methods để thêm @JsonIgnore  
+    @JsonIgnore
+    public Customer getCustomer() {
+        return customer;
+    }
+
+    @JsonIgnore
+    public User getUser() {
+        return user;
+    }
+
+    @JsonIgnore
+    public Dealer getDealer() {
+        return dealer;
+    }
+
+    @JsonIgnore
+    public List<OrderDetail> getOrderDetails() {
+        return orderDetails;
+    }
 }
