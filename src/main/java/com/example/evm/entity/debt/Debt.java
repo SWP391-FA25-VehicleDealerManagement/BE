@@ -11,6 +11,7 @@ import java.util.List;
 import com.example.evm.entity.customer.Customer;
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "Debt")
@@ -25,14 +26,17 @@ public class Debt {
     @Column(name = "debt_id")
     private Long debtId;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id") // Nhân viên quản lý nợ
     private User user;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id", nullable = false)
     private Dealer dealer;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
@@ -65,6 +69,7 @@ public class Debt {
     private LocalDateTime updatedDate;
 
     // Quan hệ 1-nhiều với lịch trả nợ
+    @JsonIgnore
     @OneToMany(mappedBy = "debt", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DebtSchedule> debtSchedules = new ArrayList<>();
 
@@ -124,5 +129,18 @@ public class Debt {
                 .map(DebtSchedule::getInterest)
                 .filter(interest -> interest != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    // Helper methods để expose ID mà không trigger lazy loading
+    public Long getUserId() {
+        return user != null ? user.getUserId() : null;
+    }
+
+    public Long getDealerId() {
+        return dealer != null ? dealer.getDealerId() : null;
+    }
+
+    public Long getCustomerId() {
+        return customer != null ? customer.getCustomerId() : null;
     }
 }

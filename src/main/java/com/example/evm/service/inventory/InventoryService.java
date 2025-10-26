@@ -60,13 +60,48 @@ public class InventoryService {
         List<Vehicle> availableVehicles = vehicleRepository
                 .findAvailableInManufacturerStock(variantId, color);
 
+        // 3. Kiểm tra số lượng và tạo message chi tiết nếu không đủ
         if (availableVehicles.size() < quantity) {
-            throw new IllegalStateException(
-                String.format("Not enough vehicles. Requested: %d, Available: %d", 
-                    quantity, availableVehicles.size()));
+            // Lấy thông tin variant để tạo message chi tiết
+            String variantInfo = "Unknown variant";
+            if (!availableVehicles.isEmpty()) {
+                Vehicle firstVehicle = availableVehicles.get(0);
+                String modelName = firstVehicle.getVariant().getModel().getName();
+                String variantName = firstVehicle.getVariant().getName();
+                variantInfo = String.format("%s - %s (màu %s)", modelName, variantName, color);
+            } else {
+                // Nếu không có xe nào, query variant từ DB
+                try {
+                    Vehicle anyVehicle = vehicleRepository
+                            .findAvailableInManufacturerStock(variantId, null)
+                            .stream()
+                            .findFirst()
+                            .orElse(null);
+                    
+                    if (anyVehicle != null) {
+                        String modelName = anyVehicle.getVariant().getModel().getName();
+                        String variantName = anyVehicle.getVariant().getName();
+                        variantInfo = String.format("%s - %s (màu %s)", modelName, variantName, color);
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not fetch variant info", e);
+                }
+            }
+            
+            String errorMessage = String.format(
+                "❌ Không đủ xe để phân bổ!\n" +
+                "🚗 Xe yêu cầu: %s\n" +
+                "📦 Số lượng yêu cầu: %d xe\n" +
+                "📊 Số lượng trong kho: %d xe\n" +
+                "⚠️ Thiếu: %d xe",
+                variantInfo, quantity, availableVehicles.size(), (quantity - availableVehicles.size())
+            );
+            
+            log.error(errorMessage);
+            throw new IllegalStateException(errorMessage);
         }
 
-        // 3. Lấy hoặc tạo kho dealer
+        // 4. Lấy hoặc tạo kho dealer
         InventoryStock dealerStock = inventoryStockRepository
                 .findByDealerDealerId(dealerId)
                 .stream()
@@ -78,7 +113,7 @@ public class InventoryService {
                     return inventoryStockRepository.save(newStock);
                 });
 
-        // 4. Chuyển xe sang kho dealer
+        // 5. Chuyển xe sang kho dealer
         List<Vehicle> allocatedVehicles = availableVehicles.stream()
                 .limit(quantity)
                 .peek(vehicle -> {
@@ -92,10 +127,10 @@ public class InventoryService {
 
         log.info("✅ Allocated {} vehicles to dealer {}", allocatedVehicles.size(), dealer.getDealerName());
 
-        // 5. Update DealerRequest status (APPROVED → SHIPPED)
+        // 6. Update DealerRequest status (APPROVED → SHIPPED)
         DealerRequest updatedRequest = updateDealerRequestStatus(dealerId, variantId, color);
 
-        // 6. Build response
+        // 7. Build response
         return buildAllocationResponse(allocatedVehicles, updatedRequest, dealer);
     }
 
@@ -120,20 +155,51 @@ public class InventoryService {
                 .limit(quantity)
                 .toList();
 
+        // 2. Kiểm tra số lượng và tạo message chi tiết nếu không đủ
         if (dealerVehicles.size() < quantity) {
-            throw new IllegalStateException(
-                String.format("Not enough vehicles to recall. Requested: %d, Available: %d", 
-                    quantity, dealerVehicles.size()));
+            // Lấy thông tin variant để tạo message chi tiết
+            String variantInfo = "Unknown variant";
+            String dealerName = "Unknown dealer";
+            
+            try {
+                Dealer dealer = dealerRepository.findById(dealerId)
+                        .orElse(null);
+                if (dealer != null) {
+                    dealerName = dealer.getDealerName();
+                }
+                
+                if (!dealerVehicles.isEmpty()) {
+                    Vehicle firstVehicle = dealerVehicles.get(0);
+                    String modelName = firstVehicle.getVariant().getModel().getName();
+                    String variantName = firstVehicle.getVariant().getName();
+                    variantInfo = String.format("%s - %s (màu %s)", modelName, variantName, color);
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch dealer/variant info", e);
+            }
+            
+            String errorMessage = String.format(
+                "❌ Không đủ xe để thu hồi!\n" +
+                "🏢 Đại lý: %s\n" +
+                "🚗 Xe yêu cầu thu hồi: %s\n" +
+                "📦 Số lượng yêu cầu: %d xe\n" +
+                "📊 Số lượng trong kho đại lý: %d xe\n" +
+                "⚠️ Thiếu: %d xe",
+                dealerName, variantInfo, quantity, dealerVehicles.size(), (quantity - dealerVehicles.size())
+            );
+            
+            log.error(errorMessage);
+            throw new IllegalStateException(errorMessage);
         }
 
-        // 2. Lấy kho tổng mặc định
+        // 3. Lấy kho tổng mặc định
         ManufacturerStock warehouse = manufacturerStockRepository
                 .findByStatus("ACTIVE")
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No active warehouse found"));
 
-        // 3. Chuyển xe về kho tổng
+        // 4. Chuyển xe về kho tổng
         dealerVehicles.forEach(vehicle -> {
             vehicle.setInventoryStock(null);
             vehicle.setManufacturerStock(warehouse);
@@ -144,7 +210,7 @@ public class InventoryService {
 
         log.info("✅ Recalled {} vehicles from dealer {} to warehouse", dealerVehicles.size(), dealerId);
 
-        // 4. Revert DealerRequest status (SHIPPED → APPROVED)
+        // 5. Revert DealerRequest status (SHIPPED → APPROVED)
         revertDealerRequestStatus(dealerId, variantId, color);
     }
 
