@@ -108,17 +108,22 @@ public class DebtService {
         debt.setUser(user);
         debt.setCreatedDate(LocalDateTime.now());
 
-        // Nếu chưa có lịch trả nợ và có số tiền nợ, tự động sinh lịch trả nợ
-        if (debt.getDebtSchedules().isEmpty() && debt.getAmountDue() != null 
+        // ✅ TỰ ĐỘNG SINH LỊCH TRẢ NỢ nếu payment_type = INSTALLMENT
+        if ("INSTALLMENT".equalsIgnoreCase(debt.getPaymentType()) 
+            && debt.getDebtSchedules().isEmpty() 
+            && debt.getAmountDue() != null 
             && debt.getAmountDue().compareTo(BigDecimal.ZERO) > 0) {
+            
+            log.info("🔄 Auto-generating debt schedule for INSTALLMENT payment...");
             generateDebtSchedule(debt);
         }
 
         // Lưu vào DB
         Debt savedDebt = debtRepository.save(debt);
 
-        log.info("Debt created: ID {} - Customer: {} - Amount: {}",
-                savedDebt.getDebtId(), customer.getCustomerName(), debt.getAmountDue());
+        log.info("✅ Debt created: ID {} - Customer: {} - Amount: {} - Type: {}",
+                savedDebt.getDebtId(), customer.getCustomerName(), 
+                debt.getAmountDue(), debt.getPaymentType());
 
         return savedDebt;
     }
