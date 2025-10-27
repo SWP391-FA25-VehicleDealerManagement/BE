@@ -1,6 +1,7 @@
 package com.example.evm.entity.feedback;
 
 import com.example.evm.entity.testDrive.TestDrive;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -25,8 +26,9 @@ public class Feedback {
     @Column(name = "feedback_id")
     private Long feedbackId;
 
+    @JsonIgnore  // ✅ Prevent lazy loading serialization error
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "testdrive_id",nullable = true)
+    @JoinColumn(name = "testdrive_id", nullable = true)
     private TestDrive testDrive;
 
     @Column(name = "description", length = 255)
@@ -40,4 +42,9 @@ public class Feedback {
 
     @Column(name = "status", length = 255)
     private String status;
+    
+    // Helper method để expose testDriveId mà không trigger lazy loading
+    public Long getTestDriveId() {
+        return testDrive != null ? testDrive.getTestDriveId() : null;
+    }
 }
