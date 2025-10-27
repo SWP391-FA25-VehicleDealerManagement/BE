@@ -55,11 +55,10 @@ public class PaymentController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','EVM_STAFF','DEALER_STAFF','DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<?>> createPayment(@RequestBody Payment payment) {
-        PaymentInfo paymentInfo = new PaymentInfo(payment.getOrderId(), payment.getAmount(), payment.getPaymentMethod());
+    public ResponseEntity<ApiResponse<?>> createPayment( @RequestBody PaymentInfo paymentInfo) {
         try {
-            Payment createPayment = paymentService.createPayment(payment);
-            if("TRANSFER".equalsIgnoreCase(payment.getPaymentMethod())){
+            Payment createPayment = paymentService.createPayment(paymentInfo);
+            if("TRANSFER".equalsIgnoreCase(paymentInfo.getPaymentMethod())){
                      //Nếu là chuyển khoản -> tạo link VNPay sandbox
                      String vnpayUrl= vnPayService.createVNPayUrl(createPayment);
                      return ResponseEntity.ok(new ApiResponse<>(true,"Redirect to VNPay",vnpayUrl));
