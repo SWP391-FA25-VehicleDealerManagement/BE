@@ -241,7 +241,7 @@ public class SalePriceController {
      * GET /api/sale-prices/range?minPrice=xxx&maxPrice=yyy
      */
     @GetMapping("/range")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF','DEALER_MANAGER','DEALER_STAFF')")
     public ResponseEntity<ApiResponse<List<SalePrice>>> getPricesByRange(
             @RequestParam BigDecimal minPrice,
             @RequestParam BigDecimal maxPrice) {
@@ -267,7 +267,7 @@ public class SalePriceController {
      * PUT /api/sale-prices/{id}
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF','DEALER_MANAGER','DEALER_STAFF')")
     public ResponseEntity<ApiResponse<SalePrice>> updatePrice(
             @PathVariable Long id,
             @Valid @RequestBody UpdateSalePriceRequest request) {
@@ -301,7 +301,7 @@ public class SalePriceController {
      * DELETE /api/sale-prices/{id}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF','DEALER_MANAGER','DEALER_STAFF')")
     public ResponseEntity<ApiResponse<Void>> deletePrice(@PathVariable Long id) {
         try {
             salePriceService.deletePrice(id);
