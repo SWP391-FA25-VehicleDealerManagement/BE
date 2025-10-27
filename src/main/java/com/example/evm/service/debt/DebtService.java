@@ -109,15 +109,22 @@ public class DebtService {
 
     @Transactional
     public Debt createDebt(Debt debt) {
+        // ✅ Để database tự động tạo ID (IDENTITY strategy)
+        debt.setDebtId(null);  // Đảm bảo ID = null để DB tự generate
+        
         // Kiểm tra các entity liên quan có tồn tại không
         Dealer dealer = dealerRepository.findById(debt.getDealer().getDealerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Dealer not found"));
 
-        Customer customer = customerRepository.findById(debt.getCustomer().getCustomerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+        Customer customer = debt.getCustomer() != null 
+                ? customerRepository.findById(debt.getCustomer().getCustomerId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Customer not found"))
+                : null;
 
-        User user = debt.getUser() != null ? userRepository.findById(debt.getUser().getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found")) : null;
+        User user = debt.getUser() != null 
+                ? userRepository.findById(debt.getUser().getUserId())
+                        .orElseThrow(() -> new ResourceNotFoundException("User not found")) 
+                : null;
 
         // Gán lại các đối tượng sau khi xác thực
         debt.setDealer(dealer);
@@ -138,9 +145,10 @@ public class DebtService {
         // Lưu vào DB
         Debt savedDebt = debtRepository.save(debt);
 
-        log.info("✅ Debt created: ID {} - Customer: {} - Amount: {} - Type: {}",
-                savedDebt.getDebtId(), customer.getCustomerName(), 
-                debt.getAmountDue(), debt.getPaymentType());
+        log.info("✅ Debt created: ID {} - Amount: {} - Type: {}",
+                savedDebt.getDebtId(), 
+                debt.getAmountDue(), 
+                debt.getPaymentType());
 
         return savedDebt;
     }
