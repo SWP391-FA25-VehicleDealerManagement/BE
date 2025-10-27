@@ -1,5 +1,6 @@
 package com.example.evm.service.vehicle;
 
+import com.example.evm.dto.vehicle.DealerVehicleResponse;
 import com.example.evm.dto.vehicle.StockSummaryResponse;
 import com.example.evm.dto.vehicle.VehicleFullResponse;
 import com.example.evm.dto.vehicle.VehicleRequest;
@@ -11,6 +12,8 @@ import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.repository.inventory.ManufacturerStockRepository;
 import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
+import com.example.evm.repository.salePrice.SalePriceRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,6 +41,7 @@ public class VehicleServiceImpl implements VehicleService {
     private final VehicleVariantRepository variantRepository;
     private final ManufacturerStockRepository manufacturerStockRepository;
     private final com.example.evm.repository.order.OrderDetailRepository orderDetailRepository;
+    private final SalePriceRepository salePriceRepository;
 
     // Get all vehicles
     @Override
@@ -136,12 +140,45 @@ public class VehicleServiceImpl implements VehicleService {
      */
     @Override
     @Transactional(readOnly = true)
-    public List<VehicleFullResponse> getDealerVehicles(Long dealerId) {
+    public List<DealerVehicleResponse> getDealerVehicles(Long dealerId) {
+        // 1️⃣ Lấy danh sách xe có đầy đủ join
         List<Vehicle> vehicles = vehicleRepository.findByDealerIdWithFullInfo(dealerId);
-        
-        return vehicles.stream()
-            .map(this::buildFullResponse)
-            .collect(Collectors.toList());
+
+        // 2️⃣ Map từng vehicle sang DealerVehicleResponse
+        return vehicles.stream().map(v -> {
+            DealerVehicleResponse.DealerVehicleResponseBuilder builder = DealerVehicleResponse.builder()
+                .vehicleId(v.getVehicleId())
+                .vinNumber(v.getVinNumber())
+                .color(v.getColor())
+                .status(v.getStatus())
+                .manufactureDate(v.getManufactureDate())
+                .warrantyExpiryDate(v.getWarrantyExpiryDate());
+
+            if (v.getVariant() != null) {
+                builder.variantId(v.getVariant().getVariantId())
+                    .variantName(v.getVariant().getName())
+                    .variantImage(v.getVariant().getImageUrl())
+                    .msrp(v.getVariant().getMsrp());
+
+                if (v.getVariant().getModel() != null) {
+                    builder.modelId(v.getVariant().getModel().getModelId())
+                        .modelName(v.getVariant().getModel().getName())
+                        .manufacturer(v.getVariant().getModel().getManufacturer())
+                        .year(v.getVariant().getModel().getYear())
+                        .bodyType(v.getVariant().getModel().getBodyType());
+                }
+
+                if (v.getVariant().getDetail() != null) {
+                    builder.detail(new VehicleDetailResponse(v.getVariant().getDetail()));
+                }
+            }
+
+            // ✅ Gắn giá bán (chỉ riêng API này)
+            salePriceRepository.findLatestPriceByDealerAndVariant(dealerId, v.getVariant().getVariantId())
+                .ifPresent(sp -> builder.price(sp.getPrice().doubleValue()));
+
+            return builder.build();
+        }).collect(Collectors.toList());
     }
 
     /**

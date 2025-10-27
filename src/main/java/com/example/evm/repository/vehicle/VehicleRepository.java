@@ -135,5 +135,5 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     Long countAvailableInManufacturerStock(@Param("variantId") Long variantId, 
                                            @Param("color") String color);
                                         
-    boolean existsByVariantVariantId(Long variantId);                 
+    boolean existsByVariantVariantId(Long variantId); 
 }

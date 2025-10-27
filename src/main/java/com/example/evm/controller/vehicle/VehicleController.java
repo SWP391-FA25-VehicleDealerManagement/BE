@@ -5,6 +5,7 @@ import com.example.evm.dto.vehicle.StockSummaryResponse;
 import com.example.evm.dto.vehicle.VehicleFullResponse;
 import com.example.evm.dto.vehicle.VehicleRequest;
 import com.example.evm.service.vehicle.VehicleService;
+import com.example.evm.dto.vehicle.DealerVehicleResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,7 @@ public class VehicleController {
     
     // Lấy tất cả xe
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')") // Quyền phù hợp
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<List<VehicleFullResponse>>> getAllVehicles() {
         List<VehicleFullResponse> vehicles = vehicleService.getAllVehicles();
         return ResponseEntity.ok(new ApiResponse<>(true, "All vehicles retrieved successfully", vehicles));
@@ -133,15 +134,11 @@ public class VehicleController {
      */
     @GetMapping("/dealer/{dealerId}/vehicles")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<List<VehicleFullResponse>>> getDealerVehicles(
+    public ResponseEntity<ApiResponse<List<DealerVehicleResponse>>> getDealerVehicles(
             @PathVariable Long dealerId) {
-        
-        log.info("Fetching all dealer vehicles for dealer: {}", dealerId);
-        
-        List<VehicleFullResponse> response = vehicleService.getDealerVehicles(dealerId);
-        
-        return ResponseEntity.ok(new ApiResponse<>(true, 
-            "Dealer vehicles retrieved successfully", response));
+        List<DealerVehicleResponse> vehicles = vehicleService.getDealerVehicles(dealerId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Fetched dealer vehicles successfully", vehicles));
     }
+
 }
 

@@ -17,7 +17,7 @@ import java.time.LocalDate;
  */
 @Data
 @Builder
-public class VehicleFullResponse {
+public class DealerVehicleResponse {
     
     // ===== VEHICLE INFO =====
     private Long vehicleId;
@@ -39,6 +39,9 @@ public class VehicleFullResponse {
     private String manufacturer;
     private Integer year;
     private String bodyType;
+
+    // ===== PRICE INFO =====
+    private Double price;
     
     // ===== VEHICLE DETAIL (Thông số kỹ thuật) =====
     private VehicleDetailResponse detail;
