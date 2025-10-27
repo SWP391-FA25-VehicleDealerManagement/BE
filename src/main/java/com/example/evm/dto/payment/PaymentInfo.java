@@ -18,6 +18,8 @@ public class PaymentInfo {
 private Long orderId;
 private BigDecimal amount;
 private String paymentMethod;
+private String paymentType;
+
 }
 
 
