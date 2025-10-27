@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.evm.dto.auth.ApiResponse;
+import com.example.evm.dto.payment.PaymentInfo;
 import com.example.evm.entity.payment.Payment;
 import com.example.evm.service.payment.PaymentService;
 import com.example.evm.service.payment.VNPayService;
@@ -55,6 +56,7 @@ public class PaymentController {
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','EVM_STAFF','DEALER_STAFF','DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<?>> createPayment(@RequestBody Payment payment) {
+        PaymentInfo paymentInfo = new PaymentInfo(payment.getOrderId(), payment.getAmount(), payment.getPaymentMethod());
         try {
             Payment createPayment = paymentService.createPayment(payment);
             if("TRANSFER".equalsIgnoreCase(payment.getPaymentMethod())){
