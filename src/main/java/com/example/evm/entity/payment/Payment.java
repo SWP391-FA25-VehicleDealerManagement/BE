@@ -52,7 +52,10 @@ private String paymentMethod;
 @Column(name = "payment_date")
 @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
 private LocalDateTime paymentDate;
-
+  
+@Column(name = "payment_type",length = 255)
+@Size(max = 255,message = "Payment type must not exceed 255 characters")
+private String paymentType;
 
 
 @ManyToOne(fetch = FetchType.LAZY)
