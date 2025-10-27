@@ -66,10 +66,11 @@ public class VehicleVariantController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Variant created successfully", createdVariant));
     }
 
-    // 🟢 LẤY TẤT CẢ các biến thể
+    // 🟢 LẤY TẤT CẢ các biến thể (với optional dealerId để lấy giá dealer)
     @GetMapping
-    public ResponseEntity<ApiResponse<List<VehicleVariantResponse>>> getAllVariants() {
-        List<VehicleVariantResponse> variants = variantService.getAllVariants();
+    public ResponseEntity<ApiResponse<List<VehicleVariantResponse>>> getAllVariants(
+            @RequestParam(required = false) Long dealerId) {
+        List<VehicleVariantResponse> variants = variantService.getAllVariants(dealerId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Variants retrieved successfully", variants));
     }
 
@@ -95,10 +96,12 @@ public class VehicleVariantController {
                 .body(file);
     }
 
-    // 🟢 LẤY MỘT biến thể theo ID
+    // 🟢 LẤY MỘT biến thể theo ID (với optional dealerId để lấy giá dealer)
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<VehicleVariantResponse>> getVariantById(@PathVariable Long id) {
-        VehicleVariantResponse variant = variantService.getVariantById(id);
+    public ResponseEntity<ApiResponse<VehicleVariantResponse>> getVariantById(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long dealerId) {
+        VehicleVariantResponse variant = variantService.getVariantById(id, dealerId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Variant retrieved successfully", variant));
     }
 

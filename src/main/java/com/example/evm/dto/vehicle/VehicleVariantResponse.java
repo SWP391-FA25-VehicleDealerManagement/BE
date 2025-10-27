@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-@JsonPropertyOrder({ "variantId", "modelId", "modelName", "name", "msrp", "status", "defaultImageUrl" })
+@JsonPropertyOrder({ "variantId", "modelId", "modelName", "name", "msrp", "basePrice", "dealerPrice", "status", "defaultImageUrl" })
 @Data
 @NoArgsConstructor
 public class VehicleVariantResponse {
@@ -15,7 +15,9 @@ public class VehicleVariantResponse {
     private String name;
     private String defaultImageUrl;
     private String status;
-    private BigDecimal msrp;
+    private BigDecimal msrp; // Giá niêm yết của hãng
+    private BigDecimal basePrice; // Giá gốc dealer nhận từ hãng (từ SalePrice)
+    private BigDecimal dealerPrice; // Giá dealer bán ra (từ SalePrice)
     private String modelName;
 
     public VehicleVariantResponse(VehicleVariant variant) {

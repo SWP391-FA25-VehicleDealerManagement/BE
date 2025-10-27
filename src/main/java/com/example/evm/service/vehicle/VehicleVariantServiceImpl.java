@@ -4,10 +4,12 @@ import com.example.evm.dto.vehicle.VehicleDetailRequest;
 import com.example.evm.dto.vehicle.VehicleDetailResponse;
 import com.example.evm.dto.vehicle.VehicleVariantRequest;
 import com.example.evm.dto.vehicle.VehicleVariantResponse;
+import com.example.evm.entity.salePrice.SalePrice;
 import com.example.evm.entity.vehicle.VehicleDetail;
 import com.example.evm.entity.vehicle.VehicleModel;
 import com.example.evm.entity.vehicle.VehicleVariant;
 import com.example.evm.exception.ResourceNotFoundException;
+import com.example.evm.repository.salePrice.SalePriceRepository;
 import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.vehicle.VehicleDetailRepository;
 import com.example.evm.repository.vehicle.VehicleModelRepository;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,6 +37,7 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
     private final FileStorageService fileStorageService;
     private final VehicleDetailRepository detailRepository;
     private final VehicleRepository vehicleRepository;
+    private final SalePriceRepository salePriceRepository;
 
     @Override
     public VehicleVariantResponse createVariant(VehicleVariantRequest request, MultipartFile file) {
@@ -59,18 +63,60 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
     }
 
     @Override
-    public List<VehicleVariantResponse> getAllVariants() {
+    public List<VehicleVariantResponse> getAllVariants(Long dealerId) {
         return variantRepository.findAll().stream()
                 .filter(variant -> "ACTIVE".equalsIgnoreCase(variant.getStatus()))
-                .map(VehicleVariantResponse::new)
+                .map(variant -> {
+                    VehicleVariantResponse response = new VehicleVariantResponse(variant);
+                    // Nếu có dealerId, lấy giá dealer từ SalePrice
+                    if (dealerId != null) {
+                        enrichWithDealerPrice(response, variant.getVariantId(), dealerId);
+                    }
+                    return response;
+                })
                 .collect(Collectors.toList());
     }
 
     @Override
-    public VehicleVariantResponse getVariantById(Long id) {
+    public VehicleVariantResponse getVariantById(Long id, Long dealerId) {
         VehicleVariant variant = variantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Variant not found with id: " + id));
-        return new VehicleVariantResponse(variant);
+        VehicleVariantResponse response = new VehicleVariantResponse(variant);
+        
+        // Nếu có dealerId, lấy giá dealer từ SalePrice
+        if (dealerId != null) {
+            enrichWithDealerPrice(response, variant.getVariantId(), dealerId);
+        }
+        
+        return response;
+    }
+    
+    /**
+     * Helper method: Lấy giá dealer từ SalePrice và gán vào response
+     */
+    private void enrichWithDealerPrice(VehicleVariantResponse response, Long variantId, Long dealerId) {
+        try {
+            List<SalePrice> prices = salePriceRepository.findByDealerIdAndVariantId(dealerId, variantId);
+            
+            if (!prices.isEmpty()) {
+                // Lấy giá mới nhất (theo effectiveDate)
+                SalePrice latestPrice = prices.stream()
+                        .filter(p -> p.getEffectiveDate().isBefore(LocalDate.now()) || p.getEffectiveDate().isEqual(LocalDate.now()))
+                        .max((p1, p2) -> p1.getEffectiveDate().compareTo(p2.getEffectiveDate()))
+                        .orElse(prices.get(0));
+                
+                response.setBasePrice(latestPrice.getBasePrice());
+                response.setDealerPrice(latestPrice.getPrice());
+                
+                log.debug("✅ Found dealer price for variant {}, dealer {}: base={}, selling={}", 
+                    variantId, dealerId, latestPrice.getBasePrice(), latestPrice.getPrice());
+            } else {
+                log.debug("⚠️ No price found for variant {}, dealer {}", variantId, dealerId);
+            }
+        } catch (Exception e) {
+            log.warn("❌ Error fetching dealer price for variant {}, dealer {}: {}", 
+                variantId, dealerId, e.getMessage());
+        }
     }
 
     @Override

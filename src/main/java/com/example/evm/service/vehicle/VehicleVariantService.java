@@ -11,8 +11,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface VehicleVariantService {
     VehicleVariantResponse createVariant(VehicleVariantRequest request, MultipartFile file);
-    List<VehicleVariantResponse> getAllVariants();
-    VehicleVariantResponse getVariantById(Long id);
+    List<VehicleVariantResponse> getAllVariants(Long dealerId); // Thêm dealerId để lấy giá dealer
+    VehicleVariantResponse getVariantById(Long id, Long dealerId); // Thêm dealerId để lấy giá dealer
     VehicleVariantResponse updateVariant(Long id, VehicleVariantRequest request, MultipartFile file);
     void deactivateVariant(Long id);
     void activateVariant(Long id);
