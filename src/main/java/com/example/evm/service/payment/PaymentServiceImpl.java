@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.example.evm.dto.payment.PaymentInfo;
 import com.example.evm.entity.payment.Payment;
 import com.example.evm.repository.order.OrderRepository;
 import com.example.evm.repository.payment.PaymentRepository;
@@ -35,7 +36,11 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public Payment createPayment(Payment payment) {
+    public Payment createPayment(PaymentInfo paymentInfo) {
+        Payment payment = new Payment();
+        payment.setOrderId(paymentInfo.getOrderId());
+        payment.setAmount(paymentInfo.getAmount());
+        payment.setPaymentMethod(paymentInfo.getPaymentMethod());
         payment.setPaymentId(null);
         if(payment.getPaymentDate() == null){
                 payment.setPaymentDate(LocalDateTime.now());
