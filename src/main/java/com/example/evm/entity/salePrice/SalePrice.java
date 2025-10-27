@@ -26,7 +26,7 @@ public class SalePrice {
     @Column(name = "dealer_id", nullable = false)
     private Long dealerId;
 
-    @JsonIgnore  // ✅ THÊM annotation này
+    @JsonIgnore  
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id", insertable = false, updatable = false)
     private Dealer dealer; 

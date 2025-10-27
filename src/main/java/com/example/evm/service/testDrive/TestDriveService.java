@@ -72,12 +72,14 @@ public class TestDriveService {
     
     @Transactional
     public TestDrive scheduleTestDrive(TestDrive testDrive) {
+        // ✅ Để DB tự động tạo ID
+        testDrive.setTestDriveId(null);
         testDrive.setCreatedDate(LocalDateTime.now());
         testDrive.setStatus("SCHEDULED");
         
         TestDrive savedTestDrive = testDriveRepository.save(testDrive);
-        log.info("Test drive scheduled: {} for vehicle {}", 
-                testDrive.getScheduledDate(), testDrive.getVehicle().getVehicleId());
+        log.info("✅ Created test drive ID: {} scheduled at: {}", 
+                savedTestDrive.getTestDriveId(), savedTestDrive.getScheduledDate());
         
         return savedTestDrive;
     }

@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import com.example.evm.entity.customer.Customer;
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.vehicle.Vehicle;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -33,17 +34,19 @@ public class TestDrive {
     @Column(name = "testdrive_id")
     private Long testDriveId;
 
+    @JsonIgnore  // ✅ Prevent lazy loading serialization error
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id")
     private Dealer dealer;
 
+    @JsonIgnore  // ✅ Prevent lazy loading serialization error
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
     private Customer customer;
 
+    @JsonIgnore  // ✅ Prevent lazy loading serialization error
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id")
-        
     private Vehicle vehicle;
 
     @Column(name = "scheduled_date")
@@ -68,4 +71,16 @@ public class TestDrive {
         }
     }
     
+    // Helper methods để expose IDs mà không trigger lazy loading
+    public Long getDealerId() {
+        return dealer != null ? dealer.getDealerId() : null;
+    }
+    
+    public Long getCustomerId() {
+        return customer != null ? customer.getCustomerId() : null;
+    }
+    
+    public Long getVehicleId() {
+        return vehicle != null ? vehicle.getVehicleId() : null;
+    }
 }

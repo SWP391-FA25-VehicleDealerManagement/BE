@@ -1,7 +1,11 @@
 package com.example.evm.controller.testDrive;
 
 import com.example.evm.dto.auth.ApiResponse;
+import com.example.evm.dto.testDrive.CreateTestDriveRequest;
+import com.example.evm.entity.customer.Customer;
+import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.testDrive.TestDrive;
+import com.example.evm.entity.vehicle.Vehicle;
 import com.example.evm.service.testDrive.TestDriveService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,19 +36,41 @@ public class TestDriveController {
     @PostMapping("create-test-drive")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<TestDrive>> scheduleTestDrive(
-            @Valid @RequestBody TestDrive testDrive) {
+            @Valid @RequestBody CreateTestDriveRequest request) {
         try {
+            // Convert DTO to Entity
+            TestDrive testDrive = new TestDrive();
+            
+            // Set relationships (using proxy to avoid unnecessary queries)
+            Dealer dealer = new Dealer();
+            dealer.setDealerId(request.getDealerId());
+            testDrive.setDealer(dealer);
+            
+            Customer customer = new Customer();
+            customer.setCustomerId(request.getCustomerId());
+            testDrive.setCustomer(customer);
+            
+            Vehicle vehicle = new Vehicle();
+            vehicle.setVehicleId(request.getVehicleId());
+            testDrive.setVehicle(vehicle);
+            
+            // Set other fields
+            testDrive.setScheduledDate(request.getScheduledDate());
+            testDrive.setNotes(request.getNotes());
+            testDrive.setAssignedBy(request.getAssignedBy());
+            
             // Gọi service để lưu lịch thử xe
             TestDrive scheduledTestDrive = testDriveService.scheduleTestDrive(testDrive);
-            log.info("Test drive scheduled for customer {} with vehicle {}",
-                    testDrive.getCustomer().getCustomerId(),
-                    testDrive.getVehicle().getVehicleId());
+            log.info("✅ Test drive scheduled ID: {} for customer {} with vehicle {}",
+                    scheduledTestDrive.getTestDriveId(),
+                    request.getCustomerId(),
+                    request.getVehicleId());
 
             return ResponseEntity.ok(new ApiResponse<>(true,
                     "Test drive scheduled successfully",
                     scheduledTestDrive));
         } catch (Exception e) {
-            log.error("Error scheduling test drive", e);
+            log.error("❌ Error scheduling test drive", e);
             return ResponseEntity.badRequest().body(new ApiResponse<>(false,
                     "Failed to schedule test drive: " + e.getMessage(),
                     null));
