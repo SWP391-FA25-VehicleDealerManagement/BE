@@ -2,11 +2,11 @@ package com.example.evm.entity.salePrice;
 
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.vehicle.VehicleVariant;
+import com.fasterxml.jackson.annotation.JsonIgnore;  // ✅ THÊM import này
 
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
-
 import java.time.LocalDate;
 
 @Entity
@@ -26,6 +26,7 @@ public class SalePrice {
     @Column(name = "dealer_id", nullable = false)
     private Long dealerId;
 
+    @JsonIgnore  // ✅ THÊM annotation này
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id", insertable = false, updatable = false)
     private Dealer dealer; 
@@ -34,6 +35,7 @@ public class SalePrice {
     @Column(name = "variant_id", nullable = false)
     private Long variantId;
 
+    @JsonIgnore  // ✅ THÊM annotation này
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id", insertable = false, updatable = false)
     private VehicleVariant variant;
