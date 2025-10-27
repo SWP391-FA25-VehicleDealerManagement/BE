@@ -19,6 +19,21 @@ import com.example.evm.entity.debt.Debt;
 public interface DebtRepository extends JpaRepository<Debt, Long> {
 
     /**
+     * 🆕 Lấy tất cả các khoản nợ theo loại (DEALER_DEBT hoặc CUSTOMER_DEBT).
+     * @param debtType Loại nợ: DEALER_DEBT hoặc CUSTOMER_DEBT.
+     * @return Danh sách các khoản nợ thuộc loại đó.
+     */
+    List<Debt> findByDebtType(String debtType);
+
+    /**
+     * 🆕 Lấy danh sách nợ theo loại và dealer cụ thể.
+     * @param debtType Loại nợ.
+     * @param dealerId ID của đại lý.
+     * @return Danh sách các khoản nợ.
+     */
+    List<Debt> findByDebtTypeAndDealerDealerId(String debtType, Long dealerId);
+
+    /**
      * 🔍 Lấy tất cả các khoản nợ của một đại lý (dealer) cụ thể.
      * @param dealerId ID của đại lý.
      * @return Danh sách các khoản nợ thuộc về đại lý đó.

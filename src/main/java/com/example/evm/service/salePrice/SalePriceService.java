@@ -120,6 +120,9 @@ public class SalePriceService {
         SalePrice existingPrice = getPriceById(id);
         
         // Update fields
+        if (priceDetails.getBasePrice() != null) {
+            existingPrice.setBasePrice(priceDetails.getBasePrice());
+        }
         if (priceDetails.getPrice() != null) {
             existingPrice.setPrice(priceDetails.getPrice());
         }

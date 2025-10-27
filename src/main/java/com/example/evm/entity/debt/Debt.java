@@ -26,6 +26,9 @@ public class Debt {
     @Column(name = "debt_id")
     private Long debtId;
 
+    @Column(name = "debt_type", nullable = false, length = 20)
+    private String debtType; // 🆕 DEALER_DEBT (dealer nợ hãng), CUSTOMER_DEBT (customer nợ dealer)
+
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id") // Nhân viên quản lý nợ
@@ -38,7 +41,7 @@ public class Debt {
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
+    @JoinColumn(name = "customer_id") // NULL nếu là DEALER_DEBT
     private Customer customer;
 
     @Column(name = "amount_due", precision = 18, scale = 2)

@@ -16,8 +16,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateSalePriceRequest {
     
+    @Positive(message = "Base price must be positive")
+    private BigDecimal basePrice;  // Giá gốc hãng (optional update)
+    
     @Positive(message = "Price must be positive")
-    private BigDecimal price;
+    private BigDecimal price;  // Giá bán dealer (optional update)
     
     private LocalDate effectiveDate;
 }

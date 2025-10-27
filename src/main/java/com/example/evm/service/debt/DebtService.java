@@ -47,7 +47,23 @@ public class DebtService {
         return debtRepository.findAll();
     }
 
-    // Lấy danh sách nợ theo dealer
+    // 🆕 Lấy danh sách NỢ CỦA DEALER (dealer nợ hãng) - EVM xem
+    public List<Debt> getDealerDebts() {
+        return debtRepository.findByDebtType("DEALER_DEBT");
+    }
+
+    // 🆕 Lấy danh sách NỢ CỦA DEALER theo dealerId (dealer nợ hãng) - EVM xem
+    public List<Debt> getDealerDebtsByDealerId(Long dealerId) {
+        return debtRepository.findByDebtTypeAndDealerDealerId("DEALER_DEBT", dealerId);
+    }
+
+    // 🆕 Lấy danh sách NỢ CỦA CUSTOMER (customer nợ dealer) - Dealer xem
+    public List<Debt> getCustomerDebts(Long dealerId) {
+        return debtRepository.findByDebtTypeAndDealerDealerId("CUSTOMER_DEBT", dealerId);
+    }
+
+    // Lấy danh sách nợ theo dealer (deprecated - dùng getDealerDebtsByDealerId hoặc getCustomerDebts)
+    @Deprecated
     public List<Debt> getDebtsByDealer(Long dealerId) {
         return debtRepository.findByDealerDealerId(dealerId);
     }

@@ -24,9 +24,13 @@ public class CreateSalePriceRequest {
     @NotNull(message = "Variant ID is required")
     private Long variantId;
     
+    @NotNull(message = "Base price is required")
+    @Positive(message = "Base price must be positive")
+    private BigDecimal basePrice;  // Giá gốc hãng
+    
     @NotNull(message = "Price is required")
     @Positive(message = "Price must be positive")
-    private BigDecimal price;
+    private BigDecimal price;  // Giá bán dealer
     
     private LocalDate effectiveDate;
 }

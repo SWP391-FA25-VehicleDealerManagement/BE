@@ -79,10 +79,68 @@ public class DebtController {
     }
 
     /**
-     * Lấy danh sách nợ theo dealer
+     * 🆕 API LẤY NỢ CỦA DEALER (dealer nợ hãng VinFast)
+     * URL: GET /api/debts/dealer-debts
+     * Quyền: ADMIN, EVM_STAFF (chỉ hãng xe mới xem được)
+     * Mô tả: Hiển thị danh sách các dealer đang nợ tiền hãng
+     */
+    @GetMapping("/dealer-debts")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<List<Debt>>> getDealerDebts() {
+        try {
+            List<Debt> debts = debtService.getDealerDebts();
+            log.info("✅ Retrieved {} dealer debts", debts.size());
+            return ResponseEntity.ok(new ApiResponse<>(true, "Dealer debts retrieved successfully", debts));
+        } catch (Exception e) {
+            log.error("❌ Error retrieving dealer debts", e);
+            return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Failed to retrieve dealer debts", null));
+        }
+    }
+
+    /**
+     * 🆕 API LẤY NỢ CỦA DEALER theo dealerId (dealer nợ hãng)
+     * URL: GET /api/debts/dealer-debts/{dealerId}
+     * Quyền: ADMIN, EVM_STAFF
+     * Mô tả: Xem chi tiết nợ của 1 dealer với hãng
+     */
+    @GetMapping("/dealer-debts/{dealerId}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<List<Debt>>> getDealerDebtsByDealerId(@PathVariable Long dealerId) {
+        try {
+            List<Debt> debts = debtService.getDealerDebtsByDealerId(dealerId);
+            log.info("✅ Retrieved {} debts for dealer {}", debts.size(), dealerId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Dealer debts retrieved successfully", debts));
+        } catch (Exception e) {
+            log.error("❌ Error retrieving debts for dealer {}", dealerId, e);
+            return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Failed to retrieve dealer debts", null));
+        }
+    }
+
+    /**
+     * 🆕 API LẤY NỢ CỦA CUSTOMER (customer nợ dealer)
+     * URL: GET /api/debts/customer-debts/{dealerId}
+     * Quyền: ADMIN, EVM_STAFF, DEALER_STAFF, DEALER_MANAGER
+     * Mô tả: Dealer xem danh sách khách hàng đang nợ tiền mua xe
+     */
+    @GetMapping("/customer-debts/{dealerId}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<List<Debt>>> getCustomerDebts(@PathVariable Long dealerId) {
+        try {
+            List<Debt> debts = debtService.getCustomerDebts(dealerId);
+            log.info("✅ Retrieved {} customer debts for dealer {}", debts.size(), dealerId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Customer debts retrieved successfully", debts));
+        } catch (Exception e) {
+            log.error("❌ Error retrieving customer debts for dealer {}", dealerId, e);
+            return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Failed to retrieve customer debts", null));
+        }
+    }
+
+    /**
+     * Lấy danh sách nợ theo dealer (deprecated - dùng dealer-debts hoặc customer-debts)
      * URL: GET /api/debts/dealer/{dealerId}
      * Quyền: ADMIN, EVM_STAFF, DEALER_STAFF, DEALER_MANAGER
      */
+    @Deprecated
     @GetMapping("/dealer/{dealerId}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<List<Debt>>> getDebtsByDealer(@PathVariable Long dealerId) {

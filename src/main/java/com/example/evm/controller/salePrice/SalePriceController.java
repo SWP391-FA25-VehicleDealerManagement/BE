@@ -49,6 +49,7 @@ public class SalePriceController {
             SalePrice salePrice = new SalePrice();
             salePrice.setDealerId(request.getDealerId());
             salePrice.setVariantId(request.getVariantId());
+            salePrice.setBasePrice(request.getBasePrice());
             salePrice.setPrice(request.getPrice());
             salePrice.setEffectiveDate(request.getEffectiveDate());
             
@@ -273,6 +274,7 @@ public class SalePriceController {
         try {
             // Convert DTO to Entity
             SalePrice priceDetails = new SalePrice();
+            priceDetails.setBasePrice(request.getBasePrice());
             priceDetails.setPrice(request.getPrice());
             priceDetails.setEffectiveDate(request.getEffectiveDate());
             

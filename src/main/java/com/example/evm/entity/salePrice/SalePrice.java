@@ -40,8 +40,11 @@ public class SalePrice {
     @JoinColumn(name = "variant_id", insertable = false, updatable = false)
     private VehicleVariant variant;
 
+    @Column(name = "base_price", nullable = false)
+    private BigDecimal basePrice;  // Giá gốc của hãng (manufacturer price)
+
     @Column(name = "price", nullable = false)
-    private BigDecimal price;
+    private BigDecimal price;  // Giá bán của dealer (dealer selling price)
 
     @Column(name = "effectivedate", nullable = false)
     private LocalDate effectiveDate;
