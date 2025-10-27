@@ -41,6 +41,7 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setOrderId(paymentInfo.getOrderId());
         payment.setAmount(paymentInfo.getAmount());
         payment.setPaymentMethod(paymentInfo.getPaymentMethod());
+        payment.setPaymentType(paymentInfo.getPaymentType());
         payment.setPaymentId(null);
         if(payment.getPaymentDate() == null){
                 payment.setPaymentDate(LocalDateTime.now());
