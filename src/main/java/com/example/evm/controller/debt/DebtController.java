@@ -248,6 +248,50 @@ public class DebtController {
     // ==========================================================
 
     /**
+     * ✅ EVM Staff xác nhận thanh toán
+     * URL: PUT /api/debts/{debtId}/payments/{paymentId}/confirm
+     * Quyền: ADMIN, EVM_STAFF
+     */
+    @PutMapping("/{debtId}/payments/{paymentId}/confirm")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<DebtPayment>> confirmPayment(
+            @PathVariable Long debtId,
+            @PathVariable Long paymentId,
+            @RequestParam(required = false) String confirmedBy) {
+        try {
+            String confirmedByValue = confirmedBy != null ? confirmedBy : "EVMSystem";
+            DebtPayment confirmedPayment = debtService.confirmPayment(debtId, paymentId, confirmedByValue);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Payment confirmed successfully", confirmedPayment));
+        } catch (Exception e) {
+            log.error("Error confirming payment", e);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Failed to confirm payment: " + e.getMessage(), null));
+        }
+    }
+
+    /**
+     * ✅ EVM Staff từ chối thanh toán
+     * URL: PUT /api/debts/{debtId}/payments/{paymentId}/reject
+     * Quyền: ADMIN, EVM_STAFF
+     */
+    @PutMapping("/{debtId}/payments/{paymentId}/reject")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<DebtPayment>> rejectPayment(
+            @PathVariable Long debtId,
+            @PathVariable Long paymentId,
+            @RequestParam(required = false) String rejectedBy,
+            @RequestParam(required = false) String reason) {
+        try {
+            String rejectedByValue = rejectedBy != null ? rejectedBy : "EVMSystem";
+            String reasonValue = reason != null ? reason : "Không hợp lệ";
+            DebtPayment rejectedPayment = debtService.rejectPayment(debtId, paymentId, rejectedByValue, reasonValue);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Payment rejected successfully", rejectedPayment));
+        } catch (Exception e) {
+            log.error("Error rejecting payment", e);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Failed to reject payment: " + e.getMessage(), null));
+        }
+    }
+
+    /**
      * Cập nhật trạng thái (status) của một khoản nợ
      * URL: PUT /api/debts/{id}/status?status=...&notes=...
      * Quyền: ADMIN, EVM_STAFF, DEALER_STAFF, DEALER_MANAGER

@@ -3,6 +3,7 @@ package com.example.evm.service.debt;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -219,9 +220,21 @@ public class DebtService {
         payment.setAmount(request.getAmount());
         payment.setPaymentMethod(request.getPaymentMethod());
         payment.setPaymentDate(LocalDateTime.now());
-        payment.setReferenceNumber(request.getReferenceNumber());
+        
+        // Generate referenceNumber nếu null
+        if (request.getReferenceNumber() == null || request.getReferenceNumber().trim().isEmpty()) {
+            String refNumber = String.format("VFT-%d-%s", 
+                debtId, 
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+            );
+            payment.setReferenceNumber(refNumber);
+        } else {
+            payment.setReferenceNumber(request.getReferenceNumber());
+        }
+        
         payment.setNotes(request.getNotes());
         payment.setCreatedBy(request.getCreatedBy());
+        payment.setStatus("PENDING"); // Chờ EVM xác nhận
 
         // 4. Nếu có scheduleId (thanh toán cho 1 kỳ cụ thể), gắn vào payment
         if (request.getScheduleId() != null) {
@@ -244,21 +257,92 @@ public class DebtService {
 
         // 5. Lưu payment
         DebtPayment savedPayment = debtPaymentRepository.save(payment);
-
-        // 6. Cập nhật số tiền đã thanh toán vào Debt
-        debt.setAmountPaid(currentPaid.add(request.getAmount()));
         
-        // 7. Update status của Debt nếu đã thanh toán đủ
+        // ⚠️ KHÔNG cập nhật amount_paid ngay, chờ EVM xác nhận mới cộng tiền
+        // Chỉ cập nhật khi status = CONFIRMED
+
+        log.info("✅ Payment created (PENDING): Debt {} - Amount: {} - Method: {} - Reference: {}", 
+                debtId, request.getAmount(), request.getPaymentMethod(), savedPayment.getReferenceNumber());
+        
+        return savedPayment;
+    }
+
+    // ================== XÁC NHẬN/TỪ CHỐI THANH TOÁN ==================
+
+    /**
+     * ✅ EVM Staff xác nhận thanh toán
+     * Khi xác nhận: cập nhật status = CONFIRMED, cộng tiền vào amount_paid
+     */
+    @Transactional
+    public DebtPayment confirmPayment(Long debtId, Long paymentId, String confirmedBy) {
+        // 1. Lấy payment
+        DebtPayment payment = debtPaymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + paymentId));
+        
+        // 2. Validate payment thuộc về debt này
+        if (!payment.getDebt().getDebtId().equals(debtId)) {
+            throw new IllegalArgumentException("Payment does not belong to this debt");
+        }
+        
+        // 3. Validate status phải là PENDING
+        if (!"PENDING".equals(payment.getStatus())) {
+            throw new IllegalArgumentException("Payment is not pending confirmation. Current status: " + payment.getStatus());
+        }
+        
+        // 4. Cập nhật payment status
+        payment.setStatus("CONFIRMED");
+        payment.setConfirmedBy(confirmedBy);
+        payment.setConfirmedDate(LocalDateTime.now());
+        debtPaymentRepository.save(payment);
+        
+        // 5. Cập nhật số tiền đã thanh toán vào Debt
+        Debt debt = getDebtById(debtId);
+        BigDecimal currentPaid = debt.getAmountPaid() != null ? debt.getAmountPaid() : BigDecimal.ZERO;
+        debt.setAmountPaid(currentPaid.add(payment.getAmount()));
+        
+        // 6. Update status của Debt nếu đã thanh toán đủ
         if (debt.getAmountPaid().compareTo(debt.getAmountDue()) >= 0) {
             debt.setStatus("PAID");
         }
-        
         debtRepository.save(debt);
-
-        log.info("✅ Payment made: Debt {} - Amount: {} - Method: {}", 
-                debtId, request.getAmount(), request.getPaymentMethod());
         
-        return savedPayment;
+        log.info("✅ Payment CONFIRMED: Payment {} - Debt {} - Amount: {} - By: {}", 
+                paymentId, debtId, payment.getAmount(), confirmedBy);
+        
+        return payment;
+    }
+
+    /**
+     * ✅ EVM Staff từ chối thanh toán
+     * Khi từ chối: cập nhật status = REJECTED
+     */
+    @Transactional
+    public DebtPayment rejectPayment(Long debtId, Long paymentId, String rejectedBy, String reason) {
+        // 1. Lấy payment
+        DebtPayment payment = debtPaymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + paymentId));
+        
+        // 2. Validate payment thuộc về debt này
+        if (!payment.getDebt().getDebtId().equals(debtId)) {
+            throw new IllegalArgumentException("Payment does not belong to this debt");
+        }
+        
+        // 3. Validate status phải là PENDING
+        if (!"PENDING".equals(payment.getStatus())) {
+            throw new IllegalArgumentException("Payment is not pending confirmation. Current status: " + payment.getStatus());
+        }
+        
+        // 4. Cập nhật payment status
+        payment.setStatus("REJECTED");
+        payment.setConfirmedBy(rejectedBy); // Dùng confirmedBy để lưu người từ chối
+        payment.setConfirmedDate(LocalDateTime.now());
+        payment.setRejectionReason(reason);
+        debtPaymentRepository.save(payment);
+        
+        log.info("❌ Payment REJECTED: Payment {} - Debt {} - Reason: {}", 
+                paymentId, debtId, reason);
+        
+        return payment;
     }
 
     // ================== CẬP NHẬT TRẠNG THÁI NỢ ==================

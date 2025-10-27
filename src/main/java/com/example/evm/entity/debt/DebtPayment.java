@@ -56,10 +56,25 @@ public class DebtPayment {
     @Column(name = "created_by", length = 100)
     private String createdBy;
 
+    @Column(name = "status", length = 20)
+    private String status = "PENDING"; // PENDING (chờ EVM xác nhận), CONFIRMED (đã xác nhận), REJECTED (từ chối)
+
+    @Column(name = "confirmed_by", length = 100)
+    private String confirmedBy; // Người xác nhận (EVM Staff)
+
+    @Column(name = "confirmed_date")
+    private LocalDateTime confirmedDate; // Ngày giờ xác nhận
+
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason; // Lý do từ chối (nếu REJECTED)
+
     @PrePersist
     protected void onCreate() {
         if (paymentDate == null) {
             paymentDate = LocalDateTime.now();
+        }
+        if (status == null) {
+            status = "PENDING"; // Mặc định chờ xác nhận
         }
     }
 
