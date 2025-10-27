@@ -1,6 +1,7 @@
 package com.example.evm.controller.debt;
 
 import com.example.evm.dto.auth.ApiResponse;
+import com.example.evm.dto.debt.CreateDebtPaymentRequest;
 import com.example.evm.entity.debt.Debt;
 import com.example.evm.entity.debt.DebtPayment;
 import com.example.evm.entity.debt.DebtSchedule;
@@ -47,17 +48,29 @@ public class DebtController {
     }
 
     /**
-     * API ghi nhận một khoản thanh toán (DebtPayment) cho một khoản nợ
+     * ✅ API thanh toán nợ - Đơn giản hóa, KHÔNG CẦN ORDER_ID
      * URL: POST /api/debts/{debtId}/payments
      * Quyền: ADMIN, EVM_STAFF, DEALER_STAFF, DEALER_MANAGER
-     * Dữ liệu gửi lên: DebtPayment (JSON)
-     * Kết quả: DebtPayment vừa được ghi nhận
+     * 
+     * Request Body:
+     * {
+     *   "amount": 10000000,
+     *   "paymentMethod": "CASH|BANK_TRANSFER|CREDIT_CARD",
+     *   "scheduleId": 123,  // Optional: ID của kỳ thanh toán nếu là trả góp
+     *   "referenceNumber": "TT123456",  // Optional
+     *   "notes": "Thanh toán tiền mặt",  // Optional
+     *   "createdBy": "admin"  // Optional
+     * }
+     * 
+     * Response: DebtPayment (không có order_id)
      */
     @PostMapping("/{debtId}/payments")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<DebtPayment>> makePayment(@PathVariable Long debtId, @Valid @RequestBody DebtPayment payment) {
+    public ResponseEntity<ApiResponse<DebtPayment>> makePayment(
+            @PathVariable Long debtId, 
+            @Valid @RequestBody CreateDebtPaymentRequest request) {
         try {
-            DebtPayment createdPayment = debtService.makePayment(debtId, payment);
+            DebtPayment createdPayment = debtService.makePayment(debtId, request);
             return ResponseEntity.ok(new ApiResponse<>(true, "Payment made successfully", createdPayment));
         } catch (Exception e) {
             log.error("Error making payment for debt {}", debtId, e);

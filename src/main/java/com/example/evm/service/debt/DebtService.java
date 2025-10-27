@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.evm.dto.debt.CreateDebtPaymentRequest;
 import com.example.evm.entity.debt.Debt;
 import com.example.evm.entity.debt.DebtPayment;
 import com.example.evm.entity.debt.DebtSchedule;
@@ -184,23 +185,71 @@ public class DebtService {
 
     // ================== XỬ LÝ THANH TOÁN ==================
 
+    /**
+     * ✅ Tạo thanh toán nợ - KHÔNG CẦN ORDER_ID
+     * Thanh toán độc lập với đơn hàng, chỉ gắn liền với Debt
+     */
     @Transactional
-    public DebtPayment makePayment(Long debtId, DebtPayment payment) {
-        // Lấy khoản nợ cần thanh toán
+    public DebtPayment makePayment(Long debtId, CreateDebtPaymentRequest request) {
+        // 1. Lấy khoản nợ cần thanh toán
         Debt debt = getDebtById(debtId);
 
-        payment.setDebt(debt);
-        payment.setPaymentDate(LocalDateTime.now());
-
-        // Cập nhật số tiền đã thanh toán
+        // 2. Validate: Kiểm tra số tiền thanh toán không vượt quá số tiền còn nợ
         BigDecimal currentPaid = debt.getAmountPaid() != null ? debt.getAmountPaid() : BigDecimal.ZERO;
-        debt.setAmountPaid(currentPaid.add(payment.getAmount()));
-        debtRepository.save(debt);
+        BigDecimal remainingAmount = debt.getAmountDue().subtract(currentPaid);
+        
+        if (request.getAmount().compareTo(remainingAmount) > 0) {
+            throw new IllegalArgumentException(
+                String.format("Số tiền thanh toán (%,.0f) vượt quá số tiền còn nợ (%,.0f)", 
+                    request.getAmount().doubleValue(), remainingAmount.doubleValue())
+            );
+        }
 
-        // Lưu lại bản ghi thanh toán
+        // 3. Tạo DebtPayment entity
+        DebtPayment payment = new DebtPayment();
+        payment.setDebt(debt);
+        payment.setAmount(request.getAmount());
+        payment.setPaymentMethod(request.getPaymentMethod());
+        payment.setPaymentDate(LocalDateTime.now());
+        payment.setReferenceNumber(request.getReferenceNumber());
+        payment.setNotes(request.getNotes());
+        payment.setCreatedBy(request.getCreatedBy());
+
+        // 4. Nếu có scheduleId (thanh toán cho 1 kỳ cụ thể), gắn vào payment
+        if (request.getScheduleId() != null) {
+            DebtSchedule schedule = debtScheduleRepository.findById(request.getScheduleId())
+                    .orElseThrow(() -> new ResourceNotFoundException("DebtSchedule not found with id: " + request.getScheduleId()));
+            
+            // Validate: schedule phải thuộc về debt này
+            if (!schedule.getDebt().getDebtId().equals(debtId)) {
+                throw new IllegalArgumentException("Schedule không thuộc về debt này");
+            }
+            
+            payment.setDebtSchedule(schedule);
+            
+            // Update schedule status nếu đã đủ tiền
+            if (payment.getAmount().compareTo(schedule.getInstallment()) >= 0) {
+                schedule.setStatus("PAID");
+                debtScheduleRepository.save(schedule);
+            }
+        }
+
+        // 5. Lưu payment
         DebtPayment savedPayment = debtPaymentRepository.save(payment);
 
-        log.info("Payment made: Debt {} - Amount: {}", debtId, payment.getAmount());
+        // 6. Cập nhật số tiền đã thanh toán vào Debt
+        debt.setAmountPaid(currentPaid.add(request.getAmount()));
+        
+        // 7. Update status của Debt nếu đã thanh toán đủ
+        if (debt.getAmountPaid().compareTo(debt.getAmountDue()) >= 0) {
+            debt.setStatus("PAID");
+        }
+        
+        debtRepository.save(debt);
+
+        log.info("✅ Payment made: Debt {} - Amount: {} - Method: {}", 
+                debtId, request.getAmount(), request.getPaymentMethod());
+        
         return savedPayment;
     }
 

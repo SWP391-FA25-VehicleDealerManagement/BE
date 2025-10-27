@@ -1,510 +1,299 @@
-# 📚 DEBT API DOCUMENTATION
+# �� DEBT & PAYMENT API DOCUMENTATION
 
-## Tổng quan hệ thống quản lý nợ
+## 🎯 Tổng quan
 
-Hệ thống Debt được thiết kế để quản lý các khoản nợ của khách hàng khi mua xe, hỗ trợ cả **Trả thẳng** và **Trả góp**.
-
----
-
-## 🔑 Các khái niệm cơ bản
-
-### 1. **Debt (Khoản nợ)**
-- Lưu thông tin tổng quan về khoản nợ
-- Bao gồm: Tổng tiền, đã trả, còn lại, lãi suất, loại thanh toán
-
-### 2. **DebtSchedule (Lịch trả nợ)**
-- Chi tiết các kỳ trả nợ (chỉ có khi trả góp)
-- **Tự động sinh** khi tạo Debt với `payment_type = INSTALLMENT`
-- Mỗi kỳ bao gồm: Gốc, lãi, tổng phải trả
-
-### 3. **DebtPayment (Lịch sử thanh toán)**
-- Ghi lại các lần thanh toán thực tế
-- Gắn với kỳ cụ thể (schedule_id)
+Hệ thống quản lý nợ (Debt Management) cho phép:
+- **Hãng xe (EVM)** theo dõi nợ của **Dealer** (dealer nợ hãng)
+- **Dealer** theo dõi nợ của **Customer** (customer nợ dealer)
+- Thanh toán nợ độc lập với đơn hàng (không cần `order_id`)
 
 ---
 
-## 🎯 Phân loại thanh toán
+## 📊 Kiến trúc
 
-### **Payment Type (Loại thanh toán)**
+### Bảng dữ liệu
 
-| Giá trị | Tên gọi | Mô tả |
-|---------|---------|-------|
-| `FULL_PAYMENT` | Trả thẳng | Thanh toán toàn bộ 1 lần, không có lịch trả nợ |
-| `INSTALLMENT` | Trả góp | Chia thành nhiều kỳ, có lịch trả nợ tự động |
+1. **`Debt`** - Khoản nợ
+   - `debt_id`: ID
+   - `debt_type`: `DEALER_DEBT` (dealer nợ hãng) hoặc `CUSTOMER_DEBT` (customer nợ dealer)
+   - `amount_due`: Tổng số tiền nợ
+   - `amount_paid`: Số tiền đã trả
+   - `payment_type`: `FULL_PAYMENT` (trả thẳng) hoặc `INSTALLMENT` (trả góp 12 tháng)
+   - `payment_method`: `CASH`, `BANK_TRANSFER`
+   - `status`: `ACTIVE`, `PAID`, `OVERDUE`, `CANCELLED`
 
-### **Payment Method (Phương thức thanh toán)**
+2. **`DebtSchedule`** - Lịch trả nợ (tự động sinh khi `payment_type = INSTALLMENT`)
+   - Mặc định chia làm **12 kỳ** (12 tháng)
+   - Mỗi kỳ gồm: `principal` (gốc), `interest` (lãi), `installment` (tổng)
 
-| Giá trị | Tên gọi |
-|---------|---------|
-| `CASH` | Tiền mặt |
-| `BANK_TRANSFER` | Chuyển khoản |
-
-### **Status (Trạng thái nợ)**
-
-| Giá trị | Mô tả |
-|---------|-------|
-| `ACTIVE` | Đang hoạt động (còn nợ) |
-| `PAID` | Đã trả hết |
-| `OVERDUE` | Quá hạn |
-| `CANCELLED` | Đã hủy |
+3. **`DebtPayment`** - Thanh toán nợ
+   - **KHÔNG CẦN `order_id`** - Thanh toán độc lập với đơn hàng
+   - Gắn liền trực tiếp với `debt_id`
+   - Optional: `schedule_id` (nếu thanh toán cho 1 kỳ cụ thể)
 
 ---
 
-## 📡 API Endpoints
+## 🔥 API Endpoints
 
-### Base URL
-```
-http://localhost:8080/api/debts
-```
+### 1️⃣ TẠO NỢ MỚI
 
----
-
-## 1️⃣ TẠO MỚI KHOẢN NỢ
-
-### **POST** `/api/debts`
-
-**Mô tả:** Tạo mới khoản nợ. Nếu `payment_type = INSTALLMENT`, hệ thống **tự động tạo lịch trả nợ** (12 kỳ).
+**POST** `/api/debts`
 
 **Request Body:**
-
 ```json
 {
-  "dealer": {
-    "dealerId": 1
-  },
-  "customer": {
-    "customerId": 1
-  },
-  "user": {
-    "userId": 4
-  },
-  "amountDue": 500000000,
-  "amountPaid": 0,
-  "interestRate": 2.0,
-  "startDate": "2024-10-01T00:00:00",
-  "dueDate": "2025-10-01T00:00:00",
+  "debtType": "DEALER_DEBT",
+  "dealerId": 1,
+  "customerId": null,  // NULL nếu là DEALER_DEBT
+  "amountDue": 1000000000,
   "paymentType": "INSTALLMENT",
   "paymentMethod": "BANK_TRANSFER",
-  "notes": "Mua xe Honda Civic"
+  "interestRate": 1.5,
+  "dueDate": "2025-12-31T00:00:00",
+  "notes": "Nợ mua xe VF8"
 }
 ```
 
 **Response:**
-
 ```json
 {
   "success": true,
   "message": "Debt created successfully",
   "data": {
     "debtId": 1,
-    "userId": 4,
-    "dealerId": 1,
-    "customerId": 1,
-    "amountDue": 500000000,
+    "debtType": "DEALER_DEBT",
+    "amountDue": 1000000000,
     "amountPaid": 0,
-    "interestRate": 2.0,
-    "startDate": "2024-10-01T00:00:00",
-    "dueDate": "2025-10-01T00:00:00",
     "status": "ACTIVE",
-    "paymentType": "INSTALLMENT",
-    "paymentMethod": "BANK_TRANSFER",
-    "notes": "Mua xe Honda Civic",
-    "createdDate": "2024-10-01T10:30:00"
+    "debtSchedules": [
+      {
+        "scheduleId": 1,
+        "periodNo": 1,
+        "installment": 85000000,
+        "dueDate": "2025-11-01",
+        "status": "PENDING"
+      },
+      // ... 11 kỳ còn lại
+    ]
   }
 }
 ```
 
-**Quyền:** `ADMIN`, `EVM_STAFF`, `DEALER_STAFF`, `DEALER_MANAGER`
+**Lưu ý:** Nếu `paymentType = INSTALLMENT`, hệ thống **tự động sinh 12 kỳ thanh toán**.
 
 ---
 
-## 2️⃣ LẤY DANH SÁCH TẤT CẢ NỢ
+### 2️⃣ THANH TOÁN NỢ
 
-### **GET** `/api/debts`
+**POST** `/api/debts/{debtId}/payments`
 
-**Mô tả:** Lấy danh sách tất cả các khoản nợ trong hệ thống.
+**Request Body:**
+```json
+{
+  "amount": 50000000,
+  "paymentMethod": "CASH",
+  "scheduleId": 1,  // Optional: ID của kỳ thanh toán
+  "referenceNumber": "TT123456",  // Optional
+  "notes": "Thanh toán tiền mặt",  // Optional
+  "createdBy": "admin"  // Optional
+}
+```
 
 **Response:**
-
 ```json
 {
   "success": true,
-  "message": "All debts retrieved successfully",
+  "message": "Payment made successfully",
+  "data": {
+    "paymentId": 1,
+    "debtId": 1,
+    "amount": 50000000,
+    "paymentMethod": "CASH",
+    "paymentDate": "2025-10-27T10:00:00"
+  }
+}
+```
+
+**Workflow:**
+1. Validate số tiền không vượt quá số tiền còn nợ
+2. Tạo `DebtPayment` record
+3. Cập nhật `amount_paid` vào `Debt`
+4. Nếu có `scheduleId`: Update status của schedule đó thành `PAID`
+5. Nếu đã thanh toán đủ (`amount_paid >= amount_due`): Update `Debt.status = PAID`
+
+---
+
+### 3️⃣ LẤY DANH SÁCH NỢ CỦA DEALER (dealer nợ hãng)
+
+**GET** `/api/debts/dealer-debts`
+
+**Quyền:** `ADMIN`, `EVM_STAFF`
+
+**Response:**
+```json
+{
+  "success": true,
   "data": [
     {
       "debtId": 1,
-      "userId": 4,
+      "debtType": "DEALER_DEBT",
       "dealerId": 1,
-      "customerId": 1,
-      "amountDue": 500000000,
-      "amountPaid": 100000000,
-      "status": "ACTIVE",
-      "paymentType": "INSTALLMENT",
-      "paymentMethod": "BANK_TRANSFER"
+      "amountDue": 1000000000,
+      "amountPaid": 50000000,
+      "status": "ACTIVE"
     }
   ]
 }
 ```
 
-**Quyền:** `ADMIN`, `EVM_STAFF`
-
 ---
 
-## 3️⃣ LẤY CHI TIẾT KHOẢN NỢ
+### 4️⃣ LẤY NỢ CỦA CUSTOMER (customer nợ dealer)
 
-### **GET** `/api/debts/{id}`
-
-**Mô tả:** Lấy thông tin chi tiết của 1 khoản nợ theo ID.
-
-**URL:** `/api/debts/1`
-
-**Response:** Tương tự như khi tạo mới.
+**GET** `/api/debts/customer-debts/{dealerId}`
 
 **Quyền:** `ADMIN`, `EVM_STAFF`, `DEALER_STAFF`, `DEALER_MANAGER`
 
----
-
-## 4️⃣ LẤY NỢ THEO DEALER
-
-### **GET** `/api/debts/dealer/{dealerId}`
-
-**Mô tả:** Lấy danh sách tất cả các khoản nợ của 1 dealer.
-
-**URL:** `/api/debts/dealer/1`
-
-**Quyền:** `ADMIN`, `EVM_STAFF`, `DEALER_STAFF`, `DEALER_MANAGER`
+**Response:** Tương tự endpoint trên, nhưng `debtType = CUSTOMER_DEBT`
 
 ---
 
-## 5️⃣ LẤY NỢ THEO KHÁCH HÀNG
+### 5️⃣ LẤY LỊCH TRẢ NỢ
 
-### **GET** `/api/debts/customer/{customerId}`
-
-**Mô tả:** Lấy danh sách tất cả các khoản nợ của 1 khách hàng.
-
-**URL:** `/api/debts/customer/1`
-
-**Quyền:** `ADMIN`, `EVM_STAFF`, `DEALER_STAFF`, `DEALER_MANAGER`
-
----
-
-## 6️⃣ LẤY NỢ THEO TRẠNG THÁI
-
-### **GET** `/api/debts/status/{status}`
-
-**Mô tả:** Lấy danh sách nợ theo trạng thái.
-
-**URL:** `/api/debts/status/ACTIVE`
-
-**Quyền:** `ADMIN`, `EVM_STAFF`
-
----
-
-## 7️⃣ LẤY NỢ QUÁ HẠN
-
-### **GET** `/api/debts/overdue/{dealerId}`
-
-**Mô tả:** Lấy danh sách các khoản nợ quá hạn của dealer.
-
-**URL:** `/api/debts/overdue/1`
-
-**Quyền:** `ADMIN`, `EVM_STAFF`, `DEALER_STAFF`, `DEALER_MANAGER`
-
----
-
-## 8️⃣ LẤY LỊCH TRẢ NỢ
-
-### **GET** `/api/debts/{id}/schedules`
-
-**Mô tả:** Lấy danh sách các kỳ trả nợ của 1 khoản nợ.
-
-**URL:** `/api/debts/1/schedules`
+**GET** `/api/debts/{debtId}/schedules`
 
 **Response:**
-
 ```json
 {
   "success": true,
-  "message": "Debt schedules retrieved successfully",
   "data": [
     {
       "scheduleId": 1,
-      "debtId": 1,
       "periodNo": 1,
-      "startBalance": 500000000,
-      "principal": 40000000,
-      "interest": 8333333,
-      "installment": 48333333,
-      "endBalance": 460000000,
-      "dueDate": "2024-11-01",
-      "paidAmount": 48333333,
-      "status": "PAID"
+      "installment": 85000000,
+      "principal": 83000000,
+      "interest": 2000000,
+      "status": "PAID",
+      "dueDate": "2025-11-01"
     },
     {
       "scheduleId": 2,
-      "debtId": 1,
       "periodNo": 2,
-      "startBalance": 460000000,
-      "principal": 40000000,
-      "interest": 7666667,
-      "installment": 47666667,
-      "endBalance": 420000000,
-      "dueDate": "2024-12-01",
-      "paidAmount": 0,
-      "status": "PENDING"
+      "installment": 85000000,
+      "principal": 83150000,
+      "interest": 1850000,
+      "status": "PENDING",
+      "dueDate": "2025-12-01"
     }
   ]
 }
 ```
 
-**Quyền:** `ADMIN`, `EVM_STAFF`, `DEALER_STAFF`, `DEALER_MANAGER`
-
 ---
 
-## 9️⃣ LẤY LỊCH SỬ THANH TOÁN
+### 6️⃣ LẤY LỊCH SỬ THANH TOÁN
 
-### **GET** `/api/debts/{id}/payments`
-
-**Mô tả:** Lấy danh sách các lần thanh toán của 1 khoản nợ.
-
-**URL:** `/api/debts/1/payments`
+**GET** `/api/debts/{debtId}/payments`
 
 **Response:**
-
 ```json
 {
   "success": true,
-  "message": "Debt payments retrieved successfully",
   "data": [
     {
       "paymentId": 1,
-      "debtId": 1,
-      "scheduleId": 1,
-      "amount": 48333333,
-      "paymentDate": "2024-10-25T10:00:00",
-      "paymentMethod": "BANK_TRANSFER",
-      "referenceNumber": "TXN123456",
-      "notes": "Thanh toán kỳ 1",
-      "createdBy": "dealerStaff1"
+      "amount": 50000000,
+      "paymentMethod": "CASH",
+      "paymentDate": "2025-10-27T10:00:00",
+      "notes": "Thanh toán tiền mặt"
     }
   ]
 }
 ```
 
-**Quyền:** `ADMIN`, `EVM_STAFF`, `DEALER_STAFF`, `DEALER_MANAGER`
-
 ---
 
-## 🔟 GHI NHẬN THANH TOÁN
+## 💡 Workflow Thanh toán nợ
 
-### **POST** `/api/debts/{debtId}/payments`
-
-**Mô tả:** Ghi nhận 1 lần thanh toán cho khoản nợ.
-
-**URL:** `/api/debts/1/payments`
-
-**Request Body:**
-
-```json
-{
-  "debtSchedule": {
-    "scheduleId": 1
-  },
-  "amount": 48333333,
-  "paymentMethod": "BANK_TRANSFER",
-  "referenceNumber": "TXN123456",
-  "notes": "Thanh toán kỳ 1",
-  "createdBy": "dealerStaff1"
-}
-```
-
-**Response:** Thông tin payment vừa tạo.
-
-**Quyền:** `ADMIN`, `EVM_STAFF`, `DEALER_STAFF`, `DEALER_MANAGER`
-
----
-
-## 1️⃣1️⃣ CẬP NHẬT TRẠNG THÁI NỢ
-
-### **PUT** `/api/debts/{id}/status`
-
-**Mô tả:** Cập nhật trạng thái của khoản nợ.
-
-**URL:** `/api/debts/1/status?status=PAID&notes=Đã trả hết`
-
-**Query Parameters:**
-- `status`: Trạng thái mới (ACTIVE, PAID, OVERDUE, CANCELLED)
-- `notes`: Ghi chú (optional)
-
-**Quyền:** `ADMIN`, `EVM_STAFF`, `DEALER_STAFF`, `DEALER_MANAGER`
-
----
-
-## 1️⃣2️⃣ XÓA KHOẢN NỢ
-
-### **DELETE** `/api/debts/{id}`
-
-**Mô tả:** Xóa khoản nợ khỏi hệ thống.
-
-**URL:** `/api/debts/1`
-
-**Quyền:** `ADMIN`, `EVM_STAFF`
-
----
-
-## 📊 THỐNG KÊ
-
-### 1️⃣3️⃣ **GET** `/api/debts/dealer/{dealerId}/stats`
-
-**Mô tả:** Lấy thống kê nợ của dealer.
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Debt statistics retrieved successfully",
-  "data": {
-    "totalDebt": 1000000000,
-    "totalPaid": 200000000,
-    "totalRemaining": 800000000,
-    "overdueAmount": 100000000,
-    "activeDebts": 5,
-    "paidDebts": 2,
-    "overdueDebts": 1
-  }
-}
-```
-
-### 1️⃣4️⃣ **GET** `/api/debts/dealer/{dealerId}/outstanding`
-
-**Mô tả:** Lấy tổng số tiền nợ chưa thanh toán của dealer.
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Total outstanding amount retrieved successfully",
-  "data": 800000000
-}
-```
-
-### 1️⃣5️⃣ **GET** `/api/debts/customer/{customerId}/outstanding`
-
-**Mô tả:** Lấy tổng số tiền nợ chưa thanh toán của khách hàng.
-
-### 1️⃣6️⃣ **GET** `/api/debts/overdue-schedules/{dealerId}`
-
-**Mô tả:** Lấy danh sách các kỳ trả nợ bị quá hạn.
-
----
-
-## 🔄 WORKFLOW
-
-### **Trả góp (INSTALLMENT):**
+### Trường hợp 1: Trả thẳng (FULL_PAYMENT)
 
 ```
-1. Tạo Debt với payment_type = INSTALLMENT
-   ↓
-2. Hệ thống TỰ ĐỘNG tạo 12 kỳ DebtSchedule
-   ↓
-3. Khách hàng trả từng kỳ → Tạo DebtPayment
-   ↓
-4. Hệ thống cập nhật trạng thái từng kỳ
-   ↓
-5. Khi trả hết → Status = PAID
+1. Tạo Debt (paymentType = FULL_PAYMENT)
+   └─> Không sinh schedule
+
+2. Thanh toán 1 lần toàn bộ số tiền
+   POST /api/debts/{debtId}/payments
+   { "amount": 1000000000 }
+   └─> debt.status = PAID
 ```
 
-### **Trả thẳng (FULL_PAYMENT):**
+### Trường hợp 2: Trả góp (INSTALLMENT)
 
 ```
-1. Tạo Debt với payment_type = FULL_PAYMENT
-   ↓
-2. KHÔNG có DebtSchedule
-   ↓
-3. Khách hàng trả 1 lần → Tạo DebtPayment
-   ↓
-4. Status = PAID ngay lập tức
+1. Tạo Debt (paymentType = INSTALLMENT)
+   └─> Tự động sinh 12 kỳ thanh toán
+   └─> debtSchedules = [
+         { periodNo: 1, installment: 85000000, status: PENDING },
+         { periodNo: 2, installment: 85000000, status: PENDING },
+         ...
+       ]
+
+2. Thanh toán từng kỳ
+   POST /api/debts/{debtId}/payments
+   {
+     "amount": 85000000,
+     "scheduleId": 1  // Thanh toán kỳ 1
+   }
+   └─> schedule[0].status = PAID
+   └─> debt.amountPaid += 85000000
+   
+3. Tiếp tục thanh toán kỳ 2, 3... cho đến hết
+
+4. Khi debt.amountPaid >= debt.amountDue
+   └─> debt.status = PAID
 ```
 
 ---
 
-## ⚙️ Cấu hình tự động
 
-### Lịch trả nợ tự động:
-- **Số kỳ:** 12 tháng (mặc định)
-- **Công thức:** Annuity (trả đều hàng tháng)
-- **Bao gồm:** Gốc + Lãi
-- **Lãi suất:** Tính theo tháng
+## 🚀 Ví dụ sử dụng
 
-### Công thức:
-```
-monthly_payment = amount * (r * (1+r)^n) / ((1+r)^n - 1)
+### Scenario: Dealer nợ hãng 1 tỷ, trả góp 12 tháng
 
-Trong đó:
-- r = interest_rate / 100 / 12
-- n = 12 (số kỳ)
-```
-
----
-
-## 🛠️ Lưu ý kỹ thuật
-
-1. **ID tự sinh:** Tất cả ID đều được database tự động tạo (`IDENTITY`)
-2. **Timestamps:** `created_date`, `updated_date` tự động
-3. **Validation:** Kiểm tra Dealer, Customer, User tồn tại trước khi tạo
-4. **Transaction:** Tất cả thao tác quan trọng đều có `@Transactional`
-
----
-
-## 🔐 Quyền truy cập
-
-| Endpoint | ADMIN | EVM_STAFF | DEALER_MANAGER | DEALER_STAFF |
-|----------|-------|-----------|----------------|--------------|
-| Tạo nợ | ✅ | ✅ | ✅ | ✅ |
-| Xem tất cả nợ | ✅ | ✅ | ❌ | ❌ |
-| Xem nợ theo dealer | ✅ | ✅ | ✅ | ✅ |
-| Thanh toán | ✅ | ✅ | ✅ | ✅ |
-| Xóa nợ | ✅ | ✅ | ❌ | ❌ |
-
----
-
-## 📝 Ví dụ thực tế
-
-### Khách hàng mua xe trả góp 500 triệu, lãi suất 2%/tháng:
-
-```json
+**Bước 1:** Tạo nợ
+```bash
 POST /api/debts
 {
-  "dealer": {"dealerId": 1},
-  "customer": {"customerId": 1},
-  "amountDue": 500000000,
-  "interestRate": 2.0,
+  "debtType": "DEALER_DEBT",
+  "dealerId": 1,
+  "amountDue": 1000000000,
   "paymentType": "INSTALLMENT",
-  "paymentMethod": "BANK_TRANSFER"
+  "interestRate": 1.5
+}
+```
+
+**Bước 2:** Thanh toán kỳ 1
+```bash
+POST /api/debts/1/payments
+{
+  "amount": 85000000,
+  "paymentMethod": "BANK_TRANSFER",
+  "scheduleId": 1,
+  "referenceNumber": "TT123456"
 }
 ```
 
 **Kết quả:**
-- Hệ thống tạo Debt
-- Tự động tạo 12 kỳ DebtSchedule
-- Mỗi kỳ ~48 triệu (gốc + lãi)
+- `debt.amountPaid` = 85,000,000
+- `schedule[0].status` = "PAID"
+- `debt.status` = "ACTIVE" (chưa trả hết)
 
 ---
 
-## 🆘 Error Codes
+## 📝 Notes
 
-| Code | Message | Giải pháp |
-|------|---------|-----------|
-| 404 | Dealer not found | Kiểm tra dealerId |
-| 404 | Customer not found | Kiểm tra customerId |
-| 400 | Invalid amount | amountDue phải > 0 |
-| 403 | Access denied | Kiểm tra quyền |
-
----
-
-**Tài liệu cập nhật:** 26/10/2024  
-**Phiên bản:** 1.0  
-**Contact:** Dev Team
+1. ✅ **Không cần `order_id`** - Thanh toán độc lập với đơn hàng
+2. ✅ **Tự động sinh schedule** - Khi `paymentType = INSTALLMENT`
+3. ✅ **Validate số tiền** - Không cho phép thanh toán vượt số tiền còn nợ
+4. ✅ **Auto update status** - Tự động chuyển `PAID` khi đủ tiền
 
