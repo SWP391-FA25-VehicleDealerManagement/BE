@@ -1,4 +1,4 @@
-package com.example.evm.controller.admin;
+package com.example.evm.controller.account;
 
 import com.example.evm.dto.auth.ApiResponse;
 import lombok.extern.slf4j.Slf4j;

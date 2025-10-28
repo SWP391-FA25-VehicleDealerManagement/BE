@@ -1,4 +1,4 @@
-package com.example.evm.controller.admin;
+package com.example.evm.controller.account;
 
 import com.example.evm.dto.admin.UserAccountInfoResponse;
 import com.example.evm.dto.auth.ApiResponse;
