@@ -24,7 +24,7 @@ public class DealerRequestDto {
     private Long userId;
     
     private LocalDateTime requiredDate;
-    private String priority = "NORMAL";
+    private String priority; // ✅ Bỏ default value để Jackson có thể deserialize đúng
     private String notes;
     
     @NotEmpty(message = "Request details cannot be empty")

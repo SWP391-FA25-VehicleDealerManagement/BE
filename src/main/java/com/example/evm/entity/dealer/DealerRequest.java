@@ -52,7 +52,7 @@ public class DealerRequest {
     private String status = "PENDING"; // PENDING, APPROVED, REJECTED, SHIPPED, DELIVERED
 
     @Column(name = "priority", length = 10)
-    private String priority = "NORMAL"; // LOW, NORMAL, HIGH, URGENT
+    private String priority; // LOW, NORMAL, HIGH, URGENT
 
     @Column(name = "notes", length = 500)
     private String notes;

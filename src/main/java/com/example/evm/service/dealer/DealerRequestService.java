@@ -57,7 +57,9 @@ public class DealerRequestService {
         request.setCreatedBy(user);
         request.setRequestDate(LocalDateTime.now());
         request.setRequiredDate(dto.getRequiredDate());
+        
         request.setPriority(dto.getPriority() != null ? dto.getPriority() : "NORMAL");
+        
         request.setNotes(dto.getNotes());
         request.setStatus("PENDING");
 
@@ -81,7 +83,7 @@ public class DealerRequestService {
         request.setTotalAmount(request.calculateTotalAmount());
 
         DealerRequest savedRequest = dealerRequestRepository.save(request);
-        log.info("Created request with ID: {}", savedRequest.getRequestId());
+        log.info("Created request with ID: {} - Priority: {}", savedRequest.getRequestId(), savedRequest.getPriority());
 
         return convertToResponseDto(savedRequest);
     }
@@ -214,7 +216,9 @@ public class DealerRequestService {
         response.setRequestDate(request.getRequestDate());
         response.setRequiredDate(request.getRequiredDate());
         response.setStatus(request.getStatus());
+        
         response.setPriority(request.getPriority());
+        
         response.setNotes(request.getNotes());
         response.setTotalAmount(request.getTotalAmount());
         
