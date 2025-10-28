@@ -76,8 +76,11 @@ public class OrderService {
     @Transactional
     public Order createOrderFromDto(OrderRequestDto dto) {
         // Lookup entities từ IDs
-        Customer customer = customerRepository.findById(dto.getCustomerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + dto.getCustomerId()));
+        Customer customer = null;
+        if (dto.getCustomerId() != null) {
+            customer = customerRepository.findById(dto.getCustomerId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + dto.getCustomerId()));
+        }
         
         User user = userRepository.findById(dto.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + dto.getUserId()));
@@ -87,7 +90,7 @@ public class OrderService {
 
         // Tạo Order entity
         Order order = new Order();
-        order.setCustomer(customer);
+        order.setCustomer(customer); // Có thể null cho dealer orders
         order.setUser(user);
         order.setDealer(dealer);
         order.setPaymentMethod(dto.getPaymentMethod());

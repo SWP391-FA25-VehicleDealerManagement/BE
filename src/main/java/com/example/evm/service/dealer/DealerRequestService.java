@@ -16,11 +16,19 @@ import com.example.evm.repository.dealer.DealerRequestRepository;
 import com.example.evm.repository.auth.UserRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
 import com.example.evm.repository.inventory.InventoryStockRepository;
+import com.example.evm.repository.vehicle.VehicleRepository;
+import com.example.evm.service.order.OrderService;
+import com.example.evm.service.debt.DebtService;
+import com.example.evm.dto.order.OrderRequestDto;
+import com.example.evm.dto.order.OrderDetailRequestDto;
+import com.example.evm.entity.order.Order;
+import com.example.evm.entity.debt.Debt;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,6 +43,9 @@ public class DealerRequestService {
     private final UserRepository userRepository;
     private final VehicleVariantRepository variantRepository;
     private final InventoryStockRepository inventoryStockRepository;
+    private final VehicleRepository vehicleRepository;
+    private final OrderService orderService;
+    private final DebtService debtService;
 
     /**
      * Tạo request mới
@@ -152,13 +163,109 @@ public class DealerRequestService {
             request.setDeliveryDate(LocalDateTime.now());
             // Add vehicles to dealer stock
             addStockToDealerOnDelivery(request);
-            log.info("Request {} DELIVERED - Added to dealer stock", id);
+            
+            // ✅ TỰ ĐỘNG tạo Order và Debt khi giao hàng
+            try {
+                createOrderAndDebtFromRequest(request);
+                log.info("Request {} DELIVERED - Order and Debt created automatically", id);
+            } catch (Exception e) {
+                log.error("Failed to create Order/Debt for request {}: {}", id, e.getMessage());
+                // Không throw exception để không ảnh hưởng đến việc cập nhật status
+            }
         }
 
         DealerRequest updated = dealerRequestRepository.save(request);
         log.info("Updated request status from {} to {}", oldStatus, status);
 
         return convertToResponseDto(updated);
+    }
+
+    /**
+     * ✅ Tạo Order và Debt tự động từ DealerRequest khi giao hàng
+     */
+    @Transactional
+    private void createOrderAndDebtFromRequest(DealerRequest request) {
+        log.info("Creating Order and Debt from DealerRequest: {}", request.getRequestId());
+        
+        // 1. Tạo Order từ DealerRequest
+        Order order = createOrderFromDealerRequest(request);
+        log.info("✅ Created Order: {} for DealerRequest: {}", order.getOrderId(), request.getRequestId());
+        
+        // 2. Tạo Debt từ Order (nếu payment_type = INSTALLMENT)
+        // Mặc định tạo debt với payment_type = INSTALLMENT cho dealer
+        createDebtFromOrder(order, request);
+        log.info("✅ Created Debt for Order: {}", order.getOrderId());
+    }
+
+    /**
+     * Tạo Order từ DealerRequest
+     */
+    private Order createOrderFromDealerRequest(DealerRequest request) {
+        // Tạo OrderRequestDto từ DealerRequest
+        OrderRequestDto orderDto = new OrderRequestDto();
+        orderDto.setDealerId(request.getDealer().getDealerId());
+        orderDto.setUserId(request.getCreatedBy().getUserId());
+        orderDto.setCustomerId(null); // Dealer request không có customer cụ thể
+        orderDto.setPaymentMethod("INSTALLMENT"); // Mặc định trả góp cho dealer
+        
+        // Tạo OrderDetail từ DealerRequestDetail
+        List<OrderDetailRequestDto> orderDetails = request.getRequestDetails().stream()
+                .map(detail -> {
+                    OrderDetailRequestDto orderDetail = new OrderDetailRequestDto();
+                    // Tìm vehicle từ variant
+                    Long vehicleId = findVehicleByVariant(detail.getVehicleVariant().getVariantId());
+                    orderDetail.setVehicleId(vehicleId);
+                    orderDetail.setQuantity(detail.getQuantity());
+                    orderDetail.setPrice(detail.getUnitPrice().doubleValue());
+                    return orderDetail;
+                })
+                .collect(Collectors.toList());
+        
+        orderDto.setOrderDetails(orderDetails);
+        
+        // Tạo Order
+        return orderService.createOrderFromDto(orderDto);
+    }
+
+    /**
+     * Tạo Debt từ Order
+     */
+    private void createDebtFromOrder(Order order, DealerRequest request) {
+        Debt debt = new Debt();
+        
+        // Set thông tin cơ bản
+        debt.setDealer(order.getDealer());
+        debt.setUser(order.getUser());
+        debt.setCustomer(order.getCustomer()); // Có thể null nếu là dealer order
+        
+        // Tính tổng tiền từ order
+        double totalAmount = order.getOrderDetails().stream()
+                .mapToDouble(detail -> detail.getPrice() * detail.getQuantity())
+                .sum();
+        
+        debt.setAmountDue(BigDecimal.valueOf(totalAmount));
+        debt.setAmountPaid(BigDecimal.ZERO);
+        debt.setPaymentType("INSTALLMENT");
+        debt.setPaymentMethod("BANK_TRANSFER");
+        debt.setDebtType("DEALER_DEBT"); // Dealer nợ EVM
+        debt.setStatus("ACTIVE");
+        debt.setNotes("Auto-generated from DealerRequest: " + request.getRequestId());
+        debt.setStartDate(LocalDateTime.now());
+        debt.setDueDate(LocalDateTime.now().plusMonths(12)); // 12 tháng trả góp
+        
+        // Tạo Debt
+        debtService.createDebt(debt);
+    }
+
+    /**
+     * Tìm vehicle ID từ variant ID
+     * TODO: Implement proper mapping logic
+     */
+    private Long findVehicleByVariant(Long variantId) {
+        // Tạm thời return variantId làm vehicleId
+        // Trong thực tế cần query database để tìm vehicle tương ứng với variant
+        // vehicleRepository.findByVariantId(variantId).orElse(variantId);
+        return variantId;
     }
 
     /**

@@ -14,8 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 public class OrderRequestDto {
     
-    @NotNull(message = "Customer ID is required")
-    private Long customerId;
+    private Long customerId; // ✅ Có thể null cho dealer orders
     
     @NotNull(message = "User ID is required")
     private Long userId;
