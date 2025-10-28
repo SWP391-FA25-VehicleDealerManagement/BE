@@ -89,7 +89,20 @@ public class DealerRequestService {
         }
 
         // Calculate total
-        request.setTotalAmount(request.calculateTotalAmount());
+        BigDecimal totalAmount = request.calculateTotalAmount();
+        log.info("🔍 Calculated total amount: {} for request with {} details", 
+                totalAmount, request.getRequestDetails().size());
+        
+        // Debug: Log each detail
+        for (DealerRequestDetail detail : request.getRequestDetails()) {
+            log.info("📋 Detail - Variant: {}, Quantity: {}, UnitPrice: {}, LineTotal: {}", 
+                    detail.getVehicleVariant() != null ? detail.getVehicleVariant().getName() : "NULL",
+                    detail.getQuantity(),
+                    detail.getUnitPrice(),
+                    detail.getLineTotal());
+        }
+        
+        request.setTotalAmount(totalAmount);
 
         DealerRequest savedRequest = dealerRequestRepository.save(request);
         log.info("Created request with ID: {} - Priority: {}", savedRequest.getRequestId(), savedRequest.getPriority());
@@ -366,24 +379,50 @@ public class DealerRequestService {
         DealerRequest request = dealerRequestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
         
+        log.info("🔍 Getting order for request {} - Status: {} - Total: {} - Dealer: {}", 
+                requestId, request.getStatus(), request.getTotalAmount(), request.getDealer().getDealerId());
+        
         // Kiểm tra request có status DELIVERED không
         if (!"DELIVERED".equals(request.getStatus())) {
-            throw new RuntimeException("Request must be DELIVERED to have an order");
+            throw new RuntimeException("Request must be DELIVERED to have an order. Current status: " + request.getStatus());
         }
         
         // Tìm order theo dealer_id và total_amount tương ứng
         List<Order> orders = orderService.getOrdersByDealer(request.getDealer().getDealerId());
+        log.info("📦 Found {} orders for dealer {}", orders.size(), request.getDealer().getDealerId());
         
-        // Tìm order có total_amount khớp với request
+        // Convert Order.totalPrice (Double) to BigDecimal for comparison
+        BigDecimal requestTotalAmount = request.getTotalAmount();
+        
+        // Debug: Log tất cả orders
+        for (Order order : orders) {
+            BigDecimal orderTotalPrice = BigDecimal.valueOf(order.getTotalPrice());
+            int comparison = orderTotalPrice.compareTo(requestTotalAmount);
+            log.info("📋 Order {} - Total: {} - Compare: {}", 
+                    order.getOrderId(), 
+                    orderTotalPrice.toString(),
+                    comparison);
+        }
+        
+        // Tìm order có total_amount khớp với request (dùng compareTo thay vì equals)
         Order matchingOrder = orders.stream()
-                .filter(order -> order.getTotalPrice().equals(request.getTotalAmount()))
+                .filter(order -> {
+                    BigDecimal orderTotalPrice = BigDecimal.valueOf(order.getTotalPrice());
+                    boolean matches = orderTotalPrice.compareTo(requestTotalAmount) == 0;
+                    log.info("🔍 Order {} matches: {} ({} vs {})", 
+                            order.getOrderId(), matches, orderTotalPrice.toString(), requestTotalAmount.toString());
+                    return matches;
+                })
                 .findFirst()
                 .orElse(null);
         
         if (matchingOrder == null) {
-            throw new RuntimeException("No order found for this request");
+            log.error("❌ No matching order found for request {} - Dealer: {} - Total: {}", 
+                    requestId, request.getDealer().getDealerId(), request.getTotalAmount());
+            throw new RuntimeException("No order found for this request. Check logs for details.");
         }
         
+        log.info("✅ Found matching order: {}", matchingOrder.getOrderId());
         return matchingOrder;
     }
 }
