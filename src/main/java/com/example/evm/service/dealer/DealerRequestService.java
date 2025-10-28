@@ -16,7 +16,6 @@ import com.example.evm.repository.dealer.DealerRequestRepository;
 import com.example.evm.repository.auth.UserRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
 import com.example.evm.repository.inventory.InventoryStockRepository;
-import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.service.order.OrderService;
 import com.example.evm.service.debt.DebtService;
 import com.example.evm.dto.order.OrderRequestDto;
@@ -43,7 +42,6 @@ public class DealerRequestService {
     private final UserRepository userRepository;
     private final VehicleVariantRepository variantRepository;
     private final InventoryStockRepository inventoryStockRepository;
-    private final VehicleRepository vehicleRepository;
     private final OrderService orderService;
     private final DebtService debtService;
 
@@ -359,6 +357,34 @@ public class DealerRequestService {
                     return detailResponse;
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Lấy order của request
+     */
+    public Object getRequestOrder(Long requestId) {
+        DealerRequest request = dealerRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        
+        // Kiểm tra request có status DELIVERED không
+        if (!"DELIVERED".equals(request.getStatus())) {
+            throw new RuntimeException("Request must be DELIVERED to have an order");
+        }
+        
+        // Tìm order theo dealer_id và total_amount tương ứng
+        List<Order> orders = orderService.getOrdersByDealer(request.getDealer().getDealerId());
+        
+        // Tìm order có total_amount khớp với request
+        Order matchingOrder = orders.stream()
+                .filter(order -> order.getTotalPrice().equals(request.getTotalAmount()))
+                .findFirst()
+                .orElse(null);
+        
+        if (matchingOrder == null) {
+            throw new RuntimeException("No order found for this request");
+        }
+        
+        return matchingOrder;
     }
 }
 

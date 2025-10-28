@@ -145,6 +145,23 @@ public class DealerRequestController {
     }
 
     /**
+     * Lấy order của request
+     * GET /api/dealer-requests/{id}/order
+     */
+    @GetMapping("/{id}/order")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER', 'DEALER_STAFF')")
+    public ResponseEntity<ApiResponse<Object>> getRequestOrder(@PathVariable Long id) {
+        log.info("Getting order for request {}", id);
+        try {
+            Object order = dealerRequestService.getRequestOrder(id);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Order retrieved successfully", order));
+        } catch (Exception e) {
+            log.error("Error getting order for request {}: {}", id, e.getMessage());
+            return ResponseEntity.ok(new ApiResponse<>(false, "No order found for this request", null));
+        }
+    }
+
+    /**
      * Xóa request (chỉ cho PENDING hoặc REJECTED)
      * DELETE /api/dealer-requests/{id}
      */

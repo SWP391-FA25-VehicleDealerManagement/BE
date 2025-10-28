@@ -165,8 +165,20 @@ public class DebtService {
         // Tính toán theo công thức trả góp (công thức annuity)
         double rate = interestRate.doubleValue() / 100 / 12;
         double amountDouble = amount.doubleValue();
-        double monthlyPaymentDouble = amountDouble * (rate * Math.pow(1 + rate, numberOfPeriods))
-                / (Math.pow(1 + rate, numberOfPeriods) - 1);
+        
+        double monthlyPaymentDouble;
+        if (rate == 0) {
+            // Nếu không có lãi suất, chia đều số tiền
+            monthlyPaymentDouble = amountDouble / numberOfPeriods;
+        } else {
+            monthlyPaymentDouble = amountDouble * (rate * Math.pow(1 + rate, numberOfPeriods))
+                    / (Math.pow(1 + rate, numberOfPeriods) - 1);
+        }
+
+        // Kiểm tra kết quả hợp lệ
+        if (Double.isNaN(monthlyPaymentDouble) || Double.isInfinite(monthlyPaymentDouble)) {
+            monthlyPaymentDouble = amountDouble / numberOfPeriods; // Fallback: chia đều
+        }
 
         BigDecimal monthlyPayment = BigDecimal.valueOf(monthlyPaymentDouble);
         BigDecimal remainingBalance = amount;

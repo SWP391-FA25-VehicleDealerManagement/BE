@@ -134,7 +134,7 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
         
         log.info("Order created from DTO: ID {} - Customer: {} - Total: {}", 
-                savedOrder.getOrderId(), customer.getCustomerName(), totalPrice);
+                savedOrder.getOrderId(), customer != null ? customer.getCustomerName() : "Dealer Order", totalPrice);
         
         return savedOrder;
     }
@@ -195,7 +195,7 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
         
         log.info("Order created: ID {} - Customer: {} - Total: {}", 
-                savedOrder.getOrderId(), customer.getCustomerName(), totalPrice);
+                savedOrder.getOrderId(), customer != null ? customer.getCustomerName() : "Dealer Order", totalPrice);
         
         return savedOrder;
     }
@@ -230,4 +230,5 @@ public class OrderService {
         orderRepository.delete(order);
         log.info("Order deleted: {}", id);
     }
+
 }
