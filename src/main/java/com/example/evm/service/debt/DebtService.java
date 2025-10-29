@@ -258,7 +258,15 @@ public class DebtService {
         debt.setAmountPaid(totalPaid);
         
         // Cập nhật status
-        if (totalPaid.compareTo(debt.getAmountDue()) >= 0) {
+        BigDecimal remainingAmount = debt.getAmountDue().subtract(totalPaid);
+        
+        // Xử lý làm tròn: nếu chênh lệch < 1đ thì coi như đã trả đủ
+        if (remainingAmount.abs().compareTo(BigDecimal.ONE) < 0) {
+            debt.setStatus("PAID");
+            debt.setAmountPaid(debt.getAmountDue()); // Đặt chính xác bằng amountDue
+            log.info("🎉 Debt {} auto-updated to PAID! Total paid: {} / {} (rounded difference: {})", 
+                debtId, debt.getAmountDue(), debt.getAmountDue(), remainingAmount);
+        } else if (totalPaid.compareTo(debt.getAmountDue()) >= 0) {
             debt.setStatus("PAID");
             log.info("🎉 Debt {} auto-updated to PAID! Total paid: {} / {}", debtId, totalPaid, debt.getAmountDue());
         } else if (debt.getDueDate() != null && LocalDateTime.now().isAfter(debt.getDueDate())) {
@@ -266,7 +274,8 @@ public class DebtService {
             log.info("⚠️ Debt {} auto-updated to OVERDUE! Due date passed", debtId);
         } else {
             debt.setStatus("ACTIVE");
-            log.info("💰 Debt {} auto-updated to ACTIVE. Paid: {} / {}", debtId, totalPaid, debt.getAmountDue());
+            log.info("💰 Debt {} auto-updated to ACTIVE. Paid: {} / {} (remaining: {})", 
+                debtId, totalPaid, debt.getAmountDue(), remainingAmount);
         }
         
         debt.setUpdatedDate(LocalDateTime.now());
@@ -409,14 +418,21 @@ public class DebtService {
         debt.setAmountPaid(totalPaidFromPayments);
         
         // 7. Update status của Debt nếu đã thanh toán đủ
-        if (totalPaidFromPayments.compareTo(debt.getAmountDue()) >= 0) {
+        BigDecimal remainingAmount = debt.getAmountDue().subtract(totalPaidFromPayments);
+        
+        // Xử lý làm tròn: nếu chênh lệch < 1đ thì coi như đã trả đủ
+        if (remainingAmount.abs().compareTo(BigDecimal.ONE) < 0) {
+            debt.setStatus("PAID");
+            debt.setAmountPaid(debt.getAmountDue()); // Đặt chính xác bằng amountDue
+            log.info("🎉 Debt {} is now PAID! Total paid: {} / {} (rounded difference: {})", 
+                debtId, debt.getAmountDue(), debt.getAmountDue(), remainingAmount);
+        } else if (totalPaidFromPayments.compareTo(debt.getAmountDue()) >= 0) {
             debt.setStatus("PAID");
             log.info("🎉 Debt {} is now PAID! Total paid: {} / {} (remaining: 0)", 
                 debtId, totalPaidFromPayments, debt.getAmountDue());
         } else {
-            BigDecimal remaining = debt.getAmountDue().subtract(totalPaidFromPayments);
             log.info("💰 Debt {} payment updated: {} / {} (remaining: {})", 
-                debtId, totalPaidFromPayments, debt.getAmountDue(), remaining);
+                debtId, totalPaidFromPayments, debt.getAmountDue(), remainingAmount);
         }
         
         debt.setUpdatedDate(LocalDateTime.now());
@@ -600,6 +616,37 @@ public class DebtService {
     }
 
     /**
+     * ✅ Fix tất cả debt có vấn đề làm tròn (chênh lệch < 0.01)
+     * Đặt status = PAID và amountPaid = amountDue cho các debt đã trả gần hết
+     */
+    @Transactional
+    public int fixRoundingIssues() {
+        List<Debt> allDebts = debtRepository.findAll();
+        int fixedCount = 0;
+        
+        for (Debt debt : allDebts) {
+            if ("ACTIVE".equals(debt.getStatus())) {
+                BigDecimal remainingAmount = debt.getAmountDue().subtract(debt.getAmountPaid());
+                
+                // Nếu chênh lệch < 1đ thì fix
+                if (remainingAmount.abs().compareTo(BigDecimal.ONE) < 0) {
+                    debt.setStatus("PAID");
+                    debt.setAmountPaid(debt.getAmountDue());
+                    debt.setUpdatedDate(LocalDateTime.now());
+                    debtRepository.save(debt);
+                    
+                    log.info("🔧 Fixed rounding issue for Debt {}: {} -> PAID (difference: {})", 
+                            debt.getDebtId(), debt.getAmountDue(), remainingAmount);
+                    fixedCount++;
+                }
+            }
+        }
+        
+        log.info("✅ Fixed {} debts with rounding issues", fixedCount);
+        return fixedCount;
+    }
+
+    /**
      * ✅ Tự động tạo debt khi customer thanh toán (nếu payment_type = INSTALLMENT)
      * Flow: Dealer tạo Order cho customer → Customer thanh toán → Tự động tạo CUSTOMER_DEBT
      */
@@ -672,7 +719,15 @@ public class DebtService {
         debt.setAmountPaid(totalPaidFromSchedules);
 
         // 5. Cập nhật status của Debt
-        if (totalPaidFromSchedules.compareTo(debt.getAmountDue()) >= 0) {
+        BigDecimal remainingAmount = debt.getAmountDue().subtract(totalPaidFromSchedules);
+        
+        // Xử lý làm tròn: nếu chênh lệch < 1đ thì coi như đã trả đủ
+        if (remainingAmount.abs().compareTo(BigDecimal.ONE) < 0) {
+            debt.setStatus("PAID");
+            debt.setAmountPaid(debt.getAmountDue()); // Đặt chính xác bằng amountDue
+            log.info("🎉 Debt {} is now PAID! Total paid: {} / {} (rounded difference: {})", 
+                    debt.getDebtId(), debt.getAmountDue(), debt.getAmountDue(), remainingAmount);
+        } else if (totalPaidFromSchedules.compareTo(debt.getAmountDue()) >= 0) {
             debt.setStatus("PAID");
             log.info("🎉 Debt {} is now PAID! Total paid: {} / {}", debt.getDebtId(), totalPaidFromSchedules, debt.getAmountDue());
         } else if (debt.getDueDate() != null && LocalDateTime.now().isAfter(debt.getDueDate())) {
@@ -681,8 +736,7 @@ public class DebtService {
         } else {
             debt.setStatus("ACTIVE");
             log.info("💰 Debt {} payment updated: {} / {} ({} remaining)",
-                    debt.getDebtId(), totalPaidFromSchedules, debt.getAmountDue(),
-                    debt.getAmountDue().subtract(totalPaidFromSchedules));
+                    debt.getDebtId(), totalPaidFromSchedules, debt.getAmountDue(), remainingAmount);
         }
         debt.setUpdatedDate(LocalDateTime.now());
         debtRepository.save(debt);
