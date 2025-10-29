@@ -23,11 +23,14 @@ import com.example.evm.repository.debt.DebtPaymentRepository;
 import com.example.evm.repository.dealer.DealerRepository;
 import com.example.evm.repository.customer.CustomerRepository;
 import com.example.evm.repository.auth.UserRepository;
+import com.example.evm.repository.payment.PaymentRepository;
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.customer.Customer;
 import com.example.evm.entity.user.User;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+
+import com.example.evm.entity.payment.Payment   ;
+import com.example.evm.entity.order.Order;
 
 @Slf4j
 @Service
@@ -41,6 +44,7 @@ public class DebtService {
     private final DealerRepository dealerRepository;
     private final CustomerRepository customerRepository;
     private final UserRepository userRepository;
+    private final PaymentRepository paymentRepository;
 
     // ================== CÁC HÀM LẤY DỮ LIỆU CƠ BẢN ==================
 
@@ -533,5 +537,157 @@ public class DebtService {
 
     public List<DebtSchedule> getOverdueSchedules(Long dealerId) {
         return debtScheduleRepository.findOverdueSchedulesByDealer(dealerId, LocalDate.now());
+    }
+
+    // ================== TẠO DEBT TỪ PAYMENT ==================
+
+    /**
+     * ✅ Tạo CUSTOMER_DEBT từ Payment (customer nợ dealer)
+     * Flow: Dealer tạo Order cho customer → Customer thanh toán → Tự động tạo debt
+     */
+    @Transactional
+    public Debt createDebtFromPayment(Long paymentId) {
+        // 1. Lấy Payment
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + paymentId));
+        
+        // 2. Lấy Order từ Payment (Order được tạo bởi Dealer cho customer)
+        Order order = payment.getOrder();
+        if (order == null) {
+            throw new IllegalArgumentException("Payment must be linked to an Order");
+        }
+        
+        // 3. Validate: Chỉ tạo debt cho INSTALLMENT payment
+        if (!"INSTALLMENT".equals(payment.getPaymentType())) {
+            throw new IllegalArgumentException("Only INSTALLMENT payments can create debt");
+        }
+        
+        // 4. Validate: Order phải có customer (Dealer tạo Order cho customer)
+        if (order.getCustomer() == null) {
+            throw new IllegalArgumentException("Order must have a customer (created by dealer for customer)");
+        }
+        
+        // 5. Validate: Order phải có dealer
+        if (order.getDealer() == null) {
+            throw new IllegalArgumentException("Order must have a dealer");
+        }
+        
+        // 6. Tạo CUSTOMER_DEBT (customer nợ dealer)
+        Debt debt = new Debt();
+        debt.setDebtType("CUSTOMER_DEBT");
+        debt.setCustomer(order.getCustomer()); // Customer nợ
+        debt.setDealer(order.getDealer()); // Dealer được trả
+        debt.setAmountDue(payment.getAmount());
+        debt.setAmountPaid(BigDecimal.ZERO);
+        debt.setPaymentMethod(payment.getPaymentMethod());
+        debt.setStatus("ACTIVE");
+        debt.setNotes("Auto-generated from Payment: " + paymentId + " - Order: " + order.getOrderId() + 
+                     " - Dealer: " + order.getDealer().getDealerName() + " - Customer: " + order.getCustomer().getCustomerName());
+        debt.setStartDate(LocalDateTime.now());
+        debt.setDueDate(LocalDateTime.now().plusMonths(12)); // 12 tháng trả góp
+        
+        // 7. Tự động tạo lịch trả nợ 12 tháng
+        generateDebtSchedule(debt);
+        
+        // 8. Lưu Debt
+        Debt savedDebt = debtRepository.save(debt);
+        
+        log.info("✅ CUSTOMER_DEBT created: Customer {} nợ Dealer {} - Amount: {} - Order: {} - Payment: {}", 
+                order.getCustomer().getCustomerName(), order.getDealer().getDealerName(), 
+                payment.getAmount(), order.getOrderId(), paymentId);
+        
+        return savedDebt;
+    }
+
+    /**
+     * ✅ Tự động tạo debt khi customer thanh toán (nếu payment_type = INSTALLMENT)
+     * Flow: Dealer tạo Order cho customer → Customer thanh toán → Tự động tạo CUSTOMER_DEBT
+     */
+    @Transactional
+    public void autoCreateDebtFromPayment(Long paymentId) {
+        try {
+            Payment payment = paymentRepository.findById(paymentId).orElse(null);
+            if (payment == null) return;
+            
+            // Chỉ tạo debt cho INSTALLMENT payment
+            if ("INSTALLMENT".equals(payment.getPaymentType())) {
+                Order order = payment.getOrder();
+                if (order != null && order.getCustomer() != null && order.getDealer() != null) {
+                    // Tạo CUSTOMER_DEBT (customer nợ dealer)
+                    createDebtFromPayment(paymentId);
+                    log.info("🔄 Auto-created CUSTOMER_DEBT: Customer {} nợ Dealer {} - Payment: {}", 
+                            order.getCustomer().getCustomerName(), order.getDealer().getDealerName(), paymentId);
+                } else {
+                    log.warn("⚠️ Cannot create CUSTOMER_DEBT: Order missing customer or dealer - Payment: {}", paymentId);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to auto-create debt from payment {}: {}", paymentId, e.getMessage());
+        }
+    }
+
+    // ================== THANH TOÁN TRỰC TIẾP DEBT SCHEDULE ==================
+
+    /**
+     * ✅ Thanh toán trực tiếp cho một kỳ trả nợ (DebtSchedule) mà không cần xác nhận
+     * Cập nhật paidAmount của schedule và tổng amountPaid của Debt
+     */
+    @Transactional
+    public DebtSchedule payDebtScheduleDirectly(Long scheduleId, BigDecimal amount) {
+        // 1. Lấy DebtSchedule
+        DebtSchedule schedule = debtScheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new ResourceNotFoundException("DebtSchedule not found with id: " + scheduleId));
+
+        // 2. Cập nhật paidAmount của schedule
+        BigDecimal currentPaidAmount = schedule.getPaidAmount() != null ? schedule.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal newPaidAmount = currentPaidAmount.add(amount);
+        schedule.setPaidAmount(newPaidAmount);
+
+        // 3. Cập nhật status của schedule
+        if (newPaidAmount.compareTo(schedule.getInstallment()) >= 0) {
+            schedule.setStatus("PAID");
+            schedule.setPaymentDate(LocalDate.now()); // Đặt ngày thanh toán khi đủ
+            log.info("✅ Schedule {} is now PAID! Paid: {} / {}",
+                    schedule.getScheduleId(), newPaidAmount, schedule.getInstallment());
+        } else {
+            schedule.setStatus("PARTIAL");
+            log.info("💰 Schedule {} updated: {} / {} ({} remaining)",
+                    schedule.getScheduleId(), newPaidAmount, schedule.getInstallment(),
+                    schedule.getInstallment().subtract(newPaidAmount));
+        }
+        debtScheduleRepository.save(schedule);
+
+        // 4. Cập nhật Debt chính
+        Debt debt = schedule.getDebt();
+        if (debt == null) {
+            throw new IllegalArgumentException("DebtSchedule is not linked to a Debt");
+        }
+
+        // Tính lại tổng số tiền đã thanh toán cho Debt từ tất cả các schedule đã thanh toán
+        BigDecimal totalPaidFromSchedules = debtScheduleRepository.findByDebtOrderByPeriodNo(debt.getDebtId())
+                .stream()
+                .map(s -> s.getPaidAmount() != null ? s.getPaidAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        debt.setAmountPaid(totalPaidFromSchedules);
+
+        // 5. Cập nhật status của Debt
+        if (totalPaidFromSchedules.compareTo(debt.getAmountDue()) >= 0) {
+            debt.setStatus("PAID");
+            log.info("🎉 Debt {} is now PAID! Total paid: {} / {}", debt.getDebtId(), totalPaidFromSchedules, debt.getAmountDue());
+        } else if (debt.getDueDate() != null && LocalDateTime.now().isAfter(debt.getDueDate())) {
+            debt.setStatus("OVERDUE");
+            log.info("⚠️ Debt {} auto-updated to OVERDUE! Due date passed", debt.getDebtId());
+        } else {
+            debt.setStatus("ACTIVE");
+            log.info("💰 Debt {} payment updated: {} / {} ({} remaining)",
+                    debt.getDebtId(), totalPaidFromSchedules, debt.getAmountDue(),
+                    debt.getAmountDue().subtract(totalPaidFromSchedules));
+        }
+        debt.setUpdatedDate(LocalDateTime.now());
+        debtRepository.save(debt);
+
+        log.info("✅ Direct payment for DebtSchedule {} processed. Amount: {}", scheduleId, amount);
+        return schedule;
     }
 }

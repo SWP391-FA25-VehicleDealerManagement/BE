@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -263,6 +264,40 @@ public class DebtController {
         } catch (Exception e) {
             log.error("Error getting debt schedule details for debt {}", id, e);
             return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Failed to get debt schedule details: " + e.getMessage(), null));
+        }
+    }
+
+    /**
+     * Tạo CUSTOMER_DEBT từ Payment (customer nợ dealer)
+     * URL: POST /api/debts/create-from-payment/{paymentId}
+     */
+    @PostMapping("/create-from-payment/{paymentId}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<Debt>> createDebtFromPayment(@PathVariable Long paymentId) {
+        try {
+            Debt debt = debtService.createDebtFromPayment(paymentId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Debt created from payment successfully", debt));
+        } catch (Exception e) {
+            log.error("Error creating debt from payment {}", paymentId, e);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Failed to create debt from payment: " + e.getMessage(), null));
+        }
+    }
+
+    /**
+     * Thanh toán trực tiếp cho DebtSchedule (không cần xác nhận)
+     * URL: POST /api/debts/schedules/{scheduleId}/direct-pay
+     */
+    @PostMapping("/schedules/{scheduleId}/direct-pay")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<DebtSchedule>> payDebtScheduleDirectly(
+            @PathVariable Long scheduleId,
+            @RequestParam BigDecimal amount) {
+        try {
+            DebtSchedule schedule = debtService.payDebtScheduleDirectly(scheduleId, amount);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Debt schedule paid successfully", schedule));
+        } catch (Exception e) {
+            log.error("Error paying debt schedule {}", scheduleId, e);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Failed to pay debt schedule: " + e.getMessage(), null));
         }
     }
 

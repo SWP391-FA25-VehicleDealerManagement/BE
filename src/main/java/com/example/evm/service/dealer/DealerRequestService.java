@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -177,7 +178,7 @@ public class DealerRequestService {
             
             // ✅ TỰ ĐỘNG tạo Order và Debt khi giao hàng
             try {
-                createOrderAndDebtFromRequest(request);
+                createDebtFromExistingOrder(request);
                 log.info("Request {} DELIVERED - Order and Debt created automatically", id);
             } catch (Exception e) {
                 log.error("Failed to create Order/Debt for request {}: {}", id, e.getMessage());
@@ -192,50 +193,40 @@ public class DealerRequestService {
     }
 
     /**
-     * ✅ Tạo Order và Debt tự động từ DealerRequest khi giao hàng
+     * ✅ Tạo Debt từ Order có sẵn khi DealerRequest giao hàng
+     * Order phải được tạo trước bởi Dealer
      */
     @Transactional
-    private void createOrderAndDebtFromRequest(DealerRequest request) {
-        log.info("Creating Order and Debt from DealerRequest: {}", request.getRequestId());
+    private void createDebtFromExistingOrder(DealerRequest request) {
+        log.info("Creating Debt from existing Order for DealerRequest: {}", request.getRequestId());
         
-        // 1. Tạo Order từ DealerRequest
-        Order order = createOrderFromDealerRequest(request);
-        log.info("✅ Created Order: {} for DealerRequest: {}", order.getOrderId(), request.getRequestId());
+        // 1. Tìm Order liên kết với DealerRequest (Order phải được tạo trước)
+        Order order = findOrderByDealerRequest(request);
+        if (order == null) {
+            throw new IllegalArgumentException("Order must be created before processing DealerRequest. Please create Order first.");
+        }
+        
+        log.info("✅ Found Order: {} for DealerRequest: {}", order.getOrderId(), request.getRequestId());
         
         // 2. Tạo Debt từ Order (nếu payment_type = INSTALLMENT)
-        // Mặc định tạo debt với payment_type = INSTALLMENT cho dealer
         createDebtFromOrder(order, request);
         log.info("✅ Created Debt for Order: {}", order.getOrderId());
     }
 
     /**
-     * Tạo Order từ DealerRequest
+     * Tìm Order liên kết với DealerRequest
+     * Order phải được tạo trước bởi Dealer
      */
-    private Order createOrderFromDealerRequest(DealerRequest request) {
-        // Tạo OrderRequestDto từ DealerRequest
-        OrderRequestDto orderDto = new OrderRequestDto();
-        orderDto.setDealerId(request.getDealer().getDealerId());
-        orderDto.setUserId(request.getCreatedBy().getUserId());
-        orderDto.setCustomerId(null); // Dealer request không có customer cụ thể
-        orderDto.setPaymentMethod("INSTALLMENT"); // Mặc định trả góp cho dealer
+    private Order findOrderByDealerRequest(DealerRequest request) {
+        // Tìm Order theo dealer và thời gian tạo gần nhất
+        // Trong thực tế có thể cần thêm field order_id vào DealerRequest
+        List<Order> orders = orderService.getOrdersByDealer(request.getDealer().getDealerId());
         
-        // Tạo OrderDetail từ DealerRequestDetail
-        List<OrderDetailRequestDto> orderDetails = request.getRequestDetails().stream()
-                .map(detail -> {
-                    OrderDetailRequestDto orderDetail = new OrderDetailRequestDto();
-                    // Tìm vehicle từ variant
-                    Long vehicleId = findVehicleByVariant(detail.getVehicleVariant().getVariantId());
-                    orderDetail.setVehicleId(vehicleId);
-                    orderDetail.setQuantity(detail.getQuantity());
-                    orderDetail.setPrice(detail.getUnitPrice().doubleValue());
-                    return orderDetail;
-                })
-                .collect(Collectors.toList());
-        
-        orderDto.setOrderDetails(orderDetails);
-        
-        // Tạo Order
-        return orderService.createOrderFromDto(orderDto);
+        // Tìm Order được tạo gần nhất (tạm thời)
+        return orders.stream()
+                .filter(order -> order.getCustomer() == null) // Dealer order (không có customer)
+                .max(Comparator.comparing(Order::getCreatedDate))
+                .orElse(null);
     }
 
     /**
@@ -267,16 +258,6 @@ public class DealerRequestService {
         debtService.createDebt(debt);
     }
 
-    /**
-     * Tìm vehicle ID từ variant ID
-     * TODO: Implement proper mapping logic
-     */
-    private Long findVehicleByVariant(Long variantId) {
-        // Tạm thời return variantId làm vehicleId
-        // Trong thực tế cần query database để tìm vehicle tương ứng với variant
-        // vehicleRepository.findByVariantId(variantId).orElse(variantId);
-        return variantId;
-    }
 
     /**
      * Thêm xe vào kho dealer khi giao hàng
