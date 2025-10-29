@@ -436,21 +436,4 @@ public class DebtController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Overdue schedules retrieved successfully", schedules));
     }
 
-    /**
-     * Fix tất cả debt có vấn đề làm tròn (chênh lệch < 0.01)
-     * URL: POST /api/debts/fix-rounding-issues
-     */
-    @PostMapping("/fix-rounding-issues")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<Integer>> fixRoundingIssues() {
-        try {
-            int fixedCount = debtService.fixRoundingIssues();
-            return ResponseEntity.ok(new ApiResponse<>(true, 
-                "Fixed " + fixedCount + " debts with rounding issues", fixedCount));
-        } catch (Exception e) {
-            log.error("Error fixing rounding issues", e);
-            return ResponseEntity.badRequest().body(new ApiResponse<>(false, 
-                "Failed to fix rounding issues: " + e.getMessage(), 0));
-        }
-    }
 }
