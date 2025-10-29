@@ -1,6 +1,7 @@
 package com.example.evm.service.debt;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -199,47 +200,36 @@ public class DebtService {
         // Mặc định chia đều 12 tháng
         int numberOfPeriods = 12;
         BigDecimal amount = debt.getAmountDue();
-        BigDecimal interestRate = debt.getInterestRate() != null ? debt.getInterestRate() : BigDecimal.ZERO;
-
-        // Tính toán theo công thức trả góp (công thức annuity)
-        double rate = interestRate.doubleValue() / 100 / 12;
-        double amountDouble = amount.doubleValue();
-        
-        double monthlyPaymentDouble;
-        if (rate == 0) {
-            // Nếu không có lãi suất, chia đều số tiền
-            monthlyPaymentDouble = amountDouble / numberOfPeriods;
-        } else {
-            monthlyPaymentDouble = amountDouble * (rate * Math.pow(1 + rate, numberOfPeriods))
-                    / (Math.pow(1 + rate, numberOfPeriods) - 1);
-        }
-
-        // Kiểm tra kết quả hợp lệ
-        if (Double.isNaN(monthlyPaymentDouble) || Double.isInfinite(monthlyPaymentDouble)) {
-            monthlyPaymentDouble = amountDouble / numberOfPeriods; // Fallback: chia đều
-        }
-
-        BigDecimal monthlyPayment = BigDecimal.valueOf(monthlyPaymentDouble);
+        BigDecimal installment = amount.divide(BigDecimal.valueOf(numberOfPeriods), 2, RoundingMode.HALF_UP);
+    
         BigDecimal remainingBalance = amount;
-
+    
         // Tạo từng kỳ trả nợ
         for (int i = 1; i <= numberOfPeriods; i++) {
             DebtSchedule schedule = new DebtSchedule();
             schedule.setPeriodNo((long) i);
             schedule.setStartBalance(remainingBalance);
-
-            BigDecimal interest = remainingBalance.multiply(BigDecimal.valueOf(rate));
-            BigDecimal principal = monthlyPayment.subtract(interest);
-
+    
+            BigDecimal principal;
+            if (i == numberOfPeriods) {
+                // Kỳ cuối: Điều chỉnh principal để endBalance = 0
+                principal = remainingBalance;
+            } else {
+                principal = installment;
+            }
+    
+            BigDecimal interest = BigDecimal.ZERO;  // Không có lãi
+            BigDecimal endBalance = remainingBalance.subtract(principal).setScale(2, RoundingMode.HALF_UP);
+    
             schedule.setPrincipal(principal);
             schedule.setInterest(interest);
-            schedule.setInstallment(monthlyPayment);
-            schedule.setEndBalance(remainingBalance.subtract(principal));
+            schedule.setInstallment(installment);
+            schedule.setEndBalance(endBalance);
             schedule.setDueDate(LocalDate.now().plusMonths(i));
             schedule.setStatus("PENDING");
-
+    
             debt.addDebtSchedule(schedule);
-            remainingBalance = schedule.getEndBalance();
+            remainingBalance = endBalance;
         }
     }
 
