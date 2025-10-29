@@ -62,8 +62,6 @@ public class Debt {
     @Column(name = "status", length = 20)
     private String status = "ACTIVE"; // ACTIVE, PAID, OVERDUE, CANCELLED
 
-    @Column(name = "payment_type", length = 50)
-    private String paymentType; // FULL_PAYMENT (Trả thẳng), INSTALLMENT (Trả góp)
 
     @Column(name = "payment_method", length = 50)
     private String paymentMethod; // CASH (Tiền mặt), BANK_TRANSFER (Chuyển khoản)

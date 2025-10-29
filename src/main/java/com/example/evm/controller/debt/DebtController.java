@@ -174,6 +174,24 @@ public class DebtController {
     }
 
     /**
+     * Cập nhật trạng thái debt tự động
+     * URL: PUT /api/debts/{debtId}/update-status
+     * Quyền: ADMIN, EVM_STAFF
+     */
+    @PutMapping("/{debtId}/update-status")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<Debt>> updateDebtStatus(@PathVariable Long debtId) {
+        try {
+            debtService.updateDebtStatus(debtId);
+            Debt updatedDebt = debtService.getDebtById(debtId);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Debt status updated successfully", updatedDebt));
+        } catch (Exception e) {
+            log.error("Error updating debt status for debt {}", debtId, e);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Failed to update debt status: " + e.getMessage(), null));
+        }
+    }
+
+    /**
      * Lấy danh sách nợ theo user
      * URL: GET /api/debts/user/{userId}
      * Quyền: DEALER_STAFF, DEALER_MANAGER
@@ -230,6 +248,22 @@ public class DebtController {
     public ResponseEntity<ApiResponse<List<DebtSchedule>>> getDebtSchedules(@PathVariable Long id) {
         List<DebtSchedule> schedules = debtService.getDebtSchedules(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Debt schedules retrieved successfully", schedules));
+    }
+
+    /**
+     * Lấy thông tin chi tiết debt schedule với thống kê
+     * URL: GET /api/debts/{id}/schedule-details
+     */
+    @GetMapping("/{id}/schedule-details")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDebtScheduleDetails(@PathVariable Long id) {
+        try {
+            Map<String, Object> details = debtService.getDebtScheduleDetails(id);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Debt schedule details retrieved successfully", details));
+        } catch (Exception e) {
+            log.error("Error getting debt schedule details for debt {}", id, e);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Failed to get debt schedule details: " + e.getMessage(), null));
+        }
     }
 
     /**

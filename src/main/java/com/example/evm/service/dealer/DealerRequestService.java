@@ -256,7 +256,6 @@ public class DealerRequestService {
         
         debt.setAmountDue(BigDecimal.valueOf(totalAmount));
         debt.setAmountPaid(BigDecimal.ZERO);
-        debt.setPaymentType("INSTALLMENT");
         debt.setPaymentMethod("BANK_TRANSFER");
         debt.setDebtType("DEALER_DEBT"); // Dealer nợ EVM
         debt.setStatus("ACTIVE");

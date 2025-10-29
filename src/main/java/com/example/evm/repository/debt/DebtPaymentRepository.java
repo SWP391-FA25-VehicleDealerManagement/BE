@@ -62,4 +62,12 @@ public interface DebtPaymentRepository extends JpaRepository<DebtPayment, Long> 
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    /**
+     * 🔍 Tìm tất cả các khoản thanh toán theo debt ID và status.
+     * @param debtId ID của khoản nợ.
+     * @param status Trạng thái thanh toán (PENDING, CONFIRMED, REJECTED).
+     * @return Danh sách các DebtPayment tương ứng.
+     */
+    List<DebtPayment> findByDebtDebtIdAndStatus(Long debtId, String status);
 }
