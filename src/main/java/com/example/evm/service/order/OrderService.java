@@ -200,15 +200,29 @@ public class OrderService {
         return savedOrder;
     }
 
-    public Order updateOrderStatus(Long id, String status) {
-        Order order = getOrderById(id);
-        order.setStatus(status);
-        
-        Order updatedOrder = orderRepository.save(order);
-        log.info("Order {} status updated to: {}", id, status);
-        
-        return updatedOrder;
+public Order updateOrderStatus(Long id, String status) {
+    Order order = getOrderById(id);
+    order.setStatus(status);
+    
+    // ✅ Thêm logic: Khi COMPLETED, cập nhật vehicle
+    if ("COMPLETED".equals(status)) {
+        List<OrderDetail> orderDetails = getOrderDetails(id);
+        for (OrderDetail detail : orderDetails) {
+            Vehicle vehicle = detail.getVehicle();
+            if (vehicle != null) {
+                vehicle.setStatus("SOLD");
+                vehicle.setInventoryStock(null); // Loại khỏi kho đại lý
+                vehicleRepository.save(vehicle);
+                log.info("Vehicle {} sold and removed from dealer inventory", vehicle.getVehicleId());
+            }
+        }
     }
+    
+    Order updatedOrder = orderRepository.save(order);
+    log.info("Order {} status updated to: {}", id, status);
+    
+    return updatedOrder;
+}
 
     public Double getTotalSalesByDealer(Long dealerId) {
         Double totalSales = orderRepository.getTotalSalesByDealer(dealerId);
