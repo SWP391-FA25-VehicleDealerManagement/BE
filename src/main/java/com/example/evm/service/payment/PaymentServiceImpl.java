@@ -47,7 +47,7 @@ public class PaymentServiceImpl implements PaymentService {
         String normalized;
         if (methodUpper.equals("CASH") || methodUpper.equals("TIEN MAT") || methodUpper.equals("TIỀN MẶT")) {
             normalized = "CASH";
-        } else if (methodUpper.equals("TRANSFER") || methodUpper.equals("CHUYEN KHOAN") || methodUpper.equals("CHUYỂN KHOẢN")) {
+        } else if (methodUpper.equals("TRANSFER") || methodUpper.equals("BANK_TRANSFER") || methodUpper.equals("CHUYEN KHOAN") || methodUpper.equals("CHUYỂN KHOẢN")) {
             normalized = "TRANSFER";
         } else {
             // keep original but still fail below with helpful msg
