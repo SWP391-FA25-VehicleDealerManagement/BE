@@ -180,6 +180,14 @@ request.setRequestDate(LocalDateTime.now());
             
             // ✅ TỰ ĐỘNG tạo Order và Debt khi giao hàng
             try {
+                // Luôn tạo Order từ kho dealer khi xác nhận đã nhận
+                Order createdOrder = createOrderFromRequestUsingDealerStock(
+                        request.getRequestId(),
+                        request.getCreatedBy().getUserId(),
+                        "BANK_TRANSFER");
+                log.info("✅ Created Order {} from DealerRequest {} upon DELIVERED", 
+                        createdOrder.getOrderId(), request.getRequestId());
+
                 createDebtFromExistingOrder(request);
                 log.info("Request {} DELIVERED - Order and Debt created automatically", id);
             } catch (Exception e) {
@@ -297,6 +305,60 @@ dto.setPaymentMethod(paymentMethod);
             // Chọn đúng số lượng xe, mỗi xe 1 dòng
             for (int i = 0; i < d.getQuantity(); i++) {
                 com.example.evm.entity.vehicle.Vehicle v = available.get(i);
+                OrderDetailRequestDto od = new OrderDetailRequestDto(
+                        v.getVehicleId(),
+                        null,
+                        1,
+                        d.getUnitPrice().doubleValue()
+                );
+                detailDtos.add(od);
+            }
+        }
+
+        dto.setOrderDetails(detailDtos);
+        return orderService.createOrderFromDto(dto);
+    }
+
+    /**
+     * Tạo Order dựa trên xe đã có trong kho dealer (sau khi allocate, trước/sau khi deliver)
+     */
+    @Transactional
+    public Order createOrderFromRequestUsingDealerStock(Long requestId, Long userId, String paymentMethod) {
+        DealerRequest request = dealerRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request not found with id: " + requestId));
+
+        Long dealerId = request.getDealer().getDealerId();
+
+        // Build DTO
+        OrderRequestDto dto = new OrderRequestDto();
+        dto.setCustomerId(null);
+        dto.setUserId(userId);
+        dto.setDealerId(dealerId);
+        dto.setPaymentMethod(paymentMethod);
+
+        List<OrderDetailRequestDto> detailDtos = new java.util.ArrayList<>();
+
+        // Lấy tất cả xe trong kho dealer một lần để filter
+        List<com.example.evm.entity.vehicle.Vehicle> dealerVehicles = vehicleRepository
+                .findByDealerIdWithFullInfo(dealerId);
+
+        for (DealerRequestDetail d : request.getRequestDetails()) {
+            List<com.example.evm.entity.vehicle.Vehicle> matched = dealerVehicles.stream()
+                    .filter(v -> v.getVariant() != null
+                            && v.getVariant().getVariantId().equals(d.getVehicleVariant().getVariantId())
+                            && v.getColor() != null
+                            && v.getColor().equalsIgnoreCase(d.getColor() != null ? d.getColor() : v.getColor())
+                            && "IN_DEALER_STOCK".equalsIgnoreCase(v.getStatus()))
+                    .limit(d.getQuantity())
+                    .toList();
+
+            if (matched.size() < d.getQuantity()) {
+                int shortage = d.getQuantity() - matched.size();
+                throw new IllegalStateException("Not enough vehicles in dealer stock for variant "
+                        + d.getVehicleVariant().getName() + " (color " + d.getColor() + ") - shortage: " + shortage);
+            }
+
+            for (com.example.evm.entity.vehicle.Vehicle v : matched) {
                 OrderDetailRequestDto od = new OrderDetailRequestDto(
                         v.getVehicleId(),
                         null,

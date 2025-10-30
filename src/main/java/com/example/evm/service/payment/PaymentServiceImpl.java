@@ -40,7 +40,21 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = new Payment();
         payment.setOrderId(paymentInfo.getOrderId());
         payment.setAmount(paymentInfo.getAmount());
-        payment.setPaymentMethod(paymentInfo.getPaymentMethod());
+
+        // Normalize payment method from UI (vi/EN/case-insensitive)
+        String rawMethod = paymentInfo.getPaymentMethod() == null ? "" : paymentInfo.getPaymentMethod().trim();
+        String methodUpper = rawMethod.toUpperCase();
+        String normalized;
+        if (methodUpper.equals("CASH") || methodUpper.equals("TIEN MAT") || methodUpper.equals("TIỀN MẶT")) {
+            normalized = "CASH";
+        } else if (methodUpper.equals("TRANSFER") || methodUpper.equals("CHUYEN KHOAN") || methodUpper.equals("CHUYỂN KHOẢN")) {
+            normalized = "TRANSFER";
+        } else {
+            // keep original but still fail below with helpful msg
+            normalized = rawMethod;
+        }
+
+        payment.setPaymentMethod(normalized);
         payment.setPaymentType(paymentInfo.getPaymentType());
         payment.setPaymentId(null);
         if(payment.getPaymentDate() == null){
@@ -49,10 +63,14 @@ public class PaymentServiceImpl implements PaymentService {
         if(payment.getOrderId()!=null && !orderRepository.existsById(payment.getOrderId())){
             throw new IllegalArgumentException("Invalid order id "+payment.getOrderId());
         }
+        if (payment.getAmount() == null) {
+            throw new IllegalArgumentException("Amount is required");
+        }
+
            // Xử lý theo phương thức thanh toán
-        if ("cash".equalsIgnoreCase(payment.getPaymentMethod())) {
+        if ("CASH".equalsIgnoreCase(payment.getPaymentMethod())) {
             payment.setStatus("Completed"); // Hoàn thành ngay
-        } else if ("transfer".equalsIgnoreCase(payment.getPaymentMethod())) {
+        } else if ("TRANSFER".equalsIgnoreCase(payment.getPaymentMethod())) {
             payment.setStatus("Pending"); // Chờ VNPay xử lý
         } else {
             throw new IllegalArgumentException("Unsupported payment method: " + payment.getPaymentMethod());
