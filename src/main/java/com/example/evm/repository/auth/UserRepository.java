@@ -28,4 +28,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // ✅ Lấy danh sách users theo dealer và role (nhiều kết quả)
     @Query("SELECT u FROM User u WHERE u.dealer.dealerId = :dealerId AND u.role = :role")
     List<User> findByDealerDealerIdAndRole(@Param("dealerId") Long dealerId, @Param("role") String role);
+     List<User> findByRole(String role);
 }
