@@ -14,12 +14,12 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/admin")
-public class DealerAccountController {
+public class AccountController {
 
     private final DealerAccountService dealerAccountService;
     private final UserAccountService userAccountService;
 
-    public DealerAccountController(DealerAccountService dealerAccountService, UserAccountService userAccountService) {
+    public AccountController(DealerAccountService dealerAccountService, UserAccountService userAccountService) {
         this.dealerAccountService = dealerAccountService;
         this.userAccountService = userAccountService;
     }
@@ -30,8 +30,8 @@ public class DealerAccountController {
      * ✅ 1 dealer chỉ có thể có 1 DEALER_MANAGER
      * ✅ Response bao gồm createdBy, createdDate, userCreatedDate
      */
-    @PostMapping("/create-dealer-account")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')") // ✅ Thêm EVM_STAFF
+    @PostMapping("create-dealer-account")
+    @PreAuthorize("hasAnyAuthority('EVM_STAFF')")
     public ResponseEntity<ApiResponse<CreateDealerAccountResponse>> createDealerAccount(
             @Valid @RequestBody CreateDealerAccountRequest request) {
 
@@ -77,7 +77,7 @@ public class DealerAccountController {
      * Tạo user account với role DEALER_STAFF cho dealer đã tồn tại
      */
     @PostMapping("/create-dealer-staff")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<CreateUserAccountResponse>> createDealerStaff(
             @Valid @RequestBody CreateUserAccountRequest request) {
 
@@ -117,7 +117,7 @@ public class DealerAccountController {
      * Tạo user account với role EVM_STAFF
      */
     @PostMapping("/create-evm-staff")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')") // ✅ Cho phép EVM_STAFF tạo
+    @PreAuthorize("hasAnyAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<CreateUserAccountResponse>> createEvmStaff(
             @Valid @RequestBody CreateUserAccountRequest request) {
 

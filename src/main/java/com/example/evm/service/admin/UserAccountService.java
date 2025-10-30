@@ -39,10 +39,10 @@ public class UserAccountService {
             throw new IllegalArgumentException("Username already exists: " + request.getUsername());
         }
 
-        // Validate role
+        // Validate role (accept both with or without ROLE_ prefix)
         if (!isValidRole(request.getRole())) {
             throw new IllegalArgumentException(
-                    "Invalid role. Supported roles: ROLE_DEALER_STAFF, ROLE_DEALER_MANAGER, ROLE_EVM_STAFF");
+                    "Invalid role. Supported roles: DEALER_STAFF, DEALER_MANAGER, EVM_STAFF");
         }
 
         // Nếu role là DEALER_STAFF hoặc DEALER_MANAGER thì cần dealerId
@@ -65,7 +65,7 @@ public class UserAccountService {
             user.setFullName(request.getFullName());
             user.setPhone(request.getPhone());
             user.setEmail(request.getEmail());
-            user.setRole(request.getRole());
+            user.setRole(normalizeRole(request.getRole()));
             user.setCreatedDate(LocalDateTime.now());
 
             // Nếu là dealer role thì set dealer
@@ -102,13 +102,20 @@ public class UserAccountService {
     }
 
     private boolean isValidRole(String role) {
-        return "ROLE_DEALER_STAFF".equals(role) ||
-                "ROLE_DEALER_MANAGER".equals(role) ||
-                "ROLE_EVM_STAFF".equals(role);
+        String r = normalizeRole(role);
+        return "DEALER_STAFF".equals(r) || "DEALER_MANAGER".equals(r) || "EVM_STAFF".equals(r);
     }
 
     private boolean isDealerRole(String role) {
-        return "ROLE_DEALER_STAFF".equals(role) || "ROLE_DEALER_MANAGER".equals(role);
+        String r = normalizeRole(role);
+        return "DEALER_STAFF".equals(r) || "DEALER_MANAGER".equals(r);
+    }
+
+    private String normalizeRole(String role) {
+        if (role == null) return null;
+        String r = role.trim();
+        if (r.startsWith("ROLE_")) r = r.substring(5);
+        return r.toUpperCase();
     }
 
     // ================== LẤY THÔNG TIN USER ACCOUNT ==================
