@@ -22,6 +22,7 @@ import com.example.evm.dto.order.OrderRequestDto;
 import com.example.evm.dto.order.OrderDetailRequestDto;
 import com.example.evm.entity.order.Order;
 import com.example.evm.entity.debt.Debt;
+import com.example.evm.repository.vehicle.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,7 @@ public class DealerRequestService {
     private final UserRepository userRepository;
     private final VehicleVariantRepository variantRepository;
     private final InventoryStockRepository inventoryStockRepository;
+    private final VehicleRepository vehicleRepository;
     private final OrderService orderService;
     private final DebtService debtService;
 
@@ -256,6 +258,58 @@ public class DealerRequestService {
         
         // Tạo Debt
         debtService.createDebt(debt);
+    }
+
+    /**
+     * Tạo Order từ DealerRequest (khi còn PENDING/APPROVED) để tiến hành thanh toán
+     * - Chọn trước các xe phù hợp từ kho tổng theo variant + color
+     * - Mỗi xe là một dòng OrderDetail (quantity = 1)
+     */
+    @Transactional
+    public Order createOrderFromRequest(Long requestId, Long userId, String paymentMethod) {
+        DealerRequest request = dealerRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request not found with id: " + requestId));
+
+        // Chỉ cho phép khi chưa DELIVERED
+        if ("DELIVERED".equals(request.getStatus())) {
+            throw new IllegalStateException("Request already delivered. Creating order is not allowed.");
+        }
+
+        // Build DTO
+        OrderRequestDto dto = new OrderRequestDto();
+        dto.setCustomerId(null); // Dealer order
+        dto.setUserId(userId);
+        dto.setDealerId(request.getDealer().getDealerId());
+        dto.setPaymentMethod(paymentMethod);
+
+        List<OrderDetailRequestDto> detailDtos = new java.util.ArrayList<>();
+
+        for (DealerRequestDetail d : request.getRequestDetails()) {
+            // Tìm xe available theo variant + color
+            List<com.example.evm.entity.vehicle.Vehicle> available = vehicleRepository
+                    .findAvailableInManufacturerStock(d.getVehicleVariant().getVariantId(), d.getColor());
+
+            if (available.size() < d.getQuantity()) {
+                int shortage = d.getQuantity() - available.size();
+                throw new IllegalStateException("Not enough vehicles for variant "
+                        + d.getVehicleVariant().getName() + " (color " + d.getColor() + ") - shortage: " + shortage);
+            }
+
+            // Chọn đúng số lượng xe, mỗi xe 1 dòng
+            for (int i = 0; i < d.getQuantity(); i++) {
+                com.example.evm.entity.vehicle.Vehicle v = available.get(i);
+                OrderDetailRequestDto od = new OrderDetailRequestDto(
+                        v.getVehicleId(),
+                        null,
+                        1,
+                        d.getUnitPrice().doubleValue()
+                );
+                detailDtos.add(od);
+            }
+        }
+
+        dto.setOrderDetails(detailDtos);
+        return orderService.createOrderFromDto(dto);
     }
 
 

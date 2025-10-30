@@ -145,6 +145,26 @@ public class DealerRequestController {
     }
 
     /**
+     * Tạo Order từ DealerRequest (khi còn PENDING/APPROVED) để tiến hành thanh toán
+     * Body: { "userId": 4, "paymentMethod": "BANK_TRANSFER" }
+     */
+    @PostMapping("/{id}/create-order")
+    @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'DEALER_STAFF')")
+    public ResponseEntity<ApiResponse<Object>> createOrderFromRequest(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        try {
+            Long userId = Long.valueOf(body.get("userId").toString());
+            String paymentMethod = body.getOrDefault("paymentMethod", "BANK_TRANSFER").toString();
+            var order = dealerRequestService.createOrderFromRequest(id, userId, paymentMethod);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Order created from request", order));
+        } catch (Exception e) {
+            log.error("Failed to create order from request {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
+        }
+    }
+
+    /**
      * Lấy order của request
      * GET /api/dealer-requests/{id}/order
      */

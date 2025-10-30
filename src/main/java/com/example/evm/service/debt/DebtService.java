@@ -687,6 +687,23 @@ public class DebtService {
         debt.setUpdatedDate(LocalDateTime.now());
         debtRepository.save(debt);
 
+        // 4.5. Tạo bản ghi DebtPayment tương ứng để hiển thị ở API GET /debts/{id}/payments
+        DebtPayment payment = new DebtPayment();
+        payment.setDebt(debt);
+        payment.setDebtSchedule(schedule);
+        payment.setAmount(amount);
+        payment.setPaymentDate(LocalDateTime.now());
+        payment.setPaymentMethod("DIRECT");
+        payment.setReferenceNumber(String.format("DIR-%d-%s",
+                debt.getDebtId(),
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))));
+        payment.setNotes("Direct pay via API /debts/schedules/{id}/direct-pay");
+        payment.setCreatedBy("system");
+        payment.setStatus("CONFIRMED");
+        payment.setConfirmedBy("system");
+        payment.setConfirmedDate(LocalDateTime.now());
+        debtPaymentRepository.save(payment);
+
         log.info("✅ Direct payment for DebtSchedule {} processed. Amount: {}", scheduleId, amount);
         return schedule;
     }
