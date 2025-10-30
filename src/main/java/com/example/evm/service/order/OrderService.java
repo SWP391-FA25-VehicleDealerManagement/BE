@@ -205,7 +205,7 @@ public Order updateOrderStatus(Long id, String status) {
     order.setStatus(status);
     
     // ✅ Thêm logic: Khi COMPLETED, cập nhật vehicle
-    if ("COMPLETED".equals(status)) {
+    if ("SHIPPED".equals(status)) {
         List<OrderDetail> orderDetails = getOrderDetails(id);
         for (OrderDetail detail : orderDetails) {
             Vehicle vehicle = detail.getVehicle();
