@@ -34,17 +34,14 @@ public class TestDrive {
     @Column(name = "testdrive_id")
     private Long testDriveId;
 
-    @JsonIgnore  // ✅ Prevent lazy loading serialization error
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id")
     private Dealer dealer;
 
-    @JsonIgnore  // ✅ Prevent lazy loading serialization error
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
     private Customer customer;
 
-    @JsonIgnore  // ✅ Prevent lazy loading serialization error
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id")
     private Vehicle vehicle;
@@ -69,18 +66,5 @@ public class TestDrive {
         if (createdDate == null) {
             createdDate = LocalDateTime.now();
         }
-    }
-    
-    // Helper methods để expose IDs mà không trigger lazy loading
-    public Long getDealerId() {
-        return dealer != null ? dealer.getDealerId() : null;
-    }
-    
-    public Long getCustomerId() {
-        return customer != null ? customer.getCustomerId() : null;
-    }
-    
-    public Long getVehicleId() {
-        return vehicle != null ? vehicle.getVehicleId() : null;
     }
 }

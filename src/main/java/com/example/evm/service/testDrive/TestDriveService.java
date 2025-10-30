@@ -25,20 +25,23 @@ public class TestDriveService {
     // ==================== READ OPERATIONS ====================
     
     public List<TestDrive> getAllTestDrives() {
-        return testDriveRepository.findAll();
+        return testDriveRepository.findAllWithDetails();
     }
 
     public TestDrive getTestDriveById(Long id) {
-        return testDriveRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Test drive not found with id: " + id));
+        List<TestDrive> results = testDriveRepository.findByIdWithDetails(id);
+        if (results.isEmpty()) {
+            throw new ResourceNotFoundException("Test drive not found with id: " + id);
+        }
+        return results.get(0);
     }
 
     public List<TestDrive> getTestDrivesByDealer(Long dealerId) {
-        return testDriveRepository.findByDealerDealerId(dealerId);
+        return testDriveRepository.findByDealerWithDetails(dealerId);
     }
 
     public List<TestDrive> getTestDrivesByCustomer(Long customerId) {
-        return testDriveRepository.findByCustomerCustomerId(customerId);
+        return testDriveRepository.findByCustomerWithDetails(customerId);
     }
 
     public List<TestDrive> getTestDrivesByVehicle(Long vehicleId) {
@@ -46,7 +49,7 @@ public class TestDriveService {
     }
 
     public List<TestDrive> getTestDrivesByStatus(String status) {
-        return testDriveRepository.findByStatus(status);
+        return testDriveRepository.findByStatusWithDetails(status);
     }
 
     // Sử dụng query tổng hợp với dealerId

@@ -7,9 +7,9 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.evm.entity.dealer.Dealer;
+
 import com.example.evm.entity.salePrice.SalePrice;
-import com.example.evm.entity.vehicle.VehicleVariant;
+
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.repository.dealer.DealerRepository;
 import com.example.evm.repository.salePrice.SalePriceRepository;

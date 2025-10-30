@@ -2,6 +2,7 @@ package com.example.evm.controller.testDrive;
 
 import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.dto.testDrive.CreateTestDriveRequest;
+import com.example.evm.dto.testDrive.TestDriveWithDetailsDTO;
 import com.example.evm.entity.customer.Customer;
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.testDrive.TestDrive;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -82,10 +84,13 @@ public class TestDriveController {
     /** Lấy tất cả lịch thử xe */
     @GetMapping("get-all-test-drives")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<List<TestDrive>>> getAllTestDrives() {
+    public ResponseEntity<ApiResponse<List<TestDriveWithDetailsDTO>>> getAllTestDrives() {
         try {
             List<TestDrive> testDrives = testDriveService.getAllTestDrives();
-            return ResponseEntity.ok(new ApiResponse<>(true, "All test drives retrieved", testDrives));
+            List<TestDriveWithDetailsDTO> dtos = testDrives.stream()
+                    .map(TestDriveWithDetailsDTO::fromTestDrive)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(new ApiResponse<>(true, "All test drives retrieved", dtos));
         } catch (Exception e) {
             log.error("Error retrieving all test drives", e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(false, e.getMessage(), null));
@@ -94,10 +99,11 @@ public class TestDriveController {
 
     /** Lấy lịch thử xe theo ID */
     @GetMapping("get-test-drive-by-id/{id}")
-    public ResponseEntity<ApiResponse<TestDrive>> getTestDriveById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<TestDriveWithDetailsDTO>> getTestDriveById(@PathVariable Long id) {
         try {
             TestDrive testDrive = testDriveService.getTestDriveById(id);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Retrieved test drive", testDrive));
+            TestDriveWithDetailsDTO dto = TestDriveWithDetailsDTO.fromTestDrive(testDrive);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Retrieved test drive", dto));
         } catch (Exception e) {
             log.error("Error retrieving test drive {}", id, e);
             return ResponseEntity.notFound().build();
@@ -106,10 +112,13 @@ public class TestDriveController {
 
     /** Lấy lịch thử xe theo dealer ID */
     @GetMapping("get-test-drives-by-dealer/{dealerId}")
-    public ResponseEntity<ApiResponse<List<TestDrive>>> getTestDrivesByDealer(@PathVariable Long dealerId) {
+    public ResponseEntity<ApiResponse<List<TestDriveWithDetailsDTO>>> getTestDrivesByDealer(@PathVariable Long dealerId) {
         try {
             List<TestDrive> testDrives = testDriveService.getTestDrivesByDealer(dealerId);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Test drives for dealer retrieved", testDrives));
+            List<TestDriveWithDetailsDTO> dtos = testDrives.stream()
+                    .map(TestDriveWithDetailsDTO::fromTestDrive)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(new ApiResponse<>(true, "Test drives for dealer retrieved", dtos));
         } catch (Exception e) {
             log.error("Error retrieving test drives for dealer {}", dealerId, e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(false, e.getMessage(), null));
@@ -118,10 +127,13 @@ public class TestDriveController {
 
     /** Lấy lịch thử xe theo customer ID */
     @GetMapping("get-test-drives-by-customer/{customerId}")
-    public ResponseEntity<ApiResponse<List<TestDrive>>> getTestDrivesByCustomer(@PathVariable Long customerId) {
+    public ResponseEntity<ApiResponse<List<TestDriveWithDetailsDTO>>> getTestDrivesByCustomer(@PathVariable Long customerId) {
         try {
             List<TestDrive> testDrives = testDriveService.getTestDrivesByCustomer(customerId);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Customer test drives retrieved", testDrives));
+            List<TestDriveWithDetailsDTO> dtos = testDrives.stream()
+                    .map(TestDriveWithDetailsDTO::fromTestDrive)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(new ApiResponse<>(true, "Customer test drives retrieved", dtos));
         } catch (Exception e) {
             log.error("Error retrieving test drives for customer {}", customerId, e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(false, e.getMessage(), null));
@@ -130,10 +142,13 @@ public class TestDriveController {
 
     /** Lấy lịch thử xe theo trạng thái (status) */
     @GetMapping("get-test-drives-by-status/{status}")
-    public ResponseEntity<ApiResponse<List<TestDrive>>> getTestDrivesByStatus(@PathVariable String status) {
+    public ResponseEntity<ApiResponse<List<TestDriveWithDetailsDTO>>> getTestDrivesByStatus(@PathVariable String status) {
         try {
             List<TestDrive> testDrives = testDriveService.getTestDrivesByStatus(status);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Test drives by status retrieved", testDrives));
+            List<TestDriveWithDetailsDTO> dtos = testDrives.stream()
+                    .map(TestDriveWithDetailsDTO::fromTestDrive)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(new ApiResponse<>(true, "Test drives by status retrieved", dtos));
         } catch (Exception e) {
             log.error("Error retrieving test drives with status {}", status, e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(false, e.getMessage(), null));

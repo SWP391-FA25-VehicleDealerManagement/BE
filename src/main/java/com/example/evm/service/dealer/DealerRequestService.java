@@ -18,8 +18,7 @@ import com.example.evm.repository.vehicle.VehicleVariantRepository;
 import com.example.evm.repository.inventory.InventoryStockRepository;
 import com.example.evm.service.order.OrderService;
 import com.example.evm.service.debt.DebtService;
-import com.example.evm.dto.order.OrderRequestDto;
-import com.example.evm.dto.order.OrderDetailRequestDto;
+
 import com.example.evm.entity.order.Order;
 import com.example.evm.entity.debt.Debt;
 import lombok.RequiredArgsConstructor;
