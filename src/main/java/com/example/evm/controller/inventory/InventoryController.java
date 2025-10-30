@@ -50,11 +50,19 @@ public class InventoryController {
         log.info("Allocating {} vehicles (variant: {}, color: {}) to dealer {}", 
                 quantity, variantId, color, dealerId);
         
-        AllocationResponse response = inventoryService.allocateVehiclesToDealer(
-                dealerId, variantId, color, quantity);
-        
-        return ResponseEntity.ok(new ApiResponse<>(true, 
-                "Vehicles allocated successfully", response));
+        try {
+            AllocationResponse response = inventoryService.allocateVehiclesToDealer(
+                    dealerId, variantId, color, quantity);
+            return ResponseEntity.ok(new ApiResponse<>(true,
+                    "Vehicles allocated successfully", response));
+        } catch (IllegalStateException ex) {
+            // Trả về thông báo không đủ số lượng và số lượng còn lại trong kho (đã có trong message)
+            return ResponseEntity.badRequest().body(new ApiResponse<>(
+                    false,
+                    ex.getMessage(),
+                    null
+            ));
+        }
     }
 
     /**
