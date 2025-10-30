@@ -23,6 +23,7 @@ public class DealerVehicleResponse {
     private Long vehicleId;
     private String vinNumber;
     private String color;
+    private String imageUrl;
     private String status;
     private LocalDate manufactureDate;
     private LocalDate warrantyExpiryDate;
@@ -30,7 +31,6 @@ public class DealerVehicleResponse {
     // ===== VARIANT INFO =====
     private Long variantId;
     private String variantName;
-    private String variantImage;
     private BigDecimal msrp;
     
     // ===== MODEL INFO =====

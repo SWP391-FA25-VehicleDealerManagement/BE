@@ -6,11 +6,12 @@ import com.example.evm.dto.vehicle.VehicleFullResponse;
 import com.example.evm.dto.vehicle.VehicleRequest;
 
 import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface VehicleService { // Đặt tên Interface
 
     List<VehicleFullResponse> getAllVehicles();
-    VehicleFullResponse createVehicle(VehicleRequest request);
+    VehicleFullResponse createVehicle(VehicleRequest request, MultipartFile file);
     VehicleFullResponse getVehicleById(Long id);
     List<VehicleFullResponse> getAllManufacturerVehicles();
     List<StockSummaryResponse> getManufacturerStockSummary();

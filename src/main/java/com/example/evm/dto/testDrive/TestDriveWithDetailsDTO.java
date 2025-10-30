@@ -80,6 +80,7 @@ public class TestDriveWithDetailsDTO {
         private Long vehicleId;
         private String vinNumber;
         private String color;
+        private String imageUrl;
         private LocalDateTime manufactureDate;
         private LocalDateTime warrantyExpiryDate;
         
@@ -91,7 +92,6 @@ public class TestDriveWithDetailsDTO {
         public static class VehicleVariantInfo {
             private Long variantId;
             private String name;
-            private String imageUrl;
             private VehicleModelInfo model;
             
             @Data
@@ -120,7 +120,6 @@ public class TestDriveWithDetailsDTO {
                 VehicleVariantInfo info = new VehicleVariantInfo();
                 info.setVariantId(variant.getVariantId());
                 info.setName(variant.getName());
-                info.setImageUrl(variant.getImageUrl());
                 // Load model thông tin
                 if (variant.getModel() != null) {
                     info.setModel(VehicleModelInfo.fromModel(variant.getModel()));
@@ -135,6 +134,7 @@ public class TestDriveWithDetailsDTO {
             info.setVehicleId(vehicle.getVehicleId());
             info.setVinNumber(vehicle.getVinNumber());
             info.setColor(vehicle.getColor());
+            info.setImageUrl(vehicle.getImageUrl());
             if (vehicle.getManufactureDate() != null) {
                 info.setManufactureDate(vehicle.getManufactureDate().atStartOfDay());
             }

@@ -40,6 +40,9 @@ public class Vehicle {
     @Column(name = "color", nullable = false, length = 50)
     private String color;
 
+    @Column(name = "image", length = 500) 
+    private String imageUrl; // Hình ảnh xe
+
     @Column(name = "manufacture_date")
     private LocalDate manufactureDate;
 

@@ -14,13 +14,11 @@ import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.vehicle.VehicleDetailRepository;
 import com.example.evm.repository.vehicle.VehicleModelRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
-import com.example.evm.service.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -34,30 +32,25 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
 
     private final VehicleVariantRepository variantRepository;
     private final VehicleModelRepository modelRepository;
-    private final FileStorageService fileStorageService;
     private final VehicleDetailRepository detailRepository;
     private final VehicleRepository vehicleRepository;
     private final SalePriceRepository salePriceRepository;
 
     @Override
-    public VehicleVariantResponse createVariant(VehicleVariantRequest request, MultipartFile file) {
-        // 1 & 2. LƯU FILE VÀ TẠO URL
-        String filename = fileStorageService.save(file);
-        String imageUrl = "/api/variants/images/" + filename;
+    public VehicleVariantResponse createVariant(VehicleVariantRequest request) {
 
-        // 3. TÌM MODEL (DÒNG XE) TƯƠNG ỨNG
+        // 1. TÌM MODEL (DÒNG XE) TƯƠNG ỨNG
         VehicleModel model = modelRepository.findById(request.getModelId())
                 .orElseThrow(() -> new ResourceNotFoundException("Model not found with id: " + request.getModelId()));
 
-        // 4. TẠO ĐỐI TƯỢNG VARIANT MỚI
+        // 2. TẠO ĐỐI TƯỢNG VARIANT MỚI
         VehicleVariant variant = new VehicleVariant();
         variant.setName(request.getName());
-        variant.setImageUrl(imageUrl);
         variant.setModel(model);
         variant.setStatus("ACTIVE");
         variant.setMsrp(request.getMsrp());
 
-        // 5. LƯU VÀ TRẢ VỀ
+        // 3. LƯU VÀ TRẢ VỀ
         VehicleVariant savedVariant = variantRepository.save(variant);
         return new VehicleVariantResponse(savedVariant);
     }
@@ -121,7 +114,7 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
 
     @Override
     @Transactional
-    public VehicleVariantResponse updateVariant(Long id, VehicleVariantRequest request, MultipartFile file) {
+    public VehicleVariantResponse updateVariant(Long id, VehicleVariantRequest request) {
 
         // 1. Tìm đối tượng (entity) đang có trong database
         VehicleVariant existingVariant = variantRepository.findById(id)
@@ -143,18 +136,10 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
             existingVariant.setMsrp(request.getMsrp());
         }
 
-        // 4. Kiểm tra và cập nhật 'file' (ảnh)
-        if (file != null && !file.isEmpty()) {
-
-            String filename = fileStorageService.save(file);
-            String newImageUrl = "/api/variants/images/" + filename;
-            existingVariant.setImageUrl(newImageUrl);
-        }
-
-        // 5. Lưu entity đã được cập nhật vào DB
+        // 4. Lưu entity đã được cập nhật vào DB
         VehicleVariant savedVariant = variantRepository.save(existingVariant);
 
-        // 6. Trả về response
+        // 5. Trả về response
         return new VehicleVariantResponse(savedVariant);
     }
 

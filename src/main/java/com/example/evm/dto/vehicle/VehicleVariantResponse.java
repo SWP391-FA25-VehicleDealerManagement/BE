@@ -13,7 +13,6 @@ public class VehicleVariantResponse {
     private Long variantId;
     private Long modelId;
     private String name;
-    private String defaultImageUrl;
     private String status;
     private BigDecimal msrp; // Giá niêm yết của hãng
     private BigDecimal basePrice; // Giá gốc dealer nhận từ hãng (từ SalePrice)
@@ -23,7 +22,6 @@ public class VehicleVariantResponse {
     public VehicleVariantResponse(VehicleVariant variant) {
         this.variantId = variant.getVariantId();
         this.name = variant.getName();
-        this.defaultImageUrl = variant.getImageUrl();
         this.status = variant.getStatus();
         this.msrp = variant.getMsrp();
         if (variant.getModel() != null) {

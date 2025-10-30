@@ -13,11 +13,13 @@ import com.example.evm.repository.inventory.ManufacturerStockRepository;
 import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
 import com.example.evm.repository.salePrice.SalePriceRepository;
+import com.example.evm.service.storage.FileStorageService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -42,6 +44,7 @@ public class VehicleServiceImpl implements VehicleService {
     private final ManufacturerStockRepository manufacturerStockRepository;
     private final com.example.evm.repository.order.OrderDetailRepository orderDetailRepository;
     private final SalePriceRepository salePriceRepository;
+    private final FileStorageService fileStorageService;
 
     // Get all vehicles
     @Override
@@ -58,7 +61,7 @@ public class VehicleServiceImpl implements VehicleService {
      */
     @Override
     @Transactional
-    public VehicleFullResponse createVehicle(VehicleRequest request) {
+    public VehicleFullResponse createVehicle(VehicleRequest request, MultipartFile file) {
         log.info("Creating new vehicle - variantId: {}, color: {}", request.getVariantId(), request.getColor());
         
         // 1. Lấy kho tổng mặc định
@@ -82,6 +85,12 @@ public class VehicleServiceImpl implements VehicleService {
         vehicle.setManufacturerStock(defaultWarehouse);
         vehicle.setInventoryStock(null);
         vehicle.setStatus("IN_MANUFACTURER_STOCK");
+
+        // 4. ✅ Lưu file ảnh nếu có
+        if (file != null && !file.isEmpty()) {
+            String filename = fileStorageService.save(file);
+            vehicle.setImageUrl("/api/vehicles/images/" + filename);
+        }
 
         Vehicle saved = vehicleRepository.save(vehicle);
 
@@ -150,6 +159,7 @@ public class VehicleServiceImpl implements VehicleService {
                 .vehicleId(v.getVehicleId())
                 .vinNumber(v.getVinNumber())
                 .color(v.getColor())
+                .imageUrl(v.getImageUrl())
                 .status(v.getStatus())
                 .manufactureDate(v.getManufactureDate())
                 .warrantyExpiryDate(v.getWarrantyExpiryDate());
@@ -157,7 +167,6 @@ public class VehicleServiceImpl implements VehicleService {
             if (v.getVariant() != null) {
                 builder.variantId(v.getVariant().getVariantId())
                     .variantName(v.getVariant().getName())
-                    .variantImage(v.getVariant().getImageUrl())
                     .msrp(v.getVariant().getMsrp());
 
                 if (v.getVariant().getModel() != null) {
@@ -229,6 +238,7 @@ public class VehicleServiceImpl implements VehicleService {
             .vehicleId(v.getVehicleId())
             .vinNumber(v.getVinNumber())
             .color(v.getColor())
+            .imageUrl(v.getImageUrl())
             .status(v.getStatus())
             .manufactureDate(v.getManufactureDate())
             .warrantyExpiryDate(v.getWarrantyExpiryDate());
@@ -238,7 +248,6 @@ public class VehicleServiceImpl implements VehicleService {
             builder
                 .variantId(v.getVariant().getVariantId())
                 .variantName(v.getVariant().getName())
-                .variantImage(v.getVariant().getImageUrl())
                 .msrp(v.getVariant().getMsrp());
 
             // Model info

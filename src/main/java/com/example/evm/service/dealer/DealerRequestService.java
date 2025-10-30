@@ -18,7 +18,8 @@ import com.example.evm.repository.vehicle.VehicleVariantRepository;
 import com.example.evm.repository.inventory.InventoryStockRepository;
 import com.example.evm.service.order.OrderService;
 import com.example.evm.service.debt.DebtService;
-
+import com.example.evm.dto.order.OrderRequestDto;
+import com.example.evm.dto.order.OrderDetailRequestDto;
 import com.example.evm.entity.order.Order;
 import com.example.evm.entity.debt.Debt;
 import com.example.evm.repository.vehicle.VehicleRepository;
@@ -66,7 +67,7 @@ public class DealerRequestService {
         DealerRequest request = new DealerRequest();
         request.setDealer(dealer);
         request.setCreatedBy(user);
-        request.setRequestDate(LocalDateTime.now());
+request.setRequestDate(LocalDateTime.now());
         request.setRequiredDate(dto.getRequiredDate());
         
         request.setPriority(dto.getPriority() != null ? dto.getPriority() : "NORMAL");
@@ -138,7 +139,7 @@ public class DealerRequestService {
     @Transactional(readOnly = true)
     public List<DealerRequestResponse> getRequestsByDealerId(Long dealerId) {
         return dealerRequestRepository.findByDealerDealerId(dealerId).stream()
-                .map(this::convertToResponseDto)
+.map(this::convertToResponseDto)
                 .collect(Collectors.toList());
     }
 
@@ -208,8 +209,7 @@ public class DealerRequestService {
         }
         
         log.info("✅ Found Order: {} for DealerRequest: {}", order.getOrderId(), request.getRequestId());
-        
-        // 2. Tạo Debt từ Order (nếu payment_type = INSTALLMENT)
+// 2. Tạo Debt từ Order (nếu payment_type = INSTALLMENT)
         createDebtFromOrder(order, request);
         log.info("✅ Created Debt for Order: {}", order.getOrderId());
     }
@@ -279,7 +279,7 @@ public class DealerRequestService {
         dto.setCustomerId(null); // Dealer order
         dto.setUserId(userId);
         dto.setDealerId(request.getDealer().getDealerId());
-        dto.setPaymentMethod(paymentMethod);
+dto.setPaymentMethod(paymentMethod);
 
         List<OrderDetailRequestDto> detailDtos = new java.util.ArrayList<>();
 
@@ -352,7 +352,7 @@ public class DealerRequestService {
     /**
      * Convert entity to response DTO
      */
-    private DealerRequestResponse convertToResponseDto(DealerRequest request) {
+private DealerRequestResponse convertToResponseDto(DealerRequest request) {
         DealerRequestResponse response = new DealerRequestResponse();
         response.setRequestId(request.getRequestId());
         
@@ -416,7 +416,7 @@ public class DealerRequestService {
                 requestId, request.getStatus(), request.getTotalAmount(), request.getDealer().getDealerId());
         
         // Kiểm tra request có status DELIVERED không
-        if (!"DELIVERED".equals(request.getStatus())) {
+if (!"DELIVERED".equals(request.getStatus())) {
             throw new RuntimeException("Request must be DELIVERED to have an order. Current status: " + request.getStatus());
         }
         
@@ -459,4 +459,3 @@ public class DealerRequestService {
         return matchingOrder;
     }
 }
-

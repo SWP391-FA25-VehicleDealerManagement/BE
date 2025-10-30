@@ -4,15 +4,24 @@ import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.dto.vehicle.StockSummaryResponse;
 import com.example.evm.dto.vehicle.VehicleFullResponse;
 import com.example.evm.dto.vehicle.VehicleRequest;
+import com.example.evm.service.storage.FileStorageService;
 import com.example.evm.service.vehicle.VehicleService;
 import com.example.evm.dto.vehicle.DealerVehicleResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 
 /**
@@ -33,6 +42,7 @@ import java.util.List;
 public class VehicleController {
 
     private final VehicleService vehicleService;
+    private final FileStorageService fileStorageService;
     
     // Lấy tất cả xe
     @GetMapping
@@ -45,17 +55,22 @@ public class VehicleController {
     /**
      * Tạo xe mới (tự động vào kho tổng)
      */
-    @PostMapping
+    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<VehicleFullResponse>> createVehicle(
-            @Valid @RequestBody VehicleRequest request) {
-        
-        log.info("Creating vehicle - variantId: {}, color: {}", request.getVariantId(), request.getColor());
-        
-        VehicleFullResponse response = vehicleService.createVehicle(request);
-        
+            @RequestParam("variantId") @NotNull Long variantId,
+            @RequestParam("color") @NotBlank String color,
+            @RequestPart(value = "file", required = true) MultipartFile file) {
+
+        log.info("Creating vehicle - variantId: {}, color: {}", variantId, color);
+
+        VehicleRequest requestDto = new VehicleRequest();
+        requestDto.setVariantId(variantId);
+        requestDto.setColor(color);
+
+        VehicleFullResponse response = vehicleService.createVehicle(requestDto, file);
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle created successfully", response));
-    }
+    }   
 
     /**
      * Lấy thông tin chi tiết 1 xe (kèm full info)
@@ -71,11 +86,35 @@ public class VehicleController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle retrieved successfully", response));
     }
 
+    // XÓA XE
     @DeleteMapping("/{vehicleId}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<?> deleteVehicle(@PathVariable Long vehicleId) {
         vehicleService.deleteVehicle(vehicleId);
         return ResponseEntity.ok("Vehicle deleted successfully.");
+    }
+
+    // LẤY ẢNH XE THEO FILENAME
+    @GetMapping("/images/{filename:.+}")
+    public ResponseEntity<Resource> getImage(@PathVariable String filename) {
+        Resource file = fileStorageService.load(filename);
+        String contentType = "application/octet-stream"; // Mặc định
+        try {
+            // Cố gắng tự động xác định ContentType từ file
+            contentType = Files.probeContentType(file.getFile().toPath());
+        } catch (IOException e) {
+            log.error("Could not determine file type for variant image: {}", filename, e);
+        }
+
+        // Nếu không xác định được, vẫn dùng loại mặc định
+        if(contentType == null) {
+            contentType = "application/octet-stream";
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
+                .body(file);
     }
 
 

@@ -5,31 +5,20 @@ import com.example.evm.dto.vehicle.VehicleDetailRequest;
 import com.example.evm.dto.vehicle.VehicleDetailResponse;
 import com.example.evm.dto.vehicle.VehicleVariantRequest;
 import com.example.evm.dto.vehicle.VehicleVariantResponse;
-import com.example.evm.service.vehicle.VehicleVariantService;
-import com.example.evm.service.storage.FileStorageService; 
+import com.example.evm.service.vehicle.VehicleVariantService; 
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.MediaType;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.nio.file.Files;
 import java.util.List;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
 
 
 @RestController
@@ -39,30 +28,16 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 public class VehicleVariantController {
 
     private final VehicleVariantService variantService;
-    private final FileStorageService fileStorageService;
 
     // ➕ TẠO MỚI một biến thể xe
-    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    @PostMapping 
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<VehicleVariantResponse>> createVariant(
-            @Parameter(in = ParameterIn.DEFAULT, description = "Tên phiên bản")
-            @RequestParam("name") @NotBlank String name,
-
-            @Parameter(in = ParameterIn.DEFAULT, description = "ID của Model")
-            @RequestParam("modelId") @NotNull Long modelId,
-
-            @Parameter(in = ParameterIn.DEFAULT, description = "Giá niêm yết (MSRP)")
-            @RequestParam("msrp") @NotNull BigDecimal msrp,
-
-            @Parameter(description = "File ảnh")
-            @RequestParam(value = "file", required = true) MultipartFile file) {
-
-            VehicleVariantRequest requestDto = new VehicleVariantRequest();
-            requestDto.setName(name);
-            requestDto.setModelId(modelId);
-            requestDto.setMsrp(msrp);
-
-        VehicleVariantResponse createdVariant = variantService.createVariant(requestDto, file);
+            @Valid @RequestBody VehicleVariantRequest requestDto 
+    ) {
+        // Gọi service (Service interface phải là createVariant(VehicleVariantRequest request))
+        VehicleVariantResponse createdVariant = variantService.createVariant(requestDto);
+        
         return ResponseEntity.ok(new ApiResponse<>(true, "Variant created successfully", createdVariant));
     }
 
@@ -74,27 +49,6 @@ public class VehicleVariantController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Variants retrieved successfully", variants));
     }
 
-    @GetMapping("/images/{filename:.+}")
-    public ResponseEntity<Resource> getImage(@PathVariable String filename) {
-        Resource file = fileStorageService.load(filename);
-        String contentType = "application/octet-stream"; // Mặc định
-        try {
-            // Cố gắng tự động xác định ContentType từ file
-            contentType = Files.probeContentType(file.getFile().toPath());
-        } catch (IOException e) {
-            log.error("Could not determine file type for variant image: {}", filename, e);
-        }
-
-        // Nếu không xác định được, vẫn dùng loại mặc định
-        if(contentType == null) {
-            contentType = "application/octet-stream";
-        }
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
-                .body(file);
-    }
 
     // 🟢 LẤY MỘT biến thể theo ID (với optional dealerId để lấy giá dealer)
     @GetMapping("/{id}")
@@ -106,30 +60,16 @@ public class VehicleVariantController {
     }
 
     // 🔄 CẬP NHẬT một biến thể
-    @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    @PutMapping(value = "/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<VehicleVariantResponse>> updateVariant(
-        @Parameter(description = "ID của Variant cần cập nhật") @PathVariable Long id,
-
-        @Parameter(in = ParameterIn.DEFAULT, description = "Tên phiên bản mới (tùy chọn)")
-        @RequestParam(value = "name", required = false) String name,
-
-        @Parameter(in = ParameterIn.DEFAULT, description = "ID Model mới (tùy chọn)")
-        @RequestParam(value = "modelId", required = false) Long modelId,
-
-        @Parameter(in = ParameterIn.DEFAULT, description = "Giá niêm yết mới (tùy chọn)")
-        @RequestParam(value = "msrp", required = false) BigDecimal msrp,
-
-        @Parameter(description = "File ảnh mới (tùy chọn)")
-        @RequestParam(value = "image", required = false) MultipartFile file) { 
-
-        VehicleVariantRequest requestDto = new VehicleVariantRequest();
-        if (name != null) requestDto.setName(name);
-        if (modelId != null) requestDto.setModelId(modelId);
-        if (msrp != null) requestDto.setMsrp(msrp);
-
-    VehicleVariantResponse updatedVariant = variantService.updateVariant(id, requestDto, file);
-    return ResponseEntity.ok(new ApiResponse<>(true, "Variant updated successfully", updatedVariant));
+            @PathVariable Long id,
+            @Valid @RequestBody VehicleVariantRequest requestDto 
+    ) {
+        
+        // Gọi service (Service interface phải là updateVariant(Long id, VehicleVariantRequest request))
+        VehicleVariantResponse updatedVariant = variantService.updateVariant(id, requestDto);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Variant updated successfully", updatedVariant));
     }
 
     // 🚫 DEACTIVATE a variant (soft delete)

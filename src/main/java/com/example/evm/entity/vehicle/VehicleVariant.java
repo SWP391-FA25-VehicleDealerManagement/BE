@@ -31,9 +31,6 @@ public class VehicleVariant {
     @Column(name = "name", nullable = false, length = 150)
     private String name; // Ví dụ: "VF 8 Eco", "VF 9 Plus"
 
-    @Column(name = "image", length = 500) 
-    private String imageUrl; // Hình ảnh variant
-
     @Column(name = "status", length = 50)
     private String status; // "ACTIVE", "INACTIVE" (soft delete)
 
@@ -45,9 +42,3 @@ public class VehicleVariant {
     @OneToOne(mappedBy = "variant", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private VehicleDetail detail;
 }
-
-
-
-
-
-
