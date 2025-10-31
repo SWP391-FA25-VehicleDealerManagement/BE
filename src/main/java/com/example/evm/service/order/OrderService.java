@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -103,8 +104,11 @@ public class OrderService {
                 String orderIdStr = "Order: " + order.getOrderId();
                 for (Debt debt : debts) {
                     if (debt.getNotes() != null && debt.getNotes().contains(orderIdStr)) {
-                        amountPaid = debt.getAmountPaid() != null ? debt.getAmountPaid().doubleValue() : 0.0;
-                        log.debug("✅ Found Debt for Order {}: amountPaid = {}", order.getOrderId(), amountPaid);
+                        // ✅ Nếu Debt có amountPaid > 0, dùng nó (đã bao gồm số tiền ban đầu + DebtPayments)
+                        if (debt.getAmountPaid() != null && debt.getAmountPaid().compareTo(BigDecimal.ZERO) > 0) {
+                            amountPaid = debt.getAmountPaid().doubleValue();
+                            log.debug("✅ Found Debt for Order {}: amountPaid = {}", order.getOrderId(), amountPaid);
+                        }
                         break;
                     }
                 }
@@ -113,7 +117,8 @@ public class OrderService {
             }
         }
         
-        // 2. Nếu chưa có Debt, kiểm tra Payment (cho các trường hợp khác hoặc Order không có customer)
+        // 2. Nếu Debt không tồn tại hoặc amountPaid = 0, kiểm tra Payment trực tiếp
+        // (Có thể Payment Pending chưa tạo Debt, hoặc Debt.amountPaid chưa được cập nhật)
         if (amountPaid == 0.0 || amountPaid == null) {
             try {
                 Payment payment = paymentRepository.findByOrderId(order.getOrderId()).orElse(null);
