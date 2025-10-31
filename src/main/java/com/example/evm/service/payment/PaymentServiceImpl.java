@@ -6,16 +6,11 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.example.evm.dto.payment.PaymentInfo;
 import com.example.evm.entity.payment.Payment;
 import com.example.evm.repository.order.OrderRepository;
 import com.example.evm.repository.payment.PaymentRepository;
-import com.example.evm.service.debt.DebtService;
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 @Service
 public class PaymentServiceImpl implements PaymentService {
 
@@ -24,8 +19,6 @@ public class PaymentServiceImpl implements PaymentService {
     private PaymentRepository paymentRepository;
     @Autowired
     private OrderRepository orderRepository;
-    @Autowired
-    private DebtService debtService;
 
     PaymentServiceImpl(VNPayService VNPayService) {
         this.VNPayService = VNPayService;
@@ -47,21 +40,7 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = new Payment();
         payment.setOrderId(paymentInfo.getOrderId());
         payment.setAmount(paymentInfo.getAmount());
-
-        // Normalize payment method from UI (vi/EN/case-insensitive)
-        String rawMethod = paymentInfo.getPaymentMethod() == null ? "" : paymentInfo.getPaymentMethod().trim();
-        String methodUpper = rawMethod.toUpperCase();
-        String normalized;
-        if (methodUpper.equals("CASH") || methodUpper.equals("TIEN MAT") || methodUpper.equals("TIỀN MẶT")) {
-            normalized = "CASH";
-        } else if (methodUpper.equals("TRANSFER") || methodUpper.equals("BANK_TRANSFER") || methodUpper.equals("CHUYEN KHOAN") || methodUpper.equals("CHUYỂN KHOẢN")) {
-            normalized = "TRANSFER";
-        } else {
-            // keep original but still fail below with helpful msg
-            normalized = rawMethod;
-        }
-
-        payment.setPaymentMethod(normalized);
+        payment.setPaymentMethod(paymentInfo.getPaymentMethod());
         payment.setPaymentType(paymentInfo.getPaymentType());
         payment.setPaymentId(null);
         if(payment.getPaymentDate() == null){
@@ -70,45 +49,15 @@ public class PaymentServiceImpl implements PaymentService {
         if(payment.getOrderId()!=null && !orderRepository.existsById(payment.getOrderId())){
             throw new IllegalArgumentException("Invalid order id "+payment.getOrderId());
         }
-        if (payment.getAmount() == null) {
-            throw new IllegalArgumentException("Amount is required");
-        }
-
            // Xử lý theo phương thức thanh toán
-        if ("CASH".equalsIgnoreCase(payment.getPaymentMethod())) {
+        if ("cash".equalsIgnoreCase(payment.getPaymentMethod())) {
             payment.setStatus("Completed"); // Hoàn thành ngay
-        } else if ("TRANSFER".equalsIgnoreCase(payment.getPaymentMethod())) {
+        } else if ("transfer".equalsIgnoreCase(payment.getPaymentMethod())) {
             payment.setStatus("Pending"); // Chờ VNPay xử lý
         } else {
             throw new IllegalArgumentException("Unsupported payment method: " + payment.getPaymentMethod());
         }
-        
-        Payment savedPayment = paymentRepository.save(payment);
-        
-        log.info("💰 Payment created: PaymentId={}, OrderId={}, Amount={}, Method={}, Type={}, Status={}", 
-                savedPayment.getPaymentId(), savedPayment.getOrderId(), savedPayment.getAmount(),
-                savedPayment.getPaymentMethod(), savedPayment.getPaymentType(), savedPayment.getStatus());
-        
-        // ✅ Tự động tạo Debt ngay khi tạo Payment INSTALLMENT (kể cả khi Pending)
-        // Điều này cho phép hiển thị amountPaid ngay lập tức
-        if (savedPayment.getPaymentType() != null && "INSTALLMENT".equalsIgnoreCase(savedPayment.getPaymentType())) {
-            try {
-                log.info("🔄 Auto-creating debt from INSTALLMENT payment (Pending): PaymentId={}, OrderId={}, Amount={}", 
-                        savedPayment.getPaymentId(), savedPayment.getOrderId(), savedPayment.getAmount());
-                debtService.autoCreateDebtFromPayment(savedPayment.getPaymentId());
-                log.info("✅ Debt created successfully for PaymentId={}", savedPayment.getPaymentId());
-            } catch (Exception e) {
-                log.error("⚠️ Failed to auto-create debt from INSTALLMENT payment {}: {}", 
-                        savedPayment.getPaymentId(), e.getMessage(), e);
-                log.error("⚠️ Exception details: ", e);
-                // Không throw exception để không làm gián đoạn payment creation
-            }
-        } else {
-            log.warn("⚠️ Payment {} is not INSTALLMENT type (paymentType={}), skipping debt creation", 
-                    savedPayment.getPaymentId(), savedPayment.getPaymentType());
-        }
-        
-        return savedPayment;
+        return paymentRepository.save(payment);
     }
 
     @Override
@@ -127,26 +76,11 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     // ✅ Cập nhật trạng thái thanh toán (dùng cho callback VNPay)
-    @Transactional
-    public Payment updatePaymentStatus(Long orderId, String status) {
-       Payment payment = paymentRepository.findByOrderId(orderId)
-        .orElseThrow(()-> new IllegalArgumentException("Payment with orderId " + orderId + " not found"));
+    public Payment updatePaymentStatus(Long paymentId, String status) {
+       Payment payment = paymentRepository.findById(paymentId)
+        .orElseThrow(()-> new IllegalArgumentException("Payment with paymentId " + paymentId + " not found"));
         payment.setStatus(status);
-        Payment savedPayment = paymentRepository.save(payment);
-        
-        // ✅ Tự động tạo Debt khi payment completed và paymentType = INSTALLMENT
-        if ("Completed".equalsIgnoreCase(status) && "INSTALLMENT".equalsIgnoreCase(payment.getPaymentType())) {
-            try {
-                log.info("🔄 Auto-creating debt from payment: PaymentId={}, OrderId={}, Amount={}, Type={}", 
-                        payment.getPaymentId(), orderId, payment.getAmount(), payment.getPaymentType());
-                debtService.autoCreateDebtFromPayment(payment.getPaymentId());
-            } catch (Exception e) {
-                log.error("⚠️ Failed to auto-create debt from payment {}: {}", payment.getPaymentId(), e.getMessage(), e);
-                // Không throw exception để không làm gián đoạn callback VNPay
-            }
-        }
-        
-        return savedPayment;
+        return paymentRepository.save(payment);
     }
 
     @Override
