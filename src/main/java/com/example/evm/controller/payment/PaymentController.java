@@ -58,7 +58,7 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<?>> createPayment( @RequestBody PaymentInfo paymentInfo) {
         try {
             Payment createPayment = paymentService.createPayment(paymentInfo);
-            if("TRANSFER".equalsIgnoreCase(createPayment.getPaymentMethod())){
+            if("TRANSFER".equalsIgnoreCase(paymentInfo.getPaymentMethod())){
                      //Nếu là chuyển khoản -> tạo link VNPay sandbox
                      String vnpayUrl= vnPayService.createVNPayUrl(createPayment);
                      return ResponseEntity.ok(new ApiResponse<>(true,"Redirect to VNPay",vnpayUrl));
@@ -89,15 +89,15 @@ public ResponseEntity<ApiResponse<String>> handleVNPayReturn(@RequestParam Map<S
                 .body(new ApiResponse<>(false,"Invalid VNPay signature",null)); 
         }
         
-        String orderId = decodedParams.get("vnp_TxnRef");
+        String paymentId = decodedParams.get("vnp_TxnRef");
         String responseCode = decodedParams.get("vnp_ResponseCode");
         String transactionStatus = decodedParams.get("vnp_TransactionStatus");
 
         if("00".equals(responseCode) && "00".equals(transactionStatus)){
-             paymentService.updatePaymentStatus(Long.parseLong(orderId),"Completed");
+             paymentService.updatePaymentStatus(Long.parseLong(paymentId),"Completed");
              return ResponseEntity.ok(new ApiResponse<>(true,"Payment completed successfully",null));
         }else{
-             paymentService.updatePaymentStatus(Long.parseLong(orderId), "Failed");
+             paymentService.updatePaymentStatus(Long.parseLong(paymentId), "Failed");
              return ResponseEntity.ok(new ApiResponse<>(false,"Payment failed or canceled",null));
         }
     } catch (Exception e) {
