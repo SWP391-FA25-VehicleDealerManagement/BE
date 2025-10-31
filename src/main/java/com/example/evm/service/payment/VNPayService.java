@@ -28,9 +28,9 @@ public class VNPayService {
         String vnp_Url = vnPayConfig.getPayUrl();
         String vnp_ReturnUrl = vnPayConfig.getReturnUrl();
 
-        String orderId = String.valueOf(payment.getOrderId());
+        String txnRef = String.valueOf(payment.getPaymentId());
         long amount = payment.getAmount().longValue() * 100; // VNPay yêu cầu nhân 100
-        String orderInfo = "Thanh toan don hang #" + orderId;
+        String orderInfo = "Thanh toan don hang #" + payment.getOrderId();
 
         Map<String, String> vnp_Params = new HashMap<>();
         vnp_Params.put("vnp_Version", "2.1.0");
@@ -38,7 +38,7 @@ public class VNPayService {
         vnp_Params.put("vnp_TmnCode", vnp_TmnCode);
         vnp_Params.put("vnp_Amount", String.valueOf(amount));
         vnp_Params.put("vnp_CurrCode", "VND");
-        vnp_Params.put("vnp_TxnRef", orderId);
+        vnp_Params.put("vnp_TxnRef", txnRef);
         vnp_Params.put("vnp_OrderInfo", orderInfo);
         vnp_Params.put("vnp_OrderType", "other");
         vnp_Params.put("vnp_Locale", "vn");
