@@ -6,11 +6,16 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.evm.dto.payment.PaymentInfo;
 import com.example.evm.entity.payment.Payment;
 import com.example.evm.repository.order.OrderRepository;
 import com.example.evm.repository.payment.PaymentRepository;
+import com.example.evm.service.debt.DebtService;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class PaymentServiceImpl implements PaymentService {
 
@@ -19,6 +24,8 @@ public class PaymentServiceImpl implements PaymentService {
     private PaymentRepository paymentRepository;
     @Autowired
     private OrderRepository orderRepository;
+    @Autowired
+    private DebtService debtService;
 
     PaymentServiceImpl(VNPayService VNPayService) {
         this.VNPayService = VNPayService;
@@ -75,7 +82,33 @@ public class PaymentServiceImpl implements PaymentService {
         } else {
             throw new IllegalArgumentException("Unsupported payment method: " + payment.getPaymentMethod());
         }
-        return paymentRepository.save(payment);
+        
+        Payment savedPayment = paymentRepository.save(payment);
+        
+        log.info("💰 Payment created: PaymentId={}, OrderId={}, Amount={}, Method={}, Type={}, Status={}", 
+                savedPayment.getPaymentId(), savedPayment.getOrderId(), savedPayment.getAmount(),
+                savedPayment.getPaymentMethod(), savedPayment.getPaymentType(), savedPayment.getStatus());
+        
+        // ✅ Tự động tạo Debt ngay khi tạo Payment INSTALLMENT (kể cả khi Pending)
+        // Điều này cho phép hiển thị amountPaid ngay lập tức
+        if (savedPayment.getPaymentType() != null && "INSTALLMENT".equalsIgnoreCase(savedPayment.getPaymentType())) {
+            try {
+                log.info("🔄 Auto-creating debt from INSTALLMENT payment (Pending): PaymentId={}, OrderId={}, Amount={}", 
+                        savedPayment.getPaymentId(), savedPayment.getOrderId(), savedPayment.getAmount());
+                debtService.autoCreateDebtFromPayment(savedPayment.getPaymentId());
+                log.info("✅ Debt created successfully for PaymentId={}", savedPayment.getPaymentId());
+            } catch (Exception e) {
+                log.error("⚠️ Failed to auto-create debt from INSTALLMENT payment {}: {}", 
+                        savedPayment.getPaymentId(), e.getMessage(), e);
+                log.error("⚠️ Exception details: ", e);
+                // Không throw exception để không làm gián đoạn payment creation
+            }
+        } else {
+            log.warn("⚠️ Payment {} is not INSTALLMENT type (paymentType={}), skipping debt creation", 
+                    savedPayment.getPaymentId(), savedPayment.getPaymentType());
+        }
+        
+        return savedPayment;
     }
 
     @Override
@@ -94,11 +127,26 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     // ✅ Cập nhật trạng thái thanh toán (dùng cho callback VNPay)
+    @Transactional
     public Payment updatePaymentStatus(Long orderId, String status) {
        Payment payment = paymentRepository.findByOrderId(orderId)
         .orElseThrow(()-> new IllegalArgumentException("Payment with orderId " + orderId + " not found"));
         payment.setStatus(status);
-        return paymentRepository.save(payment);
+        Payment savedPayment = paymentRepository.save(payment);
+        
+        // ✅ Tự động tạo Debt khi payment completed và paymentType = INSTALLMENT
+        if ("Completed".equalsIgnoreCase(status) && "INSTALLMENT".equalsIgnoreCase(payment.getPaymentType())) {
+            try {
+                log.info("🔄 Auto-creating debt from payment: PaymentId={}, OrderId={}, Amount={}, Type={}", 
+                        payment.getPaymentId(), orderId, payment.getAmount(), payment.getPaymentType());
+                debtService.autoCreateDebtFromPayment(payment.getPaymentId());
+            } catch (Exception e) {
+                log.error("⚠️ Failed to auto-create debt from payment {}: {}", payment.getPaymentId(), e.getMessage(), e);
+                // Không throw exception để không làm gián đoạn callback VNPay
+            }
+        }
+        
+        return savedPayment;
     }
 
     @Override

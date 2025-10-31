@@ -19,6 +19,10 @@ import com.example.evm.repository.customer.CustomerRepository;
 import com.example.evm.repository.dealer.DealerRepository;
 import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.promotion.PromotionRepository;
+import com.example.evm.repository.payment.PaymentRepository;
+import com.example.evm.repository.debt.DebtRepository;
+import com.example.evm.entity.payment.Payment;
+import com.example.evm.entity.debt.Debt;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,30 +44,111 @@ public class OrderService {
     private final DealerRepository dealerRepository;
     private final VehicleRepository vehicleRepository;
     private final PromotionRepository promotionRepository;
+    private final PaymentRepository paymentRepository;
+    private final DebtRepository debtRepository;
 
     public List<Order> getAllOrders() {
-        return orderRepository.findAll();
+        List<Order> orders = orderRepository.findAll();
+        enrichOrdersWithAmountPaid(orders);
+        return orders;
     }
 
     public List<Order> getOrdersByDealer(Long dealerId) {
-        return orderRepository.findByDealerDealerId(dealerId);
+        List<Order> orders = orderRepository.findByDealerDealerId(dealerId);
+        enrichOrdersWithAmountPaid(orders);
+        return orders;
     }
 
     public List<Order> getOrdersByCustomer(Long customerId) {
-        return orderRepository.findByCustomerCustomerId(customerId);
+        List<Order> orders = orderRepository.findByCustomerCustomerId(customerId);
+        enrichOrdersWithAmountPaid(orders);
+        return orders;
     }
 
     public List<Order> getOrdersByStatus(String status) {
-        return orderRepository.findByStatus(status);
+        List<Order> orders = orderRepository.findByStatus(status);
+        enrichOrdersWithAmountPaid(orders);
+        return orders;
     }
 
     public List<Order> getOrdersByDealerAndStatus(Long dealerId, String status) {
-        return orderRepository.findByDealerAndStatus(dealerId, status);
+        List<Order> orders = orderRepository.findByDealerAndStatus(dealerId, status);
+        enrichOrdersWithAmountPaid(orders);
+        return orders;
     }
 
     public Order getOrderById(Long id) {
-        return orderRepository.findById(id)
+        Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
+        calculateAmountPaidForOrder(order);
+        return order;
+    }
+
+    /**
+     * ✅ Tính số tiền đã thanh toán cho một Order
+     * Logic: Ưu tiên từ Debt (cho INSTALLMENT), sau đó từ Payment
+     */
+    private void calculateAmountPaidForOrder(Order order) {
+        Double amountPaid = 0.0;
+        
+        // 1. Kiểm tra Debt trước (cho INSTALLMENT payments - đã được tạo tự động)
+        if (order.getCustomer() != null && order.getDealer() != null) {
+            try {
+                List<Debt> debts = debtRepository.findByCustomerCustomerIdAndDealerDealerIdAndStatus(
+                        order.getCustomer().getCustomerId(),
+                        order.getDealer().getDealerId(),
+                        "ACTIVE"
+                );
+                // Tìm debt có notes chứa orderId
+                String orderIdStr = "Order: " + order.getOrderId();
+                for (Debt debt : debts) {
+                    if (debt.getNotes() != null && debt.getNotes().contains(orderIdStr)) {
+                        amountPaid = debt.getAmountPaid() != null ? debt.getAmountPaid().doubleValue() : 0.0;
+                        log.debug("✅ Found Debt for Order {}: amountPaid = {}", order.getOrderId(), amountPaid);
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("⚠️ Error checking Debt for Order {}: {}", order.getOrderId(), e.getMessage());
+            }
+        }
+        
+        // 2. Nếu chưa có Debt, kiểm tra Payment (cho các trường hợp khác hoặc Order không có customer)
+        if (amountPaid == 0.0 || amountPaid == null) {
+            try {
+                Payment payment = paymentRepository.findByOrderId(order.getOrderId()).orElse(null);
+                if (payment != null && payment.getAmount() != null) {
+                    // ✅ Tính từ Payment: Completed hoặc Pending đều tính (Pending đang chờ callback)
+                    if ("Completed".equalsIgnoreCase(payment.getStatus()) || 
+                        "Pending".equalsIgnoreCase(payment.getStatus())) {
+                        amountPaid = payment.getAmount().doubleValue();
+                        log.debug("✅ Found Payment for Order {}: status = {}, type = {}, amountPaid = {}", 
+                                order.getOrderId(), payment.getStatus(), payment.getPaymentType(), amountPaid);
+                    }
+                } else {
+                    log.debug("⚠️ No Payment found for Order {}", order.getOrderId());
+                }
+            } catch (Exception e) {
+                log.warn("⚠️ Error checking Payment for Order {}: {}", order.getOrderId(), e.getMessage());
+            }
+        }
+        
+        // 3. Đảm bảo amountPaid không null
+        if (amountPaid == null) {
+            amountPaid = 0.0;
+        }
+        
+        order.setAmountPaid(amountPaid);
+        log.debug("💰 Order {} final amountPaid = {}", order.getOrderId(), amountPaid);
+    }
+
+    /**
+     * ✅ Tính số tiền đã thanh toán cho danh sách Orders
+     */
+    private void enrichOrdersWithAmountPaid(List<Order> orders) {
+        for (Order order : orders) {
+            calculateAmountPaidForOrder(order);
+        }
     }
 
     public List<OrderDetail> getOrderDetails(Long orderId) {

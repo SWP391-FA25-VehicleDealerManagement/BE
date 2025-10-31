@@ -25,10 +25,10 @@ public class Order {
     @Column(name = "order_id")
     private Long orderId;
 
-    // Quan hệ với Customer
+    // Quan hệ với Customer (nullable cho đơn nội bộ dealer)
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
+    @JoinColumn(name = "customer_id", nullable = true)
     private Customer customer;
 
     // Quan hệ với User (nhân viên tạo đơn)
@@ -54,6 +54,10 @@ public class Order {
 
     @Column(name = "status", length = 50)
     private String status = "PENDING"; // PENDING, CONFIRMED, DELIVERED, CANCELLED
+
+    // ✅ Trường tạm để tính số tiền đã thanh toán (không lưu vào DB)
+    @Transient
+    private Double amountPaid = 0.0;
 
     // Quan hệ 1-nhiều với OrderDetail
     @JsonIgnore

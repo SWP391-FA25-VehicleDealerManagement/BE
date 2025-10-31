@@ -199,10 +199,17 @@ public class DebtService {
     private void generateDebtSchedule(Debt debt) {
         // Mặc định chia đều 12 tháng
         int numberOfPeriods = 12;
-        BigDecimal amount = debt.getAmountDue();
-        BigDecimal installment = amount.divide(BigDecimal.valueOf(numberOfPeriods), 2, RoundingMode.HALF_UP);
+        BigDecimal totalAmount = debt.getAmountDue();
+        BigDecimal amountPaid = debt.getAmountPaid() != null ? debt.getAmountPaid() : BigDecimal.ZERO;
+        
+        // ✅ Tính số tiền còn nợ (sau khi đã trả 20% đầu tiên)
+        BigDecimal remainingDebt = totalAmount.subtract(amountPaid);
+        BigDecimal installment = remainingDebt.divide(BigDecimal.valueOf(numberOfPeriods), 2, RoundingMode.HALF_UP);
     
-        BigDecimal remainingBalance = amount;
+        BigDecimal remainingBalance = remainingDebt;
+    
+        // ✅ Nếu đã có amountPaid (20% đầu tiên), cập nhật kỳ đầu tiên
+        boolean hasInitialPayment = amountPaid.compareTo(BigDecimal.ZERO) > 0;
     
         // Tạo từng kỳ trả nợ
         for (int i = 1; i <= numberOfPeriods; i++) {
@@ -226,7 +233,20 @@ public class DebtService {
             schedule.setInstallment(installment);
             schedule.setEndBalance(endBalance);
             schedule.setDueDate(LocalDate.now().plusMonths(i));
-            schedule.setStatus("PENDING");
+            
+            // ✅ Kỳ đầu tiên: Nếu đã thanh toán 20%, đánh dấu là PARTIAL hoặc PAID
+            if (i == 1 && hasInitialPayment) {
+                if (amountPaid.compareTo(installment) >= 0) {
+                    schedule.setPaidAmount(installment);
+                    schedule.setStatus("PAID");
+                    schedule.setPaymentDate(LocalDate.now());
+                } else {
+                    schedule.setPaidAmount(amountPaid);
+                    schedule.setStatus("PARTIAL");
+                }
+            } else {
+                schedule.setStatus("PENDING");
+            }
     
             debt.addDebtSchedule(schedule);
             remainingBalance = endBalance;
@@ -521,6 +541,10 @@ public class DebtService {
     /**
      * ✅ Tạo CUSTOMER_DEBT từ Payment (customer nợ dealer)
      * Flow: Dealer tạo Order cho customer → Customer thanh toán → Tự động tạo debt
+     * 
+     * Logic:
+     * - Nếu chưa có debt cho order này: Tạo mới với amountDue = Order.totalPrice, amountPaid = payment.amount (20%)
+     * - Nếu đã có debt: Cập nhật amountPaid += payment.amount
      */
     @Transactional
     public Debt createDebtFromPayment(Long paymentId) {
@@ -549,35 +573,69 @@ public class DebtService {
             throw new IllegalArgumentException("Order must have a dealer");
         }
         
-        // 6. Tạo CUSTOMER_DEBT (customer nợ dealer)
-        Debt debt = new Debt();
-        debt.setDebtType("CUSTOMER_DEBT");
-        debt.setCustomer(order.getCustomer()); // Customer nợ
-        debt.setDealer(order.getDealer()); // Dealer được trả
-        debt.setAmountDue(payment.getAmount());
-        debt.setAmountPaid(BigDecimal.ZERO);
-        debt.setPaymentMethod(payment.getPaymentMethod());
-        debt.setStatus("ACTIVE");
-        debt.setNotes("Auto-generated from Payment: " + paymentId + " - Order: " + order.getOrderId() + 
-                     " - Dealer: " + order.getDealer().getDealerName() + " - Customer: " + order.getCustomer().getCustomerName());
-        debt.setStartDate(LocalDateTime.now());
-        debt.setDueDate(LocalDateTime.now().plusMonths(12)); // 12 tháng trả góp
+        // 6. Kiểm tra xem đã có debt cho order này chưa (tìm theo notes chứa orderId)
+        String orderIdStr = "Order: " + order.getOrderId();
+        List<Debt> existingDebts = debtRepository.findByCustomerCustomerIdAndDealerDealerIdAndStatus(
+                order.getCustomer().getCustomerId(), 
+                order.getDealer().getDealerId(), 
+                "ACTIVE"
+        );
         
-        // 7. Tự động tạo lịch trả nợ 12 tháng
-        generateDebtSchedule(debt);
+        Debt debt = null;
+        for (Debt d : existingDebts) {
+            if (d.getNotes() != null && d.getNotes().contains(orderIdStr)) {
+                debt = d;
+                break;
+            }
+        }
         
-        // 8. Lưu Debt
-        Debt savedDebt = debtRepository.save(debt);
+        if (debt == null) {
+            // 7. Tạo CUSTOMER_DEBT mới (customer nợ dealer)
+            debt = new Debt();
+            debt.setDebtType("CUSTOMER_DEBT");
+            debt.setCustomer(order.getCustomer()); // Customer nợ
+            debt.setDealer(order.getDealer()); // Dealer được trả
+            
+            // ✅ FIX: amountDue = Order.totalPrice (toàn bộ số tiền), amountPaid = payment.amount (20% đã trả)
+            BigDecimal orderTotal = order.getTotalPrice() != null ? 
+                    BigDecimal.valueOf(order.getTotalPrice()) : payment.getAmount();
+            debt.setAmountDue(orderTotal);
+            debt.setAmountPaid(payment.getAmount()); // ✅ Đã thanh toán 20%
+            
+            debt.setPaymentMethod(payment.getPaymentMethod());
+            debt.setStatus("ACTIVE");
+            debt.setNotes("Auto-generated from Payment: " + paymentId + " - Order: " + order.getOrderId() + 
+                         " - Dealer: " + order.getDealer().getDealerName() + " - Customer: " + order.getCustomer().getCustomerName());
+            debt.setStartDate(LocalDateTime.now());
+            debt.setDueDate(LocalDateTime.now().plusMonths(12)); // 12 tháng trả góp
+            debt.setCreatedDate(LocalDateTime.now());
+            
+            // 8. Tự động tạo lịch trả nợ 12 tháng
+            generateDebtSchedule(debt);
+            
+            // 9. Lưu Debt
+            debt = debtRepository.save(debt);
+            
+            log.info("✅ CUSTOMER_DEBT created: Customer {} nợ Dealer {} - Total: {} - Paid: {} (20%) - Order: {} - Payment: {}", 
+                    order.getCustomer().getCustomerName(), order.getDealer().getDealerName(), 
+                    orderTotal, payment.getAmount(), order.getOrderId(), paymentId);
+        } else {
+            // 10. Cập nhật debt đã tồn tại: cộng thêm số tiền đã thanh toán
+            BigDecimal currentPaid = debt.getAmountPaid() != null ? debt.getAmountPaid() : BigDecimal.ZERO;
+            BigDecimal newPaid = currentPaid.add(payment.getAmount());
+            debt.setAmountPaid(newPaid);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debt = debtRepository.save(debt);
+            
+            log.info("✅ CUSTOMER_DEBT updated: Payment {} added - New total paid: {} / {} - Order: {}", 
+                    payment.getAmount(), newPaid, debt.getAmountDue(), order.getOrderId());
+        }
         
-        // Auto-fix rounding nếu cần
-        updateDebtStatusWithRounding(savedDebt, savedDebt.getAmountPaid());
-        debtRepository.save(savedDebt);
+        // 11. Auto-fix rounding nếu cần
+        updateDebtStatusWithRounding(debt, debt.getAmountPaid());
+        debt = debtRepository.save(debt);
         
-        log.info("✅ CUSTOMER_DEBT created: Customer {} nợ Dealer {} - Amount: {} - Order: {} - Payment: {}", 
-                order.getCustomer().getCustomerName(), order.getDealer().getDealerName(), 
-                payment.getAmount(), order.getOrderId(), paymentId);
-        
-        return savedDebt;
+        return debt;
     }
 
     /**

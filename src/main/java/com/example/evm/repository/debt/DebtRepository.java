@@ -78,6 +78,15 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     List<Debt> findByCustomerCustomerIdAndStatus(Long customerId, String status);
 
     /**
+     * 🔍 Lấy các khoản nợ của một khách hàng với một dealer cụ thể theo trạng thái.
+     * @param customerId ID của khách hàng.
+     * @param dealerId ID của đại lý.
+     * @param status Trạng thái nợ.
+     * @return Danh sách nợ theo khách hàng, dealer và trạng thái.
+     */
+    List<Debt> findByCustomerCustomerIdAndDealerDealerIdAndStatus(Long customerId, Long dealerId, String status);
+
+    /**
      * ⚠️ Lấy danh sách nợ quá hạn của một đại lý.
      * Điều kiện: dueDate <= ngày hiện tại và status = 'ACTIVE'.
      * @param dealerId ID của đại lý.
