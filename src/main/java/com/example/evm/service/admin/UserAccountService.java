@@ -39,6 +39,13 @@ public class UserAccountService {
             throw new IllegalArgumentException("Username already exists: " + request.getUsername());
         }
 
+        // Validate email format if provided
+        if (request.getEmail() != null && !request.getEmail().isEmpty()) {
+            if (!isValidEmail(request.getEmail())) {
+                throw new IllegalArgumentException("Invalid email format: " + request.getEmail());
+            }
+        }
+
         // Validate role (accept both with or without ROLE_ prefix)
         if (!isValidRole(request.getRole())) {
             throw new IllegalArgumentException(
@@ -116,6 +123,13 @@ public class UserAccountService {
         String r = role.trim();
         if (r.startsWith("ROLE_")) r = r.substring(5);
         return r.toUpperCase();
+    }
+
+    private boolean isValidEmail(String email) {
+        if (email == null || email.isEmpty()) return false;
+        // Simple email validation regex
+        String emailRegex = "^[A-Za-z0-9+_.-]+@([A-Za-z0-9.-]+\\.[A-Za-z]{2,})$";
+        return email.matches(emailRegex);
     }
 
     // ================== LẤY THÔNG TIN USER ACCOUNT ==================
