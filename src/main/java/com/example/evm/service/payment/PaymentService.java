@@ -16,7 +16,7 @@ Payment updatePayment(Payment payment);
 
  void deletePayment(Long id);   
 
- Payment updatePaymentStatus(Long orderId, String status);
+ Payment updatePaymentStatus(Long paymentId, String status);
 
  PaymentResponse createPaymentResponse(Payment payment);
 
