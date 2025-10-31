@@ -250,7 +250,7 @@ public class DebtService {
         
         // ✅ Chỉ chia cho số kỳ nếu remainingDebt > 0
         if (remainingDebt.compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn("⚠️ Remaining debt is {} (total={}, initialPayment={}) - Cannot generate schedule", 
+            log.warn(" Remaining debt is {} (total={}, initialPayment={}) - Cannot generate schedule", 
                     remainingDebt, totalAmount, initialPaymentAmount);
             return;
         }
@@ -307,6 +307,237 @@ public class DebtService {
         }
     }
 
+    /**
+     * ✅ Cập nhật lại start_balance và end_balance của các kỳ sau khi thanh toán
+     * Được gọi sau mỗi lần thanh toán được confirmed để đảm bảo các kỳ sau phản ánh đúng số tiền còn lại
+     */
+    @Transactional
+    private void updateDebtScheduleBalances(Debt debt) {
+        // 1. Tính tổng số tiền đã thanh toán
+        BigDecimal initialPaymentAmount = getInitialPaymentAmountFromOrder(debt);
+        BigDecimal totalConfirmedPayments = debtPaymentRepository.findByDebtDebtIdAndStatus(debt.getDebtId(), "CONFIRMED")
+                .stream()
+                .map(DebtPayment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalPaid = initialPaymentAmount.add(totalConfirmedPayments);
+        
+        // 2. Tính số tiền còn lại
+        BigDecimal totalAmount = debt.getAmountDue();
+        BigDecimal remainingDebt = totalAmount.subtract(totalPaid);
+        
+        // 3. Lấy tất cả schedules và sắp xếp theo period_no
+        List<DebtSchedule> schedules = debtScheduleRepository.findByDebtOrderByPeriodNo(debt.getDebtId());
+        if (schedules.isEmpty()) {
+            return;
+        }
+        
+        // 4. Tính số tiền mỗi kỳ (dựa trên số kỳ còn lại chưa thanh toán đầy đủ)
+        // Một kỳ được coi là đã thanh toán đầy đủ nếu: status = "PAID" VÀ paidAmount >= installment
+        long unpaidPeriods = schedules.stream()
+                .filter(s -> {
+                    BigDecimal sPaidAmount = s.getPaidAmount() != null ? s.getPaidAmount() : BigDecimal.ZERO;
+                    BigDecimal sRequiredAmount = s.getInstallment();
+                    return !("PAID".equals(s.getStatus()) && sPaidAmount.compareTo(sRequiredAmount) >= 0);
+                })
+                .count();
+        
+        if (unpaidPeriods == 0) {
+            // Đã thanh toán hết, tất cả kỳ đều PAID và đủ tiền
+            log.info("✅ All schedules are fully PAID for Debt {}", debt.getDebtId());
+            return;
+        }
+        
+        BigDecimal installmentPerPeriod = remainingDebt.divide(BigDecimal.valueOf(unpaidPeriods), 2, RoundingMode.HALF_UP);
+        
+        log.info("📊 Updating schedule balances for Debt {}: TotalPaid={}, Remaining={}, UnpaidPeriods={}, InstallmentPerPeriod={}", 
+                debt.getDebtId(), totalPaid, remainingDebt, unpaidPeriods, installmentPerPeriod);
+        
+        // 5. Cập nhật lại start_balance và end_balance cho tất cả các kỳ
+        // Tính lại currentBalance: bắt đầu từ số tiền còn lại (remainingDebt) - đây là số tiền sau khi đã thanh toán tất cả các kỳ trước
+        BigDecimal currentBalance = remainingDebt;
+        
+        // Tìm kỳ đầu tiên chưa thanh toán đầy đủ
+        long firstUnpaidPeriod = schedules.stream()
+                .filter(s -> {
+                    BigDecimal sPaidAmount = s.getPaidAmount() != null ? s.getPaidAmount() : BigDecimal.ZERO;
+                    BigDecimal sRequiredAmount = s.getInstallment();
+                    return !("PAID".equals(s.getStatus()) && sPaidAmount.compareTo(sRequiredAmount) >= 0);
+                })
+                .mapToLong(DebtSchedule::getPeriodNo)
+                .min()
+                .orElse(1L);
+        
+        // Tìm kỳ cuối cùng chưa thanh toán đầy đủ
+        long lastUnpaidPeriod = schedules.stream()
+                .filter(s -> {
+                    BigDecimal sPaidAmount = s.getPaidAmount() != null ? s.getPaidAmount() : BigDecimal.ZERO;
+                    BigDecimal sRequiredAmount = s.getInstallment();
+                    return !("PAID".equals(s.getStatus()) && sPaidAmount.compareTo(sRequiredAmount) >= 0);
+                })
+                .mapToLong(DebtSchedule::getPeriodNo)
+                .max()
+                .orElse((long) schedules.size());
+        
+        for (DebtSchedule schedule : schedules) {
+            // Kiểm tra kỳ đã thanh toán đầy đủ: status = "PAID" VÀ paidAmount >= installment
+            BigDecimal paidAmount = schedule.getPaidAmount() != null ? schedule.getPaidAmount() : BigDecimal.ZERO;
+            BigDecimal requiredAmount = schedule.getInstallment();
+            boolean isFullyPaid = "PAID".equals(schedule.getStatus()) && paidAmount.compareTo(requiredAmount) >= 0;
+            
+            if (isFullyPaid) {
+                // Kỳ đã thanh toán đầy đủ: cập nhật end_balance dựa trên paid_amount
+                // Không thay đổi start_balance và paid_amount
+                BigDecimal scheduleStartBalance = schedule.getStartBalance() != null ? schedule.getStartBalance() : BigDecimal.ZERO;
+                
+                // Tính end_balance = start_balance - paid_amount
+                BigDecimal newEndBalance = scheduleStartBalance.subtract(paidAmount).setScale(2, RoundingMode.HALF_UP);
+                if (newEndBalance.compareTo(BigDecimal.ZERO) < 0) {
+                    newEndBalance = BigDecimal.ZERO;
+                }
+                schedule.setEndBalance(newEndBalance);
+                
+                // Cập nhật currentBalance cho kỳ tiếp theo
+                currentBalance = newEndBalance;
+            } else {
+                // Kỳ chưa thanh toán: cập nhật lại start_balance và end_balance
+                // start_balance = currentBalance (từ end_balance của kỳ trước, hoặc remainingDebt nếu là kỳ đầu tiên chưa thanh toán)
+                if (schedule.getPeriodNo() == firstUnpaidPeriod) {
+                    // Kỳ đầu tiên chưa thanh toán: start_balance = remainingDebt
+                    schedule.setStartBalance(remainingDebt);
+                    currentBalance = remainingDebt;
+                } else {
+                    // Kỳ sau: start_balance = end_balance của kỳ trước
+                    schedule.setStartBalance(currentBalance);
+                }
+                
+                BigDecimal principal;
+                if (schedule.getPeriodNo() == lastUnpaidPeriod) {
+                    // Kỳ cuối cùng chưa thanh toán: điều chỉnh để end_balance = 0
+                    principal = currentBalance;
+                } else {
+                    principal = installmentPerPeriod;
+                }
+                
+                BigDecimal endBalance = currentBalance.subtract(principal).setScale(2, RoundingMode.HALF_UP);
+                if (endBalance.compareTo(BigDecimal.ZERO) < 0) {
+                    endBalance = BigDecimal.ZERO;
+                }
+                
+                schedule.setPrincipal(principal);
+                schedule.setEndBalance(endBalance);
+                schedule.setInstallment(installmentPerPeriod);
+                
+                // ✅ Cập nhật status cho kỳ chưa thanh toán đầy đủ
+                // Sử dụng installmentPerPeriod (giá trị mới sau khi tính lại) để so sánh với paidAmount
+                // Nếu kỳ có status = "PAID" nhưng paidAmount < installment, cập nhật lại status
+                BigDecimal newRequiredAmount = schedule.getPeriodNo() == lastUnpaidPeriod ? principal : installmentPerPeriod;
+                if (paidAmount.compareTo(BigDecimal.ZERO) > 0) {
+                    if (paidAmount.compareTo(newRequiredAmount) >= 0) {
+                        schedule.setStatus("PAID");
+                        schedule.setPaymentDate(LocalDate.now());
+                    } else {
+                        schedule.setStatus("PARTIAL");
+                    }
+                } else {
+                    schedule.setStatus("PENDING");
+                }
+                
+                // Cập nhật currentBalance cho kỳ tiếp theo
+                currentBalance = endBalance;
+            }
+            
+            debtScheduleRepository.save(schedule);
+        }
+        
+        log.info("✅ Updated all schedule balances for Debt {}", debt.getDebtId());
+    }
+
+    /**
+     * ✅ Tự động dồn số tiền dư từ kỳ đã thanh toán sang các kỳ tiếp theo
+     * Được gọi sau khi một payment được confirmed và có scheduleId
+     * @param currentSchedule Kỳ hiện tại đã được thanh toán
+     * @param newTotalPaidAmount Tổng số tiền đã thanh toán của kỳ này (bao gồm paymentAmount mới)
+     */
+    @Transactional
+    private void applyOverpaymentToNextPeriods(DebtSchedule currentSchedule, BigDecimal newTotalPaidAmount) {
+        BigDecimal requiredAmount = currentSchedule.getInstallment();
+        BigDecimal overpayment = newTotalPaidAmount.subtract(requiredAmount);
+        
+        // Nếu không có dư, không cần làm gì
+        if (overpayment.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        
+        log.info("💰 Overpayment detected for Schedule {}: TotalPaid={}, Required={}, Overpayment={}", 
+                currentSchedule.getScheduleId(), newTotalPaidAmount, requiredAmount, overpayment);
+        
+        // Lấy tất cả các kỳ chưa thanh toán đầy đủ, sắp xếp theo period_no
+        // Bao gồm cả các kỳ có status = "PAID" nhưng paidAmount < installment (trường hợp lỗi dữ liệu)
+        List<DebtSchedule> unpaidSchedules = debtScheduleRepository.findByDebtOrderByPeriodNo(currentSchedule.getDebt().getDebtId())
+                .stream()
+                .filter(s -> {
+                    if (s.getPeriodNo() <= currentSchedule.getPeriodNo()) {
+                        return false; // Chỉ lấy các kỳ sau kỳ hiện tại
+                    }
+                    // Lấy các kỳ chưa thanh toán đầy đủ
+                    BigDecimal sPaidAmount = s.getPaidAmount() != null ? s.getPaidAmount() : BigDecimal.ZERO;
+                    BigDecimal sRequiredAmount = s.getInstallment();
+                    return sPaidAmount.compareTo(sRequiredAmount) < 0;
+                })
+                .collect(java.util.stream.Collectors.toList());
+        
+        if (unpaidSchedules.isEmpty()) {
+            log.warn("⚠️ No future unpaid schedules found to apply overpayment");
+            return;
+        }
+        
+        // Áp dụng số tiền dư cho các kỳ tiếp theo
+        BigDecimal remainingOverpayment = overpayment;
+        for (DebtSchedule nextSchedule : unpaidSchedules) {
+            if (remainingOverpayment.compareTo(BigDecimal.ZERO) <= 0) {
+                break;
+            }
+            
+            BigDecimal nextRequiredAmount = nextSchedule.getInstallment();
+            BigDecimal nextCurrentPaid = nextSchedule.getPaidAmount() != null ? nextSchedule.getPaidAmount() : BigDecimal.ZERO;
+            BigDecimal nextRemaining = nextRequiredAmount.subtract(nextCurrentPaid);
+            
+            if (nextRemaining.compareTo(BigDecimal.ZERO) > 0) {
+                // Áp dụng số tiền dư cho kỳ này
+                BigDecimal amountToApply = remainingOverpayment.min(nextRemaining);
+                BigDecimal newPaidAmount = nextCurrentPaid.add(amountToApply);
+                nextSchedule.setPaidAmount(newPaidAmount);
+                
+                // Cập nhật status
+                if (newPaidAmount.compareTo(nextRequiredAmount) >= 0) {
+                    nextSchedule.setStatus("PAID");
+                    nextSchedule.setPaymentDate(LocalDate.now());
+                    log.info("✅ Schedule {} (Period {}) is now PAID from overpayment: {} / {}", 
+                            nextSchedule.getScheduleId(), nextSchedule.getPeriodNo(), newPaidAmount, nextRequiredAmount);
+                } else {
+                    nextSchedule.setStatus("PARTIAL");
+                    log.info("💰 Schedule {} (Period {}) updated from overpayment: {} / {} (remaining: {})", 
+                            nextSchedule.getScheduleId(), nextSchedule.getPeriodNo(), newPaidAmount, nextRequiredAmount, 
+                            nextRequiredAmount.subtract(newPaidAmount));
+                }
+                
+                debtScheduleRepository.save(nextSchedule);
+                remainingOverpayment = remainingOverpayment.subtract(amountToApply);
+            }
+        }
+        
+        // Điều chỉnh lại paidAmount của kỳ hiện tại để bằng đúng requiredAmount
+        // (phần dư đã được áp dụng cho các kỳ tiếp theo)
+        currentSchedule.setPaidAmount(requiredAmount);
+        debtScheduleRepository.save(currentSchedule);
+        
+        if (remainingOverpayment.compareTo(BigDecimal.ZERO) > 0) {
+            log.warn("⚠️ Remaining overpayment {} could not be applied to any future periods", remainingOverpayment);
+        } else {
+            log.info("✅ All overpayment applied to future periods");
+        }
+    }
+
     // ================== XỬ LÝ THANH TOÁN ==================
     
     /**
@@ -344,14 +575,16 @@ public class DebtService {
      */
     @Transactional
     public DebtPayment makePayment(Long debtId, CreateDebtPaymentRequest request) {
-        // 1. Lấy khoản nợ cần thanh toán
+        // 1. Lấy khoản nợ cần thanh toán (sẽ recalculate amountPaid)
         Debt debt = getDebtById(debtId);
 
         // 2. Validate: Kiểm tra số tiền thanh toán không vượt quá số tiền còn nợ
+        // Dùng amountPaid đã được recalculate (bao gồm initial payment + confirmed payments)
         BigDecimal currentPaid = debt.getAmountPaid() != null ? debt.getAmountPaid() : BigDecimal.ZERO;
         BigDecimal remainingAmount = debt.getAmountDue().subtract(currentPaid);
         
-        if (request.getAmount().compareTo(remainingAmount) > 0) {
+        // Cho phép thanh toán với sai số nhỏ do rounding (0.01)
+        if (request.getAmount().subtract(remainingAmount).compareTo(new BigDecimal("0.01")) > 0) {
             throw new IllegalArgumentException(
                 String.format("Số tiền thanh toán (%,.0f) vượt quá số tiền còn nợ (%,.0f)", 
                     request.getAmount().doubleValue(), remainingAmount.doubleValue())
@@ -391,12 +624,6 @@ public class DebtService {
             }
             
             payment.setDebtSchedule(schedule);
-            
-            // Update schedule status nếu đã đủ tiền
-            if (payment.getAmount().compareTo(schedule.getInstallment()) >= 0) {
-                schedule.setStatus("PAID");
-                debtScheduleRepository.save(schedule);
-            }
         }
 
         // 5. Lưu payment
@@ -423,6 +650,9 @@ public class DebtService {
                     schedule.setStatus("PARTIAL");
                 }
                 debtScheduleRepository.save(schedule);
+                
+                // ✅ Tự động dồn số tiền dư sang các kỳ tiếp theo
+                applyOverpaymentToNextPeriods(schedule, newPaidAmount);
             }
             
             // Cập nhật Debt.amount_paid: Số tiền ban đầu từ Payment + tổng DebtPayments CONFIRMED
@@ -437,6 +667,9 @@ public class DebtService {
             updateDebtStatusWithRounding(debt, newAmountPaid);
             debt.setUpdatedDate(LocalDateTime.now());
             debtRepository.save(debt);
+            
+            // ✅ Cập nhật lại start_balance và end_balance của các kỳ sau khi thanh toán
+            updateDebtScheduleBalances(debt);
             
             log.info("✅ Payment auto-CONFIRMED (CASH): Debt {} - Amount: {} - Total paid: {} / {} - Reference: {}", 
                     debtId, savedPayment.getAmount(), newAmountPaid, debt.getAmountDue(), savedPayment.getReferenceNumber());
@@ -497,6 +730,9 @@ public class DebtService {
             }
             
             debtScheduleRepository.save(schedule);
+            
+            // ✅ Tự động dồn số tiền dư sang các kỳ tiếp theo
+            applyOverpaymentToNextPeriods(schedule, newPaidAmount);
         }
         
         // 6. Cập nhật số tiền đã thanh toán vào Debt
@@ -521,6 +757,9 @@ public class DebtService {
         
         debt.setUpdatedDate(LocalDateTime.now());
         debtRepository.save(debt);
+        
+        // ✅ Cập nhật lại start_balance và end_balance của các kỳ sau khi thanh toán
+        updateDebtScheduleBalances(debt);
         
         log.info("✅ Payment CONFIRMED: Payment {} - Debt {} - Amount: {} - Total paid: {} / {} - By: {}", 
                 paymentId, debtId, payment.getAmount(), newAmountPaid, debt.getAmountDue(), confirmedBy);
