@@ -1,16 +1,24 @@
 package com.example.evm.controller.inventory;
 
-import com.example.evm.dto.inventory.InventoryResponse;
-import com.example.evm.entity.inventory.InventoryStock;
+import com.example.evm.dto.auth.ApiResponse;
+import com.example.evm.dto.inventory.AllocationResponse;
 import com.example.evm.service.inventory.InventoryService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
+/**
+ * Controller InventoryController - APIs allocate/recall xe
+ * 
+ * Endpoints:
+ * - POST /api/inventory/allocate - Phân bổ xe từ kho tổng cho dealer
+ * - POST /api/inventory/recall - Thu hồi xe từ dealer về kho tổng
+ */
+@Slf4j
 @RestController
 @RequestMapping("/api/inventory")
 @RequiredArgsConstructor
@@ -18,48 +26,74 @@ public class InventoryController {
 
     private final InventoryService inventoryService;
 
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EVM_STAFF', 'ROLE_DEALER_STAFF', 'ROLE_DEALER_MANAGER')")
-    @GetMapping
-    public ResponseEntity<List<InventoryResponse>> getAll() {
-        return ResponseEntity.ok(inventoryService.getAll());
-    }
-
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EVM_STAFF')")
-    @PostMapping
-    public ResponseEntity<String> addStock(@RequestBody InventoryStock stock) {
-        inventoryService.addStock(stock);
-        return ResponseEntity.ok("Inventory added successfully");
-    }
-
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EVM_STAFF')")
-    @PutMapping("/{id}")
-    public ResponseEntity<String> updateStock(@PathVariable Integer id, @RequestBody InventoryStock stock) {
-        inventoryService.updateStock(id, stock);
-        return ResponseEntity.ok("Inventory updated successfully");
-    }
-
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EVM_STAFF')")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteStock(@PathVariable Integer id) {
-        inventoryService.deleteStock(id);
-        return ResponseEntity.ok("Inventory deleted successfully");
-    }
-
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EVM_STAFF')")
+    /**
+     * Phân bổ xe từ kho tổng cho dealer
+     * 
+     * Request body:
+     * {
+     *   "dealerId": 1,
+     *   "variantId": 6,
+     *   "color": "Red",
+     *   "quantity": 5
+     * }
+     */
     @PostMapping("/allocate")
-    public ResponseEntity<Map<String, String>> allocateVehicle(@RequestBody Map<String, Integer> request) {
-        String message = inventoryService.allocateVehicleToDealer(
-                request.get("vehicleId"), request.get("dealerId"), request.get("quantity")
-        );
-        return ResponseEntity.ok(Map.of("message", message));
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<AllocationResponse>> allocateVehicles(
+            @RequestBody Map<String, Object> request) {
+        
+        Long dealerId = Long.valueOf(request.get("dealerId").toString());
+        Long variantId = Long.valueOf(request.get("variantId").toString());
+        String color = request.get("color").toString();
+        Integer quantity = Integer.valueOf(request.get("quantity").toString());
+        
+        log.info("Allocating {} vehicles (variant: {}, color: {}) to dealer {}", 
+                quantity, variantId, color, dealerId);
+        
+        try {
+            AllocationResponse response = inventoryService.allocateVehiclesToDealer(
+                    dealerId, variantId, color, quantity);
+            return ResponseEntity.ok(new ApiResponse<>(true,
+                    "Vehicles allocated successfully", response));
+        } catch (IllegalStateException ex) {
+            // Trả về thông báo không đủ số lượng và số lượng còn lại trong kho (đã có trong message)
+            return ResponseEntity.badRequest().body(new ApiResponse<>(
+                    false,
+                    ex.getMessage(),
+                    null
+            ));
+        }
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EVM_STAFF')")
+    /**
+     * Thu hồi xe từ dealer về kho tổng
+     * 
+     * Request body:
+     * {
+     *   "dealerId": 1,
+     *   "variantId": 6,
+     *   "color": "Red",
+     *   "quantity": 3
+     * }
+     */
     @PostMapping("/recall")
-    public ResponseEntity<Map<String, String>> recallVehicle(@RequestBody Map<String, Integer> request) {
-        String message = inventoryService.recallVehicleFromDealer(
-                request.get("vehicleId"), request.get("dealerId"), request.get("quantity")
-        );
-        return ResponseEntity.ok(Map.of("message", message));
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<String>> recallVehicles(
+            @RequestBody Map<String, Object> request) {
+        
+        Long dealerId = Long.valueOf(request.get("dealerId").toString());
+        Long variantId = Long.valueOf(request.get("variantId").toString());
+        String color = request.get("color").toString();
+        Integer quantity = Integer.valueOf(request.get("quantity").toString());
+        
+        log.info("Recalling {} vehicles (variant: {}, color: {}) from dealer {}", 
+                quantity, variantId, color, dealerId);
+        
+        inventoryService.recallVehiclesFromDealer(dealerId, variantId, color, quantity);
+        
+        String message = String.format("✅ Successfully recalled %d vehicles from dealer", quantity);
+        
+        return ResponseEntity.ok(new ApiResponse<>(true, message, message));
     }
 }
+

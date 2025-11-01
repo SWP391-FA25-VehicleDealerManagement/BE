@@ -2,9 +2,10 @@ package com.example.evm.service.admin;
 
 import com.example.evm.dto.admin.CreateUserAccountRequest;
 import com.example.evm.dto.admin.CreateUserAccountResponse;
+import com.example.evm.dto.admin.UserAccountInfoResponse;
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.user.User;
-import com.example.evm.repository.UserRepository;
+import com.example.evm.repository.auth.UserRepository;
 import com.example.evm.repository.dealer.DealerRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,10 +39,17 @@ public class UserAccountService {
             throw new IllegalArgumentException("Username already exists: " + request.getUsername());
         }
 
-        // Validate role
+        // Validate email format if provided
+        if (request.getEmail() != null && !request.getEmail().isEmpty()) {
+            if (!isValidEmail(request.getEmail())) {
+                throw new IllegalArgumentException("Invalid email format: " + request.getEmail());
+            }
+        }
+
+        // Validate role (accept both with or without ROLE_ prefix)
         if (!isValidRole(request.getRole())) {
             throw new IllegalArgumentException(
-                    "Invalid role. Supported roles: ROLE_DEALER_STAFF, ROLE_DEALER_MANAGER, ROLE_EVM_STAFF");
+                    "Invalid role. Supported roles: DEALER_STAFF, DEALER_MANAGER, EVM_STAFF");
         }
 
         // Nếu role là DEALER_STAFF hoặc DEALER_MANAGER thì cần dealerId
@@ -64,7 +72,7 @@ public class UserAccountService {
             user.setFullName(request.getFullName());
             user.setPhone(request.getPhone());
             user.setEmail(request.getEmail());
-            user.setRole(request.getRole());
+            user.setRole(normalizeRole(request.getRole()));
             user.setCreatedDate(LocalDateTime.now());
 
             // Nếu là dealer role thì set dealer
@@ -76,13 +84,14 @@ public class UserAccountService {
             User savedUser = userRepository.save(user);
             log.info("Created user: {} with role: {}", savedUser.getUserName(), savedUser.getRole());
 
-            // Tạo response
+            // Tạo response - ✅ KHÔNG bao gồm password
             CreateUserAccountResponse response = new CreateUserAccountResponse();
             response.setUserId(savedUser.getUserId());
             response.setUsername(savedUser.getUserName());
             response.setRole(savedUser.getRole());
             response.setFullName(savedUser.getFullName());
             response.setEmail(savedUser.getEmail());
+            response.setPhone(savedUser.getPhone());  // ✅ Thêm phone
 
             if (savedUser.getDealer() != null) {
                 response.setDealerId(savedUser.getDealer().getDealerId());
@@ -100,12 +109,104 @@ public class UserAccountService {
     }
 
     private boolean isValidRole(String role) {
-        return "ROLE_DEALER_STAFF".equals(role) ||
-                "ROLE_DEALER_MANAGER".equals(role) ||
-                "ROLE_EVM_STAFF".equals(role);
+        String r = normalizeRole(role);
+        return "DEALER_STAFF".equals(r) || "DEALER_MANAGER".equals(r) || "EVM_STAFF".equals(r);
     }
 
     private boolean isDealerRole(String role) {
-        return "ROLE_DEALER_STAFF".equals(role) || "ROLE_DEALER_MANAGER".equals(role);
+        String r = normalizeRole(role);
+        return "DEALER_STAFF".equals(r) || "DEALER_MANAGER".equals(r);
+    }
+
+    private String normalizeRole(String role) {
+        if (role == null) return null;
+        String r = role.trim();
+        if (r.startsWith("ROLE_")) r = r.substring(5);
+        return r.toUpperCase();
+    }
+
+    private boolean isValidEmail(String email) {
+        if (email == null || email.isEmpty()) return false;
+        // Simple email validation regex
+        String emailRegex = "^[A-Za-z0-9+_.-]+@([A-Za-z0-9.-]+\\.[A-Za-z]{2,})$";
+        return email.matches(emailRegex);
+    }
+
+    // ================== LẤY THÔNG TIN USER ACCOUNT ==================
+
+    /**
+     * Lấy thông tin user account theo ID
+     */
+    public UserAccountInfoResponse getUserAccountById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
+        
+        return convertToInfoResponse(user);
+    }
+
+    /**
+     * Lấy danh sách tất cả user accounts của dealer
+     */
+    public java.util.List<UserAccountInfoResponse> getDealerAccounts(Long dealerId) {
+        // Verify dealer exists
+        dealerRepository.findById(dealerId)
+                .orElseThrow(() -> new IllegalArgumentException("Dealer not found with id: " + dealerId));
+        
+        java.util.List<User> users = userRepository.findByDealerDealerId(dealerId);
+        
+        return users.stream()
+                .map(this::convertToInfoResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Lấy thông tin DEALER_MANAGER của dealer
+     */
+    public UserAccountInfoResponse getDealerManager(Long dealerId) {
+        // Verify dealer exists
+        dealerRepository.findById(dealerId)
+                .orElseThrow(() -> new IllegalArgumentException("Dealer not found with id: " + dealerId));
+        
+        User manager = userRepository.findByDealerIdAndRole(dealerId, "DEALER_MANAGER")
+                .orElseThrow(() -> new IllegalArgumentException("Dealer manager not found for dealer id: " + dealerId));
+        
+        return convertToInfoResponse(manager);
+    }
+
+    /**
+     * Lấy danh sách DEALER_STAFF của dealer
+     */
+    public java.util.List<UserAccountInfoResponse> getDealerStaff(Long dealerId) {
+        // Verify dealer exists
+        dealerRepository.findById(dealerId)
+                .orElseThrow(() -> new IllegalArgumentException("Dealer not found with id: " + dealerId));
+        
+        java.util.List<User> staff = userRepository.findByDealerDealerIdAndRole(dealerId, "DEALER_STAFF");
+        
+        return staff.stream()
+                .map(this::convertToInfoResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Convert User entity to UserAccountInfoResponse (không bao gồm password)
+     */
+    private UserAccountInfoResponse convertToInfoResponse(User user) {
+        UserAccountInfoResponse response = new UserAccountInfoResponse();
+        response.setUserId(user.getUserId());
+        response.setUsername(user.getUserName());
+        response.setRole(user.getRole());
+        response.setFullName(user.getFullName());
+        response.setEmail(user.getEmail());
+        response.setPhone(user.getPhone());
+        response.setCreatedDate(user.getCreatedDate());
+        response.setDateModified(user.getDateModified());
+        
+        if (user.getDealer() != null) {
+            response.setDealerId(user.getDealer().getDealerId());
+            response.setDealerName(user.getDealer().getDealerName());
+        }
+        
+        return response;
     }
 }

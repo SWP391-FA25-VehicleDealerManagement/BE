@@ -1,5 +1,6 @@
 package com.example.evm.entity.order;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,17 +25,20 @@ public class Order {
     @Column(name = "order_id")
     private Long orderId;
 
-    // Quan hệ với Customer
+    // Quan hệ với Customer (nullable cho đơn nội bộ dealer)
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
+    @JoinColumn(name = "customer_id", nullable = true)
     private Customer customer;
 
     // Quan hệ với User (nhân viên tạo đơn)
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     // Quan hệ với Dealer
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id", nullable = false)
     private Dealer dealer;
@@ -51,11 +55,16 @@ public class Order {
     @Column(name = "status", length = 50)
     private String status = "PENDING"; // PENDING, CONFIRMED, DELIVERED, CANCELLED
 
+    // ✅ Trường tạm để tính số tiền đã thanh toán (không lưu vào DB)
+    @Transient
+    private Double amountPaid = 0.0;
+
     // Quan hệ 1-nhiều với OrderDetail
+    @JsonIgnore
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderDetail> orderDetails = new ArrayList<>();
 
-    @PrePersist
+    @PrePersist 
     protected void onCreate() {
         if (createdDate == null) {
             createdDate = LocalDateTime.now();
@@ -77,5 +86,39 @@ public class Order {
         return orderDetails.stream()
                 .mapToDouble(detail -> detail.getPrice() * detail.getQuantity())
                 .sum();
+    }
+
+    // Helper methods để expose ID
+    public Long getCustomerId() {
+        return customer != null ? customer.getCustomerId() : null;
+    }
+
+    public Long getUserId() {
+        return user != null ? user.getUserId() : null;
+    }
+
+    public Long getDealerId() {
+        return dealer != null ? dealer.getDealerId() : null;
+    }
+
+    // Override getter methods để thêm @JsonIgnore  
+    @JsonIgnore
+    public Customer getCustomer() {
+        return customer;
+    }
+
+    @JsonIgnore
+    public User getUser() {
+        return user;
+    }
+
+    @JsonIgnore
+    public Dealer getDealer() {
+        return dealer;
+    }
+
+    @JsonIgnore
+    public List<OrderDetail> getOrderDetails() {
+        return orderDetails;
     }
 }

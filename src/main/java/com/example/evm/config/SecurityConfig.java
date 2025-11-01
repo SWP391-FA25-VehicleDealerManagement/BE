@@ -25,11 +25,12 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)      // enables @PreAuthorize
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final CustomUserDetailsService userDetailsService;
+    // ✅ Inject CustomUserDetailsService, không phải UserProfileService
+    private final CustomUserDetailsService customUserDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     // ✅ Các endpoint Swagger cần cho phép public
@@ -49,6 +50,11 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+
+                .requestMatchers("/api/vehicles/images/**").permitAll()
+
+                .requestMatchers("/api/variants/images/**").permitAll()
+
                 // Cho phép preflight request
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
@@ -56,16 +62,17 @@ public class SecurityConfig {
                 .requestMatchers(SWAGGER_WHITELIST).permitAll()
 
                 // ✅ Cho phép auth endpoints không cần JWT (trừ /me)
-                .requestMatchers("/api/auth/login", "/api/auth/logout", "/api/test/**", "/actuator/health", "/health")
+                .requestMatchers("/api/auth/login", "/api/auth/logout")
                     .permitAll()
                 
                 // ✅ /api/auth/me cần JWT
                 .requestMatchers("/api/auth/me").authenticated()
+                 
+                .requestMatchers("/api/payments/vnpay_return").permitAll()
 
                 // ✅ Các request khác phải có JWT
                 .anyRequest().authenticated()
             )
-            // Không disable anonymous nữa (cho Swagger load tài nguyên khi chưa auth)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
@@ -98,7 +105,8 @@ public class SecurityConfig {
     @Bean
     public DaoAuthenticationProvider daoAuthenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
+        // ✅ Sử dụng customUserDetailsService
+        provider.setUserDetailsService(customUserDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }

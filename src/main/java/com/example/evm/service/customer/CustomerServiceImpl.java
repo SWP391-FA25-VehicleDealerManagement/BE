@@ -1,22 +1,25 @@
 package com.example.evm.service.customer;
 
 import com.example.evm.entity.customer.Customer;
+import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.repository.customer.CustomerRepository;
 import com.example.evm.repository.dealer.DealerRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
 
-    @Autowired
-    private CustomerRepository customerRepository;
-
-    @Autowired
-    private DealerRepository dealerRepository;
+    private final CustomerRepository customerRepository;
+    private final DealerRepository dealerRepository;
 
     @Override
     public List<Customer> getAllCustomers() {
@@ -25,31 +28,68 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public Customer getCustomerById(Long id) {
-        Optional<Customer> customer = customerRepository.findById(id);
-        return customer.orElse(null);
+        return customerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
     }
 
     @Override
+    @Transactional
     public Customer createCustomer(Customer customer) {
+        // ✅ Backend tự tạo ID
+        customer.setCustomerId(null);
+        
+        // Validate dealer exists
         if (customer.getDealerId() != null && !dealerRepository.existsById(customer.getDealerId())) {
-            throw new IllegalArgumentException("Invalid dealerId: " + customer.getDealerId());
+            throw new IllegalArgumentException("Dealer not found with id: " + customer.getDealerId());
         }
-        return customerRepository.save(customer);
+        
+        Customer savedCustomer = customerRepository.save(customer);
+        log.info("Customer created: ID {} - Name: {}", savedCustomer.getCustomerId(), savedCustomer.getCustomerName());
+        
+        return savedCustomer;
     }
 
     @Override
+    @Transactional
     public Customer updateCustomer(Customer customer) {
-        if (customer.getCustomerId() == null || !customerRepository.existsById(customer.getCustomerId())) {
-            throw new IllegalArgumentException("Customer not found");
+        if (customer.getCustomerId() == null) {
+            throw new IllegalArgumentException("Customer ID is required for update");
         }
+        
+        // Check if customer exists
+        if (!customerRepository.existsById(customer.getCustomerId())) {
+            throw new ResourceNotFoundException("Customer not found with id: " + customer.getCustomerId());
+        }
+        
+        // Validate dealer exists
         if (customer.getDealerId() != null && !dealerRepository.existsById(customer.getDealerId())) {
-            throw new IllegalArgumentException("Invalid dealerId: " + customer.getDealerId());
+            throw new IllegalArgumentException("Dealer not found with id: " + customer.getDealerId());
         }
-        return customerRepository.save(customer);
+        
+        Customer updatedCustomer = customerRepository.save(customer);
+        log.info("Customer updated: ID {} - Name: {}", updatedCustomer.getCustomerId(), updatedCustomer.getCustomerName());
+        
+        return updatedCustomer;
     }
 
     @Override
+    @Transactional
     public void deleteCustomer(Long id) {
+        if (!customerRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Customer not found with id: " + id);
+        }
+        
         customerRepository.deleteById(id);
+        log.info("Customer deleted: ID {}", id);
+    }
+
+    @Override
+    public List<Customer> getCustomersByDealer(Long dealerId) {
+        return customerRepository.findByDealerId(dealerId);
+    }
+    
+    @Override
+    public List<Customer> getCustomersByCreatedBy(String createdBy){
+        return customerRepository.findByCreateBy(createdBy);
     }
 }

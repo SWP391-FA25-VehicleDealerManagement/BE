@@ -1,14 +1,13 @@
-package com.example.evm.entity.vehicle;
+package com.example.evm.entity.vehicle; // Hoặc package entity của bạn
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.*;
-
-import java.util.List;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "vehicleModel")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Table(name = "VehicleModel")
+@Data
+@NoArgsConstructor
 public class VehicleModel {
 
     @Id
@@ -16,11 +15,25 @@ public class VehicleModel {
     @Column(name = "model_id")
     private Long modelId;
 
-    private String name;
-    private String description;
+    @Column(name = "name", nullable = false, length = 100)
+    private String name; // <-- Giữ
 
-    // One Model has many Variants
-    @OneToMany(mappedBy = "model", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnoreProperties("model")
-    private List<VehicleVariant> variants;
+    @Column(name = "description")
+    @Lob // Dùng @Lob nếu mô tả có thể dài
+    private String description; // <-- Giữ
+
+    @Column(name = "status", length = 50)
+    private String status; // <-- Giữ (dùng cho soft delete)
+
+    // Thêm: Hãng sản xuất
+    @Column(name = "manufacturer", nullable = false, length = 100)
+    private String manufacturer; // <-- Thêm
+
+    // Thêm: Năm sản xuất
+    @Column(name = "[year]", nullable = false) // Dùng ngoặc vuông vì "year" là từ khóa SQL
+    private Integer year; // <-- Thêm
+
+    // Thêm: Kiểu dáng
+    @Column(name = "body_type", length = 50)
+    private String bodyType; // <-- Thêm
 }

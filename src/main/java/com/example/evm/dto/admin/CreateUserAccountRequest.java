@@ -1,6 +1,5 @@
 package com.example.evm.dto.admin;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -20,11 +19,11 @@ public class CreateUserAccountRequest {
     @Size(max = 50, message = "Phone must not exceed 50 characters")
     private String phone;
 
-    @Email(message = "Email should be valid")
+    // Email validation removed because it causes issues when email is optional
     @Size(max = 255, message = "Email must not exceed 255 characters")
     private String email;
 
-    @NotBlank(message = "Role is required")
+    // Role validation removed because it's auto-set in controllers
     private String role; // ROLE_DEALER_STAFF, ROLE_EVM_STAFF, etc.
 
     private Long dealerId; // Optional, chỉ cần khi tạo dealer staff

@@ -7,6 +7,7 @@ public class CreateUserAccountResponse {
     private String role;
     private String fullName;
     private String email;
+    private String phone;  // ✅ Thêm phone
     private Long dealerId;
     private String dealerName;
     private String message;
@@ -15,12 +16,13 @@ public class CreateUserAccountResponse {
     }
 
     public CreateUserAccountResponse(Long userId, String username, String role, String fullName, String email,
-            Long dealerId, String dealerName, String message) {
+            String phone, Long dealerId, String dealerName, String message) {
         this.userId = userId;
         this.username = username;
         this.role = role;
         this.fullName = fullName;
         this.email = email;
+        this.phone = phone;
         this.dealerId = dealerId;
         this.dealerName = dealerName;
         this.message = message;
@@ -65,6 +67,14 @@ public class CreateUserAccountResponse {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     public Long getDealerId() {
