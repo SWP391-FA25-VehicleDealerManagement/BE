@@ -52,7 +52,7 @@ public class PaymentServiceImpl implements PaymentService {
            // Xử lý theo phương thức thanh toán
         if ("cash".equalsIgnoreCase(payment.getPaymentMethod())) {
             payment.setStatus("Completed"); // Hoàn thành ngay
-        } else if ("transfer".equalsIgnoreCase(payment.getPaymentMethod())) {
+        } else if ("transfer".equalsIgnoreCase(payment.getPaymentMethod()) || "BANK_TRANSFER".equalsIgnoreCase(payment.getPaymentMethod())) {
             payment.setStatus("Pending"); // Chờ VNPay xử lý
         } else {
             throw new IllegalArgumentException("Unsupported payment method: " + payment.getPaymentMethod());
@@ -64,7 +64,8 @@ public class PaymentServiceImpl implements PaymentService {
     public Payment updatePayment(Payment payment) {
         if (payment.getPaymentId() == null || !paymentRepository.existsById(payment.getPaymentId())){
             throw new IllegalArgumentException("PaymentId not found");
-        } if (payment.getOrderId() != null && orderRepository.existsById(payment.getOrderId())) {
+        } 
+        if (payment.getOrderId() != null && !orderRepository.existsById(payment.getOrderId())) {
             throw new IllegalArgumentException("Invalid orderId "+payment.getOrderId());
         }
         return paymentRepository.save(payment);

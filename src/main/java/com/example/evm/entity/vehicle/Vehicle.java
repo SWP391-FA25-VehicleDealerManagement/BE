@@ -2,6 +2,7 @@ package com.example.evm.entity.vehicle;
 
 import com.example.evm.entity.inventory.InventoryStock;
 import com.example.evm.entity.inventory.ManufacturerStock;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -56,11 +57,13 @@ public class Vehicle {
     // Xe đang ở kho tổng (nullable - nếu null thì xe không ở kho tổng)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manufacturer_stock_id")
+    @JsonIgnore // Tránh serialize Hibernate proxy
     private ManufacturerStock manufacturerStock;
 
     // Xe đang ở kho dealer (nullable - nếu null thì xe không ở kho dealer)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "inventory_stock_id")
+    @JsonIgnore // Tránh serialize Hibernate proxy
     private InventoryStock inventoryStock;
     
     /**

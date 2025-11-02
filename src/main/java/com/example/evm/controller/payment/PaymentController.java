@@ -58,7 +58,7 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<?>> createPayment( @RequestBody PaymentInfo paymentInfo) {
         try {
             Payment createPayment = paymentService.createPayment(paymentInfo);
-            if("TRANSFER".equalsIgnoreCase(paymentInfo.getPaymentMethod())){
+            if("TRANSFER".equalsIgnoreCase(paymentInfo.getPaymentMethod()) || "BANK_TRANSFER".equalsIgnoreCase(paymentInfo.getPaymentMethod())){
                      //Nếu là chuyển khoản -> tạo link VNPay sandbox
                      String vnpayUrl= vnPayService.createVNPayUrl(createPayment);
                      return ResponseEntity.ok(new ApiResponse<>(true,"Redirect to VNPay",vnpayUrl));
