@@ -1,5 +1,6 @@
 package com.example.evm.service.payment;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +38,13 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public Payment createPayment(PaymentInfo paymentInfo) {
+        // ✅ Validate số tiền tối thiểu cho VNPay
+        if (("BANK_TRANSFER".equalsIgnoreCase(paymentInfo.getPaymentMethod()) || 
+             "TRANSFER".equalsIgnoreCase(paymentInfo.getPaymentMethod())) 
+            && paymentInfo.getAmount().compareTo(new BigDecimal("10000")) < 0) {
+            throw new IllegalArgumentException("Payment amount must be at least 10,000 VND for VNPay");
+        }
+        
         Payment payment = new Payment();
         payment.setOrderId(paymentInfo.getOrderId());
         payment.setAmount(paymentInfo.getAmount());
