@@ -2,12 +2,15 @@ package com.example.evm.service.feedback;
 
 import java.util.List;
 
+import com.example.evm.dto.feedback.FeedbackInfo;
+import com.example.evm.dto.feedback.FeedbackRequest;
 import com.example.evm.entity.feedback.Feedback;
 
+
 public interface FeedbackService {
-    List<Feedback> getAllFeedbacks();
-    Feedback getFeedbackById(Long id);
-    Feedback createFeedback(Feedback feedback);
-    Feedback updateFeedback( Feedback feedback);
+    List<FeedbackInfo> getAllFeedbacks();
+    FeedbackInfo getFeedbackById(Long id);
+    FeedbackInfo createFeedback(FeedbackRequest request);
+    FeedbackInfo updateFeedback(Long id, FeedbackRequest request);
     void deleteFeedback(Long id);
 } 
