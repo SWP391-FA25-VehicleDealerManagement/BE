@@ -44,6 +44,10 @@ public class UserAccountService {
             if (!isValidEmail(request.getEmail())) {
                 throw new IllegalArgumentException("Invalid email format: " + request.getEmail());
             }
+            // ✅ Kiểm tra email đã tồn tại chưa
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new IllegalArgumentException("Email already exists: " + request.getEmail());
+            }
         }
 
         // Validate role (accept both with or without ROLE_ prefix)
