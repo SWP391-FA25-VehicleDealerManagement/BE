@@ -1,6 +1,7 @@
 package com.example.evm.entity.feedback;
 
 import com.example.evm.entity.testDrive.TestDrive;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
@@ -26,7 +27,7 @@ public class Feedback {
     @Column(name = "feedback_id")
     private Long feedbackId;
 
-    @JsonIgnore  // ✅ Prevent lazy loading serialization error
+    @JsonBackReference // ✅ Prevent lazy loading serialization error
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "testdrive_id", nullable = true)
     private TestDrive testDrive;

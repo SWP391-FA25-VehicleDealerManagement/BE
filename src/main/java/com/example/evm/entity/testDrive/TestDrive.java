@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import com.example.evm.entity.customer.Customer;
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.vehicle.Vehicle;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -15,12 +15,17 @@ import jakarta.persistence.Column;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.List;
+
+import com.example.evm.entity.feedback.Feedback;
+import jakarta.persistence.CascadeType;
 
 @Entity
 @Table(name = "TestDrive")
@@ -67,4 +72,7 @@ public class TestDrive {
             createdDate = LocalDateTime.now();
         }
     }
+    @OneToMany(mappedBy = "testDrive", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<Feedback> feedbacks;
 }

@@ -7,7 +7,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.evm.dto.auth.ApiResponse;
-import com.example.evm.entity.feedback.Feedback;
+import com.example.evm.dto.feedback.FeedbackInfo;
+import com.example.evm.dto.feedback.FeedbackRequest;
 import com.example.evm.service.feedback.FeedbackService;
 
 import lombok.RequiredArgsConstructor;
@@ -21,15 +22,15 @@ public class FeedbackController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','EVM_STAFF','DEALER_MANAGER','DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<List<Feedback>>> getAllFeedbacks() {
-        List<Feedback> feedbacks = feedbackService.getAllFeedbacks();
+    public ResponseEntity<ApiResponse<List<FeedbackInfo>>> getAllFeedbacks() {
+        List<FeedbackInfo> feedbacks = feedbackService.getAllFeedbacks();
         return ResponseEntity.ok(new ApiResponse<>(true, "Feedbacks retrieved successfully", feedbacks));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN','EVM_STAFF','DEALER_MANAGER','DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<Feedback>> getFeedbackById(@PathVariable Long id) {
-        Feedback feedback = feedbackService.getFeedbackById(id);
+    public ResponseEntity<ApiResponse<FeedbackInfo>> getFeedbackById(@PathVariable Long id) {
+        FeedbackInfo feedback = feedbackService.getFeedbackById(id);
         return feedback != null
                 ? ResponseEntity.ok(new ApiResponse<>(true, "Feedback retrieved successfully", feedback))
                 : ResponseEntity.badRequest().body(new ApiResponse<>(false, "Feedback not found", null));
@@ -37,9 +38,9 @@ public class FeedbackController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','EVM_STAFF','DEALER_MANAGER','DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<Feedback>> createFeedback(@RequestBody Feedback feedback) {
+    public ResponseEntity<ApiResponse<FeedbackInfo>> createFeedback(@RequestBody FeedbackRequest request) {
         try {
-            Feedback created = feedbackService.createFeedback(feedback);
+            FeedbackInfo created = feedbackService.createFeedback(request);
             return ResponseEntity.ok(new ApiResponse<>(true, "Feedback created successfully", created));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
@@ -48,10 +49,9 @@ public class FeedbackController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN','EVM_STAFF','DEALER_MANAGER','DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<Feedback>> updateFeedback(@PathVariable Long id, @RequestBody Feedback feedback) {
+    public ResponseEntity<ApiResponse<FeedbackInfo>> updateFeedback(@PathVariable Long id, @RequestBody FeedbackRequest request) {
         try {
-            feedback.setFeedbackId(id);
-            Feedback updated = feedbackService.updateFeedback(feedback);
+            FeedbackInfo updated = feedbackService.updateFeedback(id, request);
             return ResponseEntity.ok(new ApiResponse<>(true, "Feedback updated successfully", updated));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
