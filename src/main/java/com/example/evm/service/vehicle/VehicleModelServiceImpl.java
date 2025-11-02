@@ -21,6 +21,9 @@ public class VehicleModelServiceImpl implements VehicleModelService {
     public VehicleModelResponse createModel(VehicleModelRequest request) {
         VehicleModel model = new VehicleModel();
         model.setName(request.getName());
+        model.setManufacturer(request.getManufacturer());
+        model.setYear(request.getYear()); 
+        model.setBodyType(request.getBody_type()); 
         model.setDescription(request.getDescription());
         model.setStatus("ACTIVE");
         VehicleModel savedModel = modelRepository.save(model);
