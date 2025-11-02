@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -29,7 +30,21 @@ public class VNPayService {
         String vnp_ReturnUrl = vnPayConfig.getReturnUrl();
 
         String txnRef = String.valueOf(payment.getPaymentId());
-        long amount = payment.getAmount().longValue() * 100; // VNPay yêu cầu nhân 100
+        
+        // ✅ FIX: Chuyển đổi số tiền đúng cách
+        BigDecimal amountBD = payment.getAmount();
+        if (amountBD == null) {
+            throw new IllegalArgumentException("Payment amount cannot be null");
+        }
+        
+        // Làm tròn về số nguyên và nhân 100
+        long amount = amountBD.longValue() * 100L;
+        
+        // ✅ Kiểm tra số tiền tối thiểu (10,000 VND = 1,000,000 sau khi nhân 100)
+        if (amount < 1000000L) {
+            throw new IllegalArgumentException("Payment amount must be at least 10,000 VND");
+        }
+        
         String orderInfo = "Thanh toan don hang #" + payment.getOrderId();
 
         Map<String, String> vnp_Params = new HashMap<>();

@@ -69,6 +69,28 @@ public class PaymentController {
         }
     }
 
+    @PostMapping("/create-vnpay")
+    @PreAuthorize("hasAnyAuthority('ADMIN','EVM_STAFF','DEALER_STAFF','DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<?>> createVNPayPayment(@RequestBody PaymentInfo paymentInfo) {
+        try {
+            // Tạo payment record với status PENDING
+            Payment createdPayment = paymentService.createPayment(paymentInfo);
+            
+            // Tạo VNPay URL
+            String vnpayUrl = vnPayService.createVNPayUrl(createdPayment);
+            
+            // Tạo response data
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("paymentId", createdPayment.getPaymentId());
+            responseData.put("vnpayUrl", vnpayUrl);
+            responseData.put("status", "PENDING");
+            
+            return ResponseEntity.ok(new ApiResponse<>(true, "VNPay URL created successfully", responseData));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Failed to create VNPay payment: " + e.getMessage(), null));
+        }
+    }
+
    @GetMapping("/vnpay_return")
 public ResponseEntity<ApiResponse<String>> handleVNPayReturn(@RequestParam Map<String,String> allParams){
     try {
