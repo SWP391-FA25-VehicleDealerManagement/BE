@@ -2,7 +2,8 @@ package com.example.evm.entity.salePrice;
 
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.vehicle.VehicleVariant;
-import com.fasterxml.jackson.annotation.JsonIgnore;  // ✅ THÊM import này
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -35,7 +36,7 @@ public class SalePrice {
     @Column(name = "variant_id", nullable = false)
     private Long variantId;
 
-    @JsonIgnore  // ✅ THÊM annotation này
+    @JsonIgnoreProperties({"vehicles", "detail"})  // Chỉ ignore vehicles và detail để tránh circular reference và lazy loading
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id", insertable = false, updatable = false)
     private VehicleVariant variant;

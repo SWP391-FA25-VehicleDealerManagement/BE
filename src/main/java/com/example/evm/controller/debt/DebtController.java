@@ -291,9 +291,11 @@ public class DebtController {
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<DebtSchedule>> payDebtScheduleDirectly(
             @PathVariable Long scheduleId,
-            @RequestParam BigDecimal amount) {
+            @RequestParam BigDecimal amount,
+            @RequestParam(required = false, defaultValue = "DIRECT") String paymentMethod,
+            @RequestParam(required = false) String notes) {
         try {
-            DebtSchedule schedule = debtService.payDebtScheduleDirectly(scheduleId, amount);
+            DebtSchedule schedule = debtService.payDebtScheduleDirectly(scheduleId, amount, paymentMethod, notes);
             return ResponseEntity.ok(new ApiResponse<>(true, "Debt schedule paid successfully", schedule));
         } catch (Exception e) {
             log.error("Error paying debt schedule {}", scheduleId, e);
