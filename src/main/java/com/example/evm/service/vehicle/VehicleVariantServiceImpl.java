@@ -144,6 +144,22 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
     }
 
     @Override
+    public void deactivateVariant(Long id) {
+        VehicleVariant variant = variantRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Variant not found with id: " + id));
+        variant.setStatus("INACTIVE");
+        variantRepository.save(variant);
+    }
+
+    @Override
+    public void activateVariant(Long id) {
+        VehicleVariant variant = variantRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Variant not found with id: " + id));
+        variant.setStatus("ACTIVE");
+        variantRepository.save(variant);
+    }
+
+    @Override
     @Transactional
     public VehicleDetailResponse createDetails(Long variantId, VehicleDetailRequest request) {
         // 1. Kiểm tra xem Detail đã tồn tại cho variantId này chưa

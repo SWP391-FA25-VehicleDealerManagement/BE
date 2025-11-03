@@ -20,4 +20,6 @@ public class VehicleRequest {
     
     @NotBlank(message = "Color is required")
     private String color;
+
+    private Boolean testDrive;
 }

@@ -64,6 +64,8 @@ public class VehicleController {
     public ResponseEntity<ApiResponse<VehicleFullResponse>> createVehicle(
             @RequestParam("variantId") @NotNull Long variantId,
             @RequestParam("color") @NotBlank String color,
+            @Parameter(in = ParameterIn.DEFAULT, description = "Tick nếu là xe lái thử")
+            @RequestParam(value = "isTestDrive", required = false) Boolean isTestDrive,
             @RequestPart(value = "file", required = true) MultipartFile file) {
 
         log.info("Creating vehicle - variantId: {}, color: {}", variantId, color);
@@ -71,6 +73,7 @@ public class VehicleController {
         VehicleRequest requestDto = new VehicleRequest();
         requestDto.setVariantId(variantId);
         requestDto.setColor(color);
+        requestDto.setTestDrive(isTestDrive);
 
         VehicleFullResponse response = vehicleService.createVehicle(requestDto, file);
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle created successfully", response));
@@ -118,7 +121,7 @@ public class VehicleController {
     // LẤY ẢNH XE THEO FILENAME
     @GetMapping("/images/{filename:.+}")
     public ResponseEntity<Resource> getImage(@PathVariable String filename) {
-        Resource file = fileStorageService.load(filename);
+        Resource file = fileStorageService.load("vehicles", filename);
         String contentType = "application/octet-stream"; // Mặc định
         try {
             // Cố gắng tự động xác định ContentType từ file

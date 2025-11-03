@@ -62,12 +62,13 @@ public class VehicleServiceImpl implements VehicleService {
     @Override
     @Transactional
     public VehicleFullResponse createVehicle(VehicleRequest request, MultipartFile file) {
-        log.info("Creating new vehicle - variantId: {}, color: {}", request.getVariantId(), request.getColor());
+        log.info("Creating new vehicle - variantId: {}, color: {}, isTestDrive: {}",
+            request.getVariantId(), request.getColor(), request.getTestDrive());
         
         // 1. Lấy kho tổng mặc định
         ManufacturerStock defaultWarehouse = manufacturerStockRepository
             .findByStatus("ACTIVE")
-            .stream()
+            .stream()   
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("No active warehouse found"));
 
@@ -84,11 +85,18 @@ public class VehicleServiceImpl implements VehicleService {
         vehicle.setWarrantyExpiryDate(LocalDate.now().plusYears(5)); // 5 năm bảo hành
         vehicle.setManufacturerStock(defaultWarehouse);
         vehicle.setInventoryStock(null);
-        vehicle.setStatus("IN_MANUFACTURER_STOCK");
+
+        // ✅ Nếu được chọn là xe lái thử
+        if (Boolean.TRUE.equals(request.getTestDrive())) {
+            vehicle.setStatus("TEST_DRIVE");
+            log.info("🚗 Vehicle marked as TEST DRIVE - VIN: {}", vehicle.getVinNumber());
+        } else {
+            vehicle.setStatus("IN_MANUFACTURER_STOCK");
+        }
 
         // 4. ✅ Lưu file ảnh nếu có
         if (file != null && !file.isEmpty()) {
-            String filename = fileStorageService.save(file);
+            String filename = fileStorageService.saveToSubFolder(file, "vehicles");
             vehicle.setImageUrl("/api/vehicles/images/" + filename);
         }
 
@@ -96,7 +104,7 @@ public class VehicleServiceImpl implements VehicleService {
 
         log.info("✅ Created vehicle {} in warehouse {}", saved.getVinNumber(), defaultWarehouse.getWarehouseName());
 
-        // 4. Reload với full info
+        // 5. Reload với full info
         return getVehicleById(saved.getVehicleId());
     }
 
@@ -117,7 +125,7 @@ public class VehicleServiceImpl implements VehicleService {
         // 3. Cập nhật Ảnh (nếu có file mới)
         if (file != null && !file.isEmpty()) {
             
-            String filename = fileStorageService.save(file);
+            String filename = fileStorageService.saveToSubFolder(file, "vehicles");
             vehicle.setImageUrl("/api/vehicles/images/" + filename);
             log.info("Updated Image for Vehicle ID: {}", id);
         }

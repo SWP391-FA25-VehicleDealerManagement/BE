@@ -85,4 +85,21 @@ public class VehicleModelServiceImpl implements VehicleModelService {
         log.info("Deleting VehicleModel permanently with ID: {}", id);
         modelRepository.deleteById(id);
     }
+
+    @Override
+    public void deactivateModel(Long id) {
+        VehicleModel model = modelRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Model not found with id: " + id));
+        model.setStatus("INACTIVE");
+        modelRepository.save(model);
+    }
+
+    @Override
+    public void activateModel(Long id) {
+        VehicleModel model = modelRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Model not found with id: " + id));
+        model.setStatus("ACTIVE");
+        modelRepository.save(model);
+    }
+    
 }
