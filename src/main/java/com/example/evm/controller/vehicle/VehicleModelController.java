@@ -48,7 +48,7 @@ public class VehicleModelController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Model updated successfully", updatedModel));
     }
 
-    // ❌ XÓA một dòng xe
+    // ❌ DEACTIVE một dòng xe
     @PutMapping("/deactivate/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<Void>> deactivateModel(@PathVariable Long id) {
@@ -62,5 +62,13 @@ public class VehicleModelController {
     public ResponseEntity<ApiResponse<Void>> activateModel(@PathVariable Long id) {
         modelService.activateModel(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Model activated successfully", null));
+    }
+
+    // ❌ XÓA một dòng xe
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<Void>> deleteModel(@PathVariable Long id) {
+        modelService.deleteModel(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Model đã được xóa vĩnh viễn.", null)); 
     }
 }

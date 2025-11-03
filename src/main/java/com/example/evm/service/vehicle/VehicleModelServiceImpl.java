@@ -5,17 +5,25 @@ import com.example.evm.dto.vehicle.VehicleModelResponse;
 import com.example.evm.entity.vehicle.VehicleModel;
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.repository.vehicle.VehicleModelRepository;
+import com.example.evm.repository.vehicle.VehicleVariantRepository;
+
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class VehicleModelServiceImpl implements VehicleModelService {
 
     private final VehicleModelRepository modelRepository;
+    private final VehicleVariantRepository variantRepository;
 
     @Override
     public VehicleModelResponse createModel(VehicleModelRequest request) {
@@ -58,6 +66,27 @@ public class VehicleModelServiceImpl implements VehicleModelService {
     }
 
     @Override
+    @Transactional
+    public void deleteModel(Long id) {
+        // 1. Kiểm tra xem Model có tồn tại không
+        if (!modelRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Model not found with id: " + id);
+        }
+
+        // 2. Kiểm tra bảng con (VehicleVariant)
+        if (variantRepository.existsByModelModelId(id)) {
+            // Nếu đang được sử dụng -> Báo lỗi, không cho xóa
+            throw new DataIntegrityViolationException(
+                "Không thể xóa. Dòng xe (Model) này đang được liên kết với ít nhất một phiên bản (Variant)."
+            );
+        }
+
+        // 3. Nếu không bị ràng buộc, tiến hành xóa
+        log.info("Deleting VehicleModel permanently with ID: {}", id);
+        modelRepository.deleteById(id);
+    }
+
+    @Override
     public void deactivateModel(Long id) {
         VehicleModel model = modelRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Model not found with id: " + id));
@@ -72,4 +101,5 @@ public class VehicleModelServiceImpl implements VehicleModelService {
         model.setStatus("ACTIVE");
         modelRepository.save(model);
     }
+    
 }

@@ -22,66 +22,94 @@ public class FileStorageServiceImpl implements FileStorageService {
 
     private final Path rootLocation;
 
-    // Tự động đọc đường dẫn từ file application.properties
+    // Đọc đường dẫn lưu file từ application.properties (vd: file.upload-dir=uploads)
     public FileStorageServiceImpl(@Value("${file.upload-dir}") String uploadDir) {
         this.rootLocation = Paths.get(uploadDir);
     }
 
-    // Khởi tạo thư mục lưu trữ ngay khi service được tạo
+    // Khởi tạo thư mục gốc khi app chạy lần đầu
     @Override
     @PostConstruct
     public void init() {
         try {
             Files.createDirectories(rootLocation);
         } catch (IOException e) {
-            throw new RuntimeException("Could not initialize storage directory!", e);
+            throw new RuntimeException("❌ Could not initialize storage directory!", e);
         }
     }
 
-    // Lưu file được upload lên
+    /**
+     * Lưu file vào thư mục gốc
+     */
     @Override
     public String save(MultipartFile file) {
+        return saveToSubFolder(file, "");
+    }
+
+    /**
+     * Lưu file vào thư mục con (ví dụ: "contracts", "vehicles", ...)
+     */
+    public String saveToSubFolder(MultipartFile file, String subFolder) {
         if (file.isEmpty()) {
-            throw new RuntimeException("Failed to store empty file.");
+            throw new RuntimeException("❌ Failed to store empty file.");
         }
-        
-        // Dọn dẹp tên file gốc
+
         String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
-        
-        // Tạo một tên file duy nhất bằng cách thêm UUID để tránh trùng lặp
         String uniqueFilename = UUID.randomUUID().toString() + "_" + originalFilename;
 
         try {
-            // Xác định đường dẫn đầy đủ để lưu file
-            Path destinationFile = this.rootLocation.resolve(uniqueFilename)
-                    .normalize().toAbsolutePath();
+            Path destinationFolder = rootLocation.resolve(subFolder).normalize().toAbsolutePath();
+            Files.createDirectories(destinationFolder); // tự động tạo thư mục con nếu chưa có
 
-            // Copy dữ liệu từ file upload vào file đích
+            Path destinationFile = destinationFolder.resolve(uniqueFilename);
+
             try (InputStream inputStream = file.getInputStream()) {
                 Files.copy(inputStream, destinationFile, StandardCopyOption.REPLACE_EXISTING);
             }
-            
-            // Trả về tên file duy nhất đã được lưu để ghi vào database
+
             return uniqueFilename;
         } catch (IOException e) {
-            throw new RuntimeException("Failed to store file.", e);
+            throw new RuntimeException("❌ Failed to store file.", e);
         }
     }
 
-    // Tải file từ thư mục lưu trữ
-    @Override
-    public Resource load(String filename) {
+    /**
+     * Load file theo thư mục con + tên file
+     * Ví dụ: load("contracts", "Contract_123.docx")
+     */
+    public Resource load(String subFolder, String filename) {
         try {
-            Path file = rootLocation.resolve(filename);
+            Path folderPath = rootLocation.resolve(subFolder).normalize().toAbsolutePath();
+            Path file = folderPath.resolve(filename);
             Resource resource = new UrlResource(file.toUri());
 
-            if (resource.exists() || resource.isReadable()) {
+            if (resource.exists() && resource.isReadable()) {
                 return resource;
             } else {
-                throw new RuntimeException("Could not read the file: " + filename);
+                throw new RuntimeException("⚠️ Could not read the file: " + filename);
             }
         } catch (MalformedURLException e) {
-            throw new RuntimeException("Error while reading file: " + e.getMessage());
+            throw new RuntimeException("❌ Error while reading file: " + e.getMessage());
         }
     }
+
+    @Override
+    public void delete(String relativePath) {
+         try {
+            // Nối đường dẫn gốc (uploads) với đường dẫn tương đối
+            Path file = rootLocation.resolve(Paths.get(relativePath)).normalize().toAbsolutePath();
+            
+            // Kiểm tra bảo mật
+            if (!file.startsWith(this.rootLocation)) {
+                 throw new RuntimeException("Cannot access file outside current directory.");
+            }
+
+            // Xóa file nếu nó tồn tại
+            Files.deleteIfExists(file);
+         } catch (IOException e) {
+             // Ném lỗi runtime nếu không xóa được
+             throw new RuntimeException("Failed to delete file: " + relativePath, e);
+         }
+    }
+
 }

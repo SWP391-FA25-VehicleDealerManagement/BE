@@ -194,6 +194,11 @@ public class OrderService {
         for (OrderDetailRequestDto detailDto : dto.getOrderDetails()) {
             Vehicle vehicle = vehicleRepository.findById(detailDto.getVehicleId())
                     .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + detailDto.getVehicleId()));
+
+            // 🚫 NGHIỆP VỤ MỚI: Xe lái thử không thể bán
+            if ("TEST_DRIVE".equalsIgnoreCase(vehicle.getStatus())) {
+                throw new IllegalStateException("🚫 Xe lái thử (VIN: " + vehicle.getVinNumber() + ") không thể được đặt hàng hoặc bán.");
+            }        
             
             OrderDetail detail = new OrderDetail();
             detail.setVehicle(vehicle);
