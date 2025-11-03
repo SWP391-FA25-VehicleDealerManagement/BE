@@ -139,7 +139,7 @@ public class VehicleController {
      * Lấy chi tiết tất cả xe trong kho tổng (với VIN)
      */
     @GetMapping("/manufacturer/vehicles")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<List<VehicleFullResponse>>> getManufacturerVehicles() {
         
         log.info("Fetching all manufacturer vehicles");
