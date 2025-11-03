@@ -21,6 +21,5 @@ COPY src ./src
 # Build JAR
 RUN mvn clean package -DskipTests -B
 
-# Chạy ứng dụng
-EXPOSE 8080
-CMD ["java", "-jar", "/app/target/*.jar"]
+# Chạy ứng dụng (sửa wildcard thành tên file cụ thể)
+CMD ["java", "-jar", "/app/target/evm-management-0.0.1-SNAPSHOT.jar"]
