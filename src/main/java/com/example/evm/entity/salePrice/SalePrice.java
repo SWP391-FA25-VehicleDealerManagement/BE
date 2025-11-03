@@ -36,7 +36,13 @@ public class SalePrice {
     @Column(name = "variant_id", nullable = false)
     private Long variantId;
 
-    @JsonIgnoreProperties({"vehicles", "detail"})  // Chỉ ignore vehicles và detail để tránh circular reference và lazy loading
+     @JsonIgnoreProperties({
+        "vehicles", 
+        "detail", 
+        "model",  
+        "hibernateLazyInitializer",  
+        "handler"  
+    })
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id", insertable = false, updatable = false)
     private VehicleVariant variant;

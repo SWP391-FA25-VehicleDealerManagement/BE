@@ -1,0 +1,19 @@
+HỢP ĐỒNG MUA BÁN XE Ô TÔ
+
+Hợp đồng số: ${contractId}
+
+Bên Bán (Đại lý): ${dealerName}
+Bên Mua (Khách hàng): ${customerName}
+
+Thông tin xe:
+- Mẫu xe: ${modelName}
+- Phiên bản: ${variantName}
+- Màu sắc: ${color}
+- Số VIN: ${vinNumber}
+
+Giá bán: ${price} VND
+Phương thức thanh toán: ${paymentMethod}
+Ngày ký hợp đồng: ${contractDate}
+
+Đại diện bên bán: _______________________
+Đại diện bên mua: _______________________
