@@ -47,6 +47,15 @@ public class VehicleContractController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Contract created successfully", response));
     }
 
+    @PutMapping("/{id}/sign")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<VehicleContractResponse>> signContract(
+            @PathVariable Long id) {
+        
+        VehicleContractResponse signedContract = vehicleContractService.signContract(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Hợp đồng đã được ký thành công.", signedContract));
+    }
+
     /**
      * Lấy danh sách hợp đồng
      */
@@ -72,23 +81,31 @@ public class VehicleContractController {
      */
     @GetMapping("/files/{id}")
     public ResponseEntity<Resource> getContractFile(@PathVariable Long id) {
-    // ✅ gọi đúng tên hàm trong service
-    VehicleContract contract = vehicleContractService.getContractEntityById(id); 
+        // ✅ gọi đúng tên hàm trong service
+        VehicleContract contract = vehicleContractService.getContractEntityById(id); 
 
-    // ✅ tạo tên file
-    String filename = "Contract_" + contract.getContractId() + ".docx";
+        // ✅ tạo tên file
+        String filename = "Contract_" + contract.getContractId() + ".docx";
 
-    // ✅ tải file từ thư mục uploads/contracts
-    Resource file = fileStorageService.load("contracts", filename);
+        // ✅ tải file từ thư mục uploads/contracts
+        Resource file = fileStorageService.load("contracts", filename);
 
-    // ✅ trả về với content-type Word đúng chuẩn
-    return ResponseEntity.ok()
-            .contentType(MediaType.parseMediaType(
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-            .body(file);
-}
+        // ✅ trả về với content-type Word đúng chuẩn
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(file);
+    }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<Void>> deleteContract(
+            @PathVariable Long id) {
+        
+        vehicleContractService.deleteDraftContract(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Hợp đồng nháp đã được xóa thành công.", null));
+    }
 
 
 }

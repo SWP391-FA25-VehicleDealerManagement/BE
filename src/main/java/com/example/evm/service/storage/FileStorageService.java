@@ -15,4 +15,7 @@ public interface FileStorageService {
 
     // 🔹 Load file từ thư mục con
     Resource load(String subFolder, String filename);
+
+    // Xóa file dùng ĐƯỜNG DẪN TƯƠNG ĐỐI.
+    void delete(String relativePath);
 }

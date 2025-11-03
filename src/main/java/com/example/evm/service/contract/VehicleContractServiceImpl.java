@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.poi.xwpf.usermodel.*;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.io.FileOutputStream;
@@ -91,6 +92,7 @@ public class VehicleContractServiceImpl implements VehicleContractService {
         contract.setSalePrice(salePrice);
         contract.setPaymentMethod(order.getPaymentMethod());
         contract.setNotes(request.getNotes());
+        contract.setStatus("DRAFT"); // ✅ trạng thái mặc định khi tạo
 
         VehicleContract saved = vehicleContractRepository.save(contract);
         log.info("✅ Created contract {} for order {}", saved.getContractNumber(), order.getOrderId());
@@ -101,6 +103,27 @@ public class VehicleContractServiceImpl implements VehicleContractService {
         vehicleContractRepository.save(saved);
 
         return mapToResponse(saved);
+    }
+
+    /**
+     * 🧾 Ký hợp đồng (DRAFT -> SIGNED)
+     */
+    @Override
+    @Transactional
+    public VehicleContractResponse signContract(Long id) {
+        VehicleContract contract = vehicleContractRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Contract not found with ID: " + id));
+
+        // Chỉ cho phép ký hợp đồng đang ở trạng thái DRAFT
+        if (!"DRAFT".equalsIgnoreCase(contract.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể ký hợp đồng đang ở trạng thái 'DRAFT'. Trạng thái hiện tại: " + contract.getStatus());
+        }
+
+        contract.setStatus("SIGNED"); // Cập nhật trạng thái
+        VehicleContract signedContract = vehicleContractRepository.save(contract);
+        log.info("✅ Contract {} has been SIGNED.", signedContract.getContractNumber());
+
+        return mapToResponse(signedContract);
     }
 
     /**
@@ -131,6 +154,45 @@ public class VehicleContractServiceImpl implements VehicleContractService {
         VehicleContract contract = vehicleContractRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contract not found with ID: " + id));
         return mapToResponse(contract);
+    }
+
+    /**
+     * 🧾 Xóa hợp đồng nháp (Chỉ xóa DRAFT)
+     */
+    @Override
+    @Transactional
+    public void deleteDraftContract(Long id) {
+        VehicleContract contract = vehicleContractRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Contract not found with ID: " + id));
+
+        // --- VALIDATION QUAN TRỌNG ---
+        if (!"DRAFT".equalsIgnoreCase(contract.getStatus())) {
+            throw new DataIntegrityViolationException(
+                "Không thể xóa hợp đồng đã ký (SIGNED) hoặc đã xử lý. Chỉ có thể xóa hợp đồng 'DRAFT'."
+            );
+        }
+        // --- HẾT VALIDATION ---
+
+        log.warn("🔥 Deleting DRAFT contract ID: {}, Number: {}", id, contract.getContractNumber());
+
+        // 1. Xóa file Word liên quan
+        if (contract.getFileUrl() != null && !contract.getFileUrl().isBlank()) {
+            try {
+                // Trích xuất tên file từ URL (ví dụ: "/api/contracts/files/Contract_2.docx")
+                String filename = contract.getFileUrl().substring(contract.getFileUrl().lastIndexOf('/') + 1);
+                String relativePath = "contracts/" + filename; // Đường dẫn tương đối
+                
+                fileStorageService.delete(relativePath); // Gọi hàm delete 1 tham số
+                log.info("   - Deleted associated file: {}", relativePath);
+            } catch (Exception e) {
+                log.error("   - Failed to delete file for contract ID {}: {}. Continuing with DB deletion.", id, e.getMessage());
+                // (Có thể chọn ném lỗi ở đây nếu bắt buộc phải xóa được file)
+            }
+        }
+        
+        // 2. Xóa bản ghi hợp đồng
+        vehicleContractRepository.delete(contract);
+        log.info("   - Deleted contract record from DB.");
     }
 
     /**

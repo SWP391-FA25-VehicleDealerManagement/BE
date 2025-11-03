@@ -92,4 +92,24 @@ public class FileStorageServiceImpl implements FileStorageService {
             throw new RuntimeException("❌ Error while reading file: " + e.getMessage());
         }
     }
+
+    @Override
+    public void delete(String relativePath) {
+         try {
+            // Nối đường dẫn gốc (uploads) với đường dẫn tương đối
+            Path file = rootLocation.resolve(Paths.get(relativePath)).normalize().toAbsolutePath();
+            
+            // Kiểm tra bảo mật
+            if (!file.startsWith(this.rootLocation)) {
+                 throw new RuntimeException("Cannot access file outside current directory.");
+            }
+
+            // Xóa file nếu nó tồn tại
+            Files.deleteIfExists(file);
+         } catch (IOException e) {
+             // Ném lỗi runtime nếu không xóa được
+             throw new RuntimeException("Failed to delete file: " + relativePath, e);
+         }
+    }
+
 }
