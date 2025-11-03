@@ -1,10 +1,8 @@
 package com.example.evm.service.testDrive;
 
 import com.example.evm.entity.testDrive.TestDrive;
-import com.example.evm.entity.vehicle.Vehicle;
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.repository.testDrive.TestDriveRepository;
-import com.example.evm.repository.vehicle.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,7 +21,6 @@ import java.util.stream.Collectors;
 public class TestDriveService {
 
     private final TestDriveRepository testDriveRepository;
-    private final VehicleRepository vehicleRepository;
 
     // ==================== READ OPERATIONS ====================
     
@@ -78,18 +75,6 @@ public class TestDriveService {
     
     @Transactional
     public TestDrive scheduleTestDrive(TestDrive testDrive) {
-        // ✅ Validate vehicle status - chỉ chấp nhận xe có status = TEST_DRIVE
-        if (testDrive.getVehicle() != null && testDrive.getVehicle().getVehicleId() != null) {
-            Vehicle vehicle = vehicleRepository.findById(testDrive.getVehicle().getVehicleId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + testDrive.getVehicle().getVehicleId()));
-            
-            if (!"TEST_DRIVE".equalsIgnoreCase(vehicle.getStatus())) {
-                throw new IllegalArgumentException("Chỉ được chọn những xe có trạng thái TEST_DRIVE để lái thử. Xe hiện tại có trạng thái: " + vehicle.getStatus());
-            }
-            
-            log.info("✅ Validated vehicle {} has status TEST_DRIVE", vehicle.getVehicleId());
-        }
-        
         // ✅ Để DB tự động tạo ID
         testDrive.setTestDriveId(null);
         testDrive.setCreatedDate(LocalDateTime.now());

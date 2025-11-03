@@ -226,6 +226,19 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     /**
+     * Lấy danh sách xe có status = TEST_DRIVE
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<VehicleFullResponse> getTestDriveVehicles() {
+        List<Vehicle> vehicles = vehicleRepository.findByStatusTestDriveWithFullInfo();
+        
+        return vehicles.stream()
+            .map(this::buildFullResponse)
+            .collect(Collectors.toList());
+    }
+
+    /**
      * Lấy tổng hợp kho dealer (GROUP BY variant + color)
      */
     @Override

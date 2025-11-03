@@ -203,5 +203,16 @@ public class VehicleController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Fetched dealer vehicles successfully", vehicles));
     }
 
+    /**
+     * Lấy tất cả xe có status = TEST_DRIVE (cho test drive)
+     */
+    @GetMapping("/test-drive")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<List<VehicleFullResponse>>> getTestDriveVehicles() {
+        log.info("Fetching all test drive vehicles");
+        List<VehicleFullResponse> vehicles = vehicleService.getTestDriveVehicles();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Test drive vehicles retrieved successfully", vehicles));
+    }
+
 }
 
