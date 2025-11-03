@@ -100,6 +100,33 @@ public class VehicleServiceImpl implements VehicleService {
         return getVehicleById(saved.getVehicleId());
     }
 
+    @Override
+    @Transactional
+    public VehicleFullResponse updateVehicle(Long id, String color, MultipartFile file) {
+        
+        // 1. Tìm xe (Vehicle) hiện có
+        Vehicle vehicle = vehicleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
+
+        // 2. Cập nhật Color (nếu có)
+        if (color != null && !color.isBlank()) {
+            vehicle.setColor(color);
+            log.info("Updated Color for Vehicle ID: {}", id);
+        }
+
+        // 3. Cập nhật Ảnh (nếu có file mới)
+        if (file != null && !file.isEmpty()) {
+            
+            String filename = fileStorageService.save(file);
+            vehicle.setImageUrl("/api/vehicles/images/" + filename);
+            log.info("Updated Image for Vehicle ID: {}", id);
+        }
+
+        // 4. Lưu và trả về
+        Vehicle updatedVehicle = vehicleRepository.save(vehicle);
+        return getVehicleById(updatedVehicle.getVehicleId());
+    }
+
     /**
      * Lấy thông tin chi tiết xe (kèm full info)
      */

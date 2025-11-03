@@ -6,6 +6,10 @@ import com.example.evm.dto.vehicle.VehicleFullResponse;
 import com.example.evm.dto.vehicle.VehicleRequest;
 import com.example.evm.service.storage.FileStorageService;
 import com.example.evm.service.vehicle.VehicleService;
+
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+
 import com.example.evm.dto.vehicle.DealerVehicleResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,7 +74,24 @@ public class VehicleController {
 
         VehicleFullResponse response = vehicleService.createVehicle(requestDto, file);
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle created successfully", response));
-    }   
+    }
+    
+    // CẬP NHẬT ẢNH VÀ MÀU XE
+    @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<VehicleFullResponse>> updateVehicleVisuals(
+            @Parameter(description = "ID của xe cần cập nhật")
+            @PathVariable Long id,
+            
+            @Parameter(in = ParameterIn.DEFAULT, description = "Màu sắc mới (tùy chọn)")
+            @RequestParam(value = "color", required = false) String color,
+            
+            @Parameter(description = "Ảnh thực tế mới (tùy chọn)")
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) {
+        VehicleFullResponse updated = vehicleService.updateVehicle(id, color, file);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle visuals updated successfully", updated));
+    }
 
     /**
      * Lấy thông tin chi tiết 1 xe (kèm full info)
