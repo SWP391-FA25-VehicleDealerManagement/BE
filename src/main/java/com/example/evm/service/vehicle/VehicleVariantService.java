@@ -12,8 +12,6 @@ public interface VehicleVariantService {
     List<VehicleVariantResponse> getAllVariants(Long dealerId); // Thêm dealerId để lấy giá dealer
     VehicleVariantResponse getVariantById(Long id, Long dealerId); // Thêm dealerId để lấy giá dealer
     VehicleVariantResponse updateVariant(Long id, VehicleVariantRequest request);
-    void deactivateVariant(Long id);
-    void activateVariant(Long id);
 
     VehicleDetailResponse createDetails(Long variantId, VehicleDetailRequest request);
     VehicleDetailResponse updateDetails(Long variantId, VehicleDetailRequest request);

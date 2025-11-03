@@ -9,6 +9,5 @@ public interface VehicleModelService {
     List<VehicleModelResponse> getAllModels();
     VehicleModelResponse getModelById(Long id);
     VehicleModelResponse updateModel(Long id, VehicleModelRequest request);
-    void deactivateModel(Long id);
-    void activateModel(Long id);
+    void deleteModel(Long id);
 }

@@ -72,22 +72,6 @@ public class VehicleVariantController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Variant updated successfully", updatedVariant));
     }
 
-    // 🚫 DEACTIVATE a variant (soft delete)
-    @PutMapping("/deactivate/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<Void>> deactivateVariant(@PathVariable Long id) {
-        variantService.deactivateVariant(id);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Variant deactivated successfully", null));
-    }
-
-    // ✅ ACTIVATE a variant
-    @PutMapping("/activate/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<Void>> activateVariant(@PathVariable Long id) {
-        variantService.activateVariant(id);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Variant activated successfully", null));
-    }
-
     // ➕ LẤY thông số kỹ thuật của một variant
     @GetMapping("/{variantId}/details")
     public ResponseEntity<ApiResponse<VehicleDetailResponse>> getVariantDetails(@PathVariable Long variantId) {

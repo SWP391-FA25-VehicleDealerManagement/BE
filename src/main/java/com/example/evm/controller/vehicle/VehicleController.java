@@ -90,7 +90,7 @@ public class VehicleController {
             @RequestPart(value = "file", required = false) MultipartFile file
     ) {
         VehicleFullResponse updated = vehicleService.updateVehicle(id, color, file);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle visuals updated successfully", updated));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle updated successfully", updated));
     }
 
     /**
