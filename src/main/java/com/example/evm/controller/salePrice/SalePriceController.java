@@ -42,7 +42,7 @@ public class SalePriceController {
      * POST /api/sale-prices
      */
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF','DEALER_MANAGER','DEALER_STAFF')")
     public ResponseEntity<ApiResponse<SalePrice>> createPrice(@Valid @RequestBody CreateSalePriceRequest request) {
         try {
             // Convert DTO to Entity
