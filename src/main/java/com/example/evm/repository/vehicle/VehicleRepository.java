@@ -74,6 +74,17 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
            "WHERE UPPER(v.status) = 'TEST_DRIVE'")
     List<Vehicle> findByStatusTestDriveWithFullInfo();
 
+    /**
+     * Lấy xe có status = TEST_DRIVE theo dealer (kèm full info)
+     */
+    @Query("SELECT DISTINCT v FROM Vehicle v " +
+           "LEFT JOIN FETCH v.variant vr " +
+           "LEFT JOIN FETCH vr.model m " +
+           "LEFT JOIN FETCH vr.detail d " +
+           "WHERE UPPER(v.status) = 'TEST_DRIVE' " +
+           "AND v.inventoryStock.dealer.dealerId = :dealerId")
+    List<Vehicle> findByStatusTestDriveAndDealerIdWithFullInfo(@Param("dealerId") Long dealerId);
+
     // ===== QUERY TỔNG HỢP (GROUP BY) =====
     
     /**

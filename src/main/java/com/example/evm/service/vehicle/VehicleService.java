@@ -19,5 +19,6 @@ public interface VehicleService { // Đặt tên Interface
     List<DealerVehicleResponse> getDealerVehicles(Long dealerId);
     List<StockSummaryResponse> getDealerStockSummary(Long dealerId);
     List<VehicleFullResponse> getTestDriveVehicles();
+    List<VehicleFullResponse> getTestDriveVehiclesByDealer(Long dealerId);
     void deleteVehicle(Long vehicleId);
 }

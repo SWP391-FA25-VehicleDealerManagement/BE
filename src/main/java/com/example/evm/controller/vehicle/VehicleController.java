@@ -205,13 +205,26 @@ public class VehicleController {
 
     /**
      * Lấy tất cả xe có status = TEST_DRIVE (cho test drive)
+     * Có thể filter theo dealerId (optional)
      */
     @GetMapping("/test-drive")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<List<VehicleFullResponse>>> getTestDriveVehicles() {
-        log.info("Fetching all test drive vehicles");
-        List<VehicleFullResponse> vehicles = vehicleService.getTestDriveVehicles();
-        return ResponseEntity.ok(new ApiResponse<>(true, "Test drive vehicles retrieved successfully", vehicles));
+    public ResponseEntity<ApiResponse<List<VehicleFullResponse>>> getTestDriveVehicles(
+            @RequestParam(required = false) Long dealerId) {
+        
+        List<VehicleFullResponse> vehicles;
+        
+        if (dealerId != null) {
+            log.info("Fetching test drive vehicles for dealer: {}", dealerId);
+            vehicles = vehicleService.getTestDriveVehiclesByDealer(dealerId);
+            return ResponseEntity.ok(new ApiResponse<>(true, 
+                "Test drive vehicles for dealer retrieved successfully", vehicles));
+        } else {
+            log.info("Fetching all test drive vehicles");
+            vehicles = vehicleService.getTestDriveVehicles();
+            return ResponseEntity.ok(new ApiResponse<>(true, 
+                "Test drive vehicles retrieved successfully", vehicles));
+        }
     }
 
 }
