@@ -13,6 +13,7 @@ public interface VehicleService { // Đặt tên Interface
     List<VehicleFullResponse> getAllVehicles();
     VehicleFullResponse createVehicle(VehicleRequest request, MultipartFile file);
     VehicleFullResponse updateVehicle(Long id, String color, MultipartFile file);
+    void setVehicleAsTestDrive(Long vehicleId);
     VehicleFullResponse getVehicleById(Long id);
     List<VehicleFullResponse> getAllManufacturerVehicles();
     List<StockSummaryResponse> getManufacturerStockSummary();

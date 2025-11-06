@@ -7,6 +7,7 @@ import com.example.evm.dto.vehicle.VehicleRequest;
 import com.example.evm.service.storage.FileStorageService;
 import com.example.evm.service.vehicle.VehicleService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 
@@ -95,6 +96,17 @@ public class VehicleController {
         VehicleFullResponse updated = vehicleService.updateVehicle(id, color, file);
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle updated successfully", updated));
     }
+
+    @PutMapping("/{id}/test-drive")
+    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER')")
+    @Operation(summary = "Đặt trạng thái xe thành TEST_DRIVE")
+    public ResponseEntity<ApiResponse<String>> markVehicleAsTestDrive(
+            @PathVariable("id") Long vehicleId) {
+
+        vehicleService.setVehicleAsTestDrive(vehicleId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Xe đã được đánh dấu là xe lái thử (TEST_DRIVE)", null));
+    }
+
 
     /**
      * Lấy thông tin chi tiết 1 xe (kèm full info)

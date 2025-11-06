@@ -272,6 +272,23 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     @Transactional
+    public void setVehicleAsTestDrive(Long vehicleId) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + vehicleId));
+
+        if ("SOLD".equalsIgnoreCase(vehicle.getStatus())) {
+            throw new IllegalStateException("Cannot mark a sold vehicle as test drive.");
+        }
+
+        vehicle.setStatus("TEST_DRIVE");
+        vehicleRepository.save(vehicle);
+
+        log.info("🚗 Vehicle {} marked as TEST_DRIVE", vehicle.getVehicleId());
+    }
+
+
+    @Override
+    @Transactional
     public void deleteVehicle(Long vehicleId) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with ID: " + vehicleId));
@@ -286,6 +303,8 @@ public class VehicleServiceImpl implements VehicleService {
         vehicleRepository.delete(vehicle);
         log.info("✅ Vehicle ID {} deleted successfully.", vehicleId);
     }
+
+    
 
 
     // ===== HELPER METHODS =====
@@ -351,5 +370,6 @@ public class VehicleServiceImpl implements VehicleService {
 
     return "VIN" + modelCode + randomPart;
     }
+
 }
 

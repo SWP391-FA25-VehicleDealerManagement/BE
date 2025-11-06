@@ -1,5 +1,6 @@
 package com.example.evm.repository.vehicle;
 
+import com.example.evm.dto.report.DealerInventoryReportDto;
 import com.example.evm.entity.vehicle.Vehicle;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -157,4 +158,22 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
                                            @Param("color") String color);
                                         
     boolean existsByVariantVariantId(Long variantId); 
+
+    // 📦 Báo cáo tồn kho theo đại lý
+    @Query("""
+        SELECT new com.example.evm.dto.report.DealerInventoryReportDto(
+            d.dealerId,
+            d.dealerName,
+            d.phone,
+            d.address,
+            COUNT(v.vehicleId),
+            SUM(CASE WHEN v.status = 'IN_DEALER_STOCK' THEN 1 ELSE 0 END),
+            SUM(CASE WHEN v.status = 'SOLD' THEN 1 ELSE 0 END)
+        )
+        FROM Vehicle v
+        JOIN v.inventoryStock.dealer d
+        GROUP BY d.dealerId, d.dealerName, d.phone, d.address
+        ORDER BY COUNT(v.vehicleId) DESC
+    """)
+    List<DealerInventoryReportDto> getDealerInventoryReport();
 }
