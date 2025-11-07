@@ -6,6 +6,8 @@ import com.example.evm.entity.order.Order;
 import com.example.evm.entity.order.OrderDetail;
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.service.order.OrderService;
+
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -81,6 +83,19 @@ public class OrderController {
         List<OrderDetail> details = orderService.getOrderDetails(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Order details retrieved successfully", details));
     }
+
+    @GetMapping("/dealer/{dealerId}/no-contract")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
+    @Operation(summary = "Lấy danh sách đơn hàng của đại lý chưa có hợp đồng")
+    public ResponseEntity<ApiResponse<List<Order>>> getOrdersWithoutContract(
+            @PathVariable Long dealerId) {
+
+        List<Order> orders = orderService.getOrdersWithoutContract(dealerId);
+        return ResponseEntity.ok(new ApiResponse<>(true,
+                "Danh sách đơn hàng chưa có hợp đồng của đại lý " + dealerId,
+                orders));
+    }
+
 
     /**
      * ✅ Tạo order mới - Chỉ cần truyền IDs, backend sẽ mock hết thông tin

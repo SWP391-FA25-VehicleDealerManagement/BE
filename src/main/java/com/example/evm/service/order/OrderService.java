@@ -340,4 +340,9 @@ public Order updateOrderStatus(Long id, String status) {
         log.info("Order deleted: {}", id);
     }
 
+    public List<Order> getOrdersWithoutContract(Long dealerId) {
+    return orderRepository.findOrdersWithoutContractByDealer(dealerId);
+    }
+
+
 }

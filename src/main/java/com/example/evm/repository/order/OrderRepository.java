@@ -82,4 +82,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         GROUP BY o.dealer.dealerId, o.dealer.dealerName, o.dealer.phone, o.dealer.address
     """)
     List<DealerTurnoverReportDto> getDealerTurnoverReport();
+
+    @Query("""
+    SELECT o 
+    FROM Order o
+    WHERE o.dealer.dealerId = :dealerId
+      AND o.orderId NOT IN (
+          SELECT c.order.orderId FROM VehicleContract c
+      )
+    """)
+    List<Order> findOrdersWithoutContractByDealer(@Param("dealerId") Long dealerId);
+
 }
