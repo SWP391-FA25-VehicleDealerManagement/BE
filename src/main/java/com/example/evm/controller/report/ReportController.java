@@ -1,9 +1,19 @@
 package com.example.evm.controller.report;
 
 import com.example.evm.dto.auth.ApiResponse;
+import com.example.evm.dto.report.DealerInventoryReportDto;
+import com.example.evm.dto.report.DealerSalesReportDto;
+import com.example.evm.dto.report.DealerSalesSummaryResponse;
+import com.example.evm.dto.report.DealerTurnoverReportDto;
+import com.example.evm.dto.report.SalesByStaffDto;
 import com.example.evm.service.report.ReportService;
+
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -16,35 +26,56 @@ public class ReportController {
 
     private final ReportService reportService;
 
-    // --- Báo cáo doanh số các đại lý
+    // --- Báo cáo doanh thu của 1 đại lý
     @GetMapping("/dealer-sales")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<Object>> getDealerSalesReport() {
-        Object reportData = reportService.getDealerSalesReport();
-        return ResponseEntity.ok(new ApiResponse<>(true, "Báo cáo doanh số đại lý lấy thành công", reportData));
+    @PreAuthorize("hasAnyAuthority('DEALER_MANAGER')")
+    @Operation(summary = "Báo cáo doanh thu của 1 đại lý")
+    public ResponseEntity<ApiResponse<List<DealerSalesReportDto>>> getDealerSalesReport(
+            @RequestParam Long dealerId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+
+        List<DealerSalesReportDto> report = reportService.getDealerSalesReport(dealerId, year, month);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Báo cáo doanh thu của đại lý", report));
     }
 
     // --- Báo cáo doanh số theo nhân viên của 1 đại lý
     @GetMapping("/staff-sales/{dealerId}")
-    @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<Object>> getSalesByStaff(@PathVariable Long dealerId) {
-        Object reportData = reportService.getSalesByStaff(dealerId);
+    @PreAuthorize("hasAnyAuthority('DEALER_MANAGER')")
+    public ResponseEntity<ApiResponse<List<SalesByStaffDto>>> getSalesByStaff(
+        @PathVariable Long dealerId,
+        @RequestParam(required = false) Integer year,
+        @RequestParam(required = false) Integer month) {
+        List<SalesByStaffDto> reportData = reportService.getSalesByStaff(dealerId, year, month);
         return ResponseEntity.ok(new ApiResponse<>(true, "Báo cáo doanh số nhân viên lấy thành công", reportData));
     }
+
+    // --- Báo cáo doanh thu của tất cả đại lý
+    @GetMapping("/dealers/summary")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    @Operation(summary = "📊 Báo cáo tổng hợp doanh thu của tất cả đại lý (chỉ hãng xem)")
+    public ResponseEntity<ApiResponse<List<DealerSalesSummaryResponse>>> getAllDealersSalesSummary(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        
+        List<DealerSalesSummaryResponse> report = reportService.getAllDealersSalesSummary(year, month);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Báo cáo tổng hợp doanh thu đại lý", report));
+    }
+
 
     // --- Báo cáo tồn kho
     @GetMapping("/inventory")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<Object>> getInventoryReport() { 
-        Object reportData = reportService.getInventoryReport();
+    public ResponseEntity<ApiResponse<List<DealerInventoryReportDto>>> getInventoryReport() { 
+        List<DealerInventoryReportDto> reportData = reportService.getInventoryReport();
         return ResponseEntity.ok(new ApiResponse<>(true, "Báo cáo tồn kho lấy thành công", reportData));
     }
 
     // --- Báo cáo tốc độ tiêu thụ
     @GetMapping("/turnover")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<Object>> getTurnoverReport() { 
-        Object reportData = reportService.getTurnoverReport();
+    public ResponseEntity<ApiResponse<List<DealerTurnoverReportDto>>> getTurnoverReport() { 
+        List<DealerTurnoverReportDto> reportData = reportService.getTurnoverReport();
         return ResponseEntity.ok(new ApiResponse<>(true, "Báo cáo tốc độ tiêu thụ lấy thành công", reportData));
     }
 }

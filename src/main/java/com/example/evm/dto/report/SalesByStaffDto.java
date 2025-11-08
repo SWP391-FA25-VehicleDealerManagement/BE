@@ -1,5 +1,7 @@
 package com.example.evm.dto.report;
 
+import java.math.BigDecimal;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,6 +17,8 @@ public class SalesByStaffDto {
     private String email;
     private String role; 
     private String dealerName;
+    private Integer year;
+    private Integer month;
     private Long totalOrders;
     private Double totalRevenue;
 }

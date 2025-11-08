@@ -86,7 +86,7 @@ public class OrderController {
 
     @GetMapping("/dealer/{dealerId}/no-contract")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    @Operation(summary = "Lấy danh sách đơn hàng của đại lý chưa có hợp đồng")
+    @Operation(summary = "Lấy danh sách đơn hàng chưa có hợp đồng của đại lý ")
     public ResponseEntity<ApiResponse<List<Order>>> getOrdersWithoutContract(
             @PathVariable Long dealerId) {
 

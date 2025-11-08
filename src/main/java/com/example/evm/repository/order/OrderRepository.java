@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 import com.example.evm.dto.report.DealerSalesReportDto;
+import com.example.evm.dto.report.DealerSalesSummaryResponse;
 import com.example.evm.dto.report.DealerTurnoverReportDto;
 import com.example.evm.dto.report.SalesByStaffDto;
 import com.example.evm.entity.order.Order;
@@ -29,22 +30,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT COUNT(o) FROM Order o WHERE o.dealer.dealerId = :dealerId AND o.status = :status")
     Long countByDealerAndStatus(@Param("dealerId") Long dealerId, @Param("status") String status);
 
-    // 📊 Báo cáo doanh số theo đại lý
+    // Lấy order ko có contract
     @Query("""
-        SELECT new com.example.evm.dto.report.DealerSalesReportDto(
-            o.dealer.dealerId,
-            o.dealer.dealerName,
-            o.dealer.phone,
-            o.dealer.address,
-            COUNT(o.orderId),
-            SUM(o.totalPrice)
-        )
-        FROM Order o
-        WHERE o.status IN ('SHIPPED', 'COMPLETED')
-        GROUP BY o.dealer.dealerId, o.dealer.dealerName, o.dealer.phone, o.dealer.address
-        ORDER BY SUM(o.totalPrice) DESC
+    SELECT o 
+    FROM Order o
+    WHERE o.dealer.dealerId = :dealerId
+      AND o.orderId NOT IN (
+          SELECT c.order.orderId FROM VehicleContract c
+      )
     """)
-    List<DealerSalesReportDto> getDealerSalesReport();
+    List<Order> findOrdersWithoutContractByDealer(@Param("dealerId") Long dealerId);
 
     // 📈 Báo cáo doanh số theo nhân viên (dealer side)
     @Query("""
@@ -56,16 +51,77 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             o.user.email,
             o.user.role,
             o.dealer.dealerName,
+            YEAR(o.createdDate),
+            MONTH(o.createdDate),
             COUNT(o.orderId),
             SUM(o.totalPrice)
         )
         FROM Order o
         WHERE o.dealer.dealerId = :dealerId
           AND o.status IN ('SHIPPED', 'COMPLETED')
-        GROUP BY o.user.userId, o.user.userName, o.user.fullName, o.user.phone, o.user.email, o.user.role, o.dealer.dealerName
-        ORDER BY SUM(o.totalPrice) DESC
+          AND (:year IS NULL OR YEAR(o.createdDate) = :year)
+          AND (:month IS NULL OR MONTH(o.createdDate) = :month)
+        GROUP BY 
+            o.user.userId, o.user.userName, o.user.fullName, o.user.phone,
+            o.user.email, o.user.role, o.dealer.dealerName,
+            YEAR(o.createdDate), MONTH(o.createdDate)
+        ORDER BY 
+            YEAR(o.createdDate) DESC,
+            MONTH(o.createdDate) DESC,
+            SUM(o.totalPrice) DESC
     """)
-    List<SalesByStaffDto> getSalesByStaff(@Param("dealerId") Long dealerId);
+    List<SalesByStaffDto> getSalesByStaff(@Param("dealerId") Long dealerId,
+                                          @Param("year") Integer year,
+                                          @Param("month") Integer month);
+
+    // Báo cáo doanh thu của 1 đại lý (dealer side)
+    @Query("""
+        SELECT new com.example.evm.dto.report.DealerSalesReportDto(
+            d.dealerId,
+            d.dealerName,
+            YEAR(o.createdDate),
+            MONTH(o.createdDate),
+            SUM(o.totalPrice),
+            COUNT(o.orderId)
+        )
+        FROM Order o JOIN o.dealer d
+        WHERE o.dealer.dealerId = :dealerId
+        AND (:year IS NULL OR YEAR(o.createdDate) = :year)
+        AND (:month IS NULL OR MONTH(o.createdDate) = :month)
+        AND o.status IN ('SHIPPED', 'COMPLETED')
+        GROUP BY d.dealerId, d.dealerName, YEAR(o.createdDate), MONTH(o.createdDate)
+        ORDER BY YEAR(o.createdDate) DESC, MONTH(o.createdDate) DESC
+    """)
+    List<DealerSalesReportDto> getDealerSalesReport(@Param("dealerId") Long dealerId, 
+                                                    @Param("year") Integer year, 
+                                                    @Param("month") Integer month);
+
+    // Báo cáo doanh thu của các đại lý (EVM side)                            
+    @Query("""
+        SELECT new com.example.evm.dto.report.DealerSalesSummaryResponse(
+            o.dealer.dealerId,
+            o.dealer.dealerName,
+            o.dealer.phone,
+            o.dealer.address,
+            YEAR(o.createdDate),
+            MONTH(o.createdDate), 
+            COALESCE(SUM(o.totalPrice), 0),
+            COUNT(o)
+        )    
+        FROM Order o
+        WHERE (:year IS NULL OR YEAR(o.createdDate) = :year)
+            AND (:month IS NULL OR MONTH(o.createdDate) = :month)
+            AND o.status IN ('SHIPPED', 'COMPLETED')
+        GROUP BY o.dealer.dealerId, o.dealer.dealerName, o.dealer.phone, o.dealer.address, YEAR(o.createdDate), MONTH(o.createdDate)
+        ORDER BY
+            YEAR(o.createdDate) DESC,
+            MONTH(o.createdDate) DESC,
+            SUM(o.totalPrice) DESC
+    """)
+    List<DealerSalesSummaryResponse> getAllDealersSalesSummary(@Param("year") Integer year,
+                                                               @Param("month") Integer month
+    );
+                          
 
     // 📉 Tốc độ tiêu thụ
     @Query("""
@@ -82,15 +138,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         GROUP BY o.dealer.dealerId, o.dealer.dealerName, o.dealer.phone, o.dealer.address
     """)
     List<DealerTurnoverReportDto> getDealerTurnoverReport();
-
-    @Query("""
-    SELECT o 
-    FROM Order o
-    WHERE o.dealer.dealerId = :dealerId
-      AND o.orderId NOT IN (
-          SELECT c.order.orderId FROM VehicleContract c
-      )
-    """)
-    List<Order> findOrdersWithoutContractByDealer(@Param("dealerId") Long dealerId);
 
 }

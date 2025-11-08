@@ -1,6 +1,10 @@
 package com.example.evm.service.report;
 
-import com.example.evm.dto.report.*;
+import com.example.evm.dto.report.DealerInventoryReportDto;
+import com.example.evm.dto.report.DealerSalesReportDto;
+import com.example.evm.dto.report.DealerSalesSummaryResponse;
+import com.example.evm.dto.report.DealerTurnoverReportDto;
+import com.example.evm.dto.report.SalesByStaffDto;
 import com.example.evm.repository.order.OrderRepository;
 import com.example.evm.repository.vehicle.VehicleRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,15 +22,19 @@ public class ReportServiceImpl implements ReportService {
     private final VehicleRepository vehicleRepository;
 
     @Override
-    public List<DealerSalesReportDto> getDealerSalesReport() {
-        log.info("📊 Generating dealer sales report...");
-        return orderRepository.getDealerSalesReport();
+    public List<DealerSalesReportDto> getDealerSalesReport(Long dealerId, Integer year, Integer month) {
+        return orderRepository.getDealerSalesReport(dealerId, year, month);
     }
 
     @Override
-    public List<SalesByStaffDto> getSalesByStaff(Long dealerId) {
+    public List<DealerSalesSummaryResponse> getAllDealersSalesSummary(Integer year, Integer month) {
+        return orderRepository.getAllDealersSalesSummary(year, month);
+    }
+
+    @Override
+    public List<SalesByStaffDto> getSalesByStaff(Long dealerId, Integer year, Integer month) {
         log.info("📈 Generating staff sales report for dealer {}", dealerId);
-        return orderRepository.getSalesByStaff(dealerId);
+        return orderRepository.getSalesByStaff(dealerId, year, month);
     }
 
     @Override

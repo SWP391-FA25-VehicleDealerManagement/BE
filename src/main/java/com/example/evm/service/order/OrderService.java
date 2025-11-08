@@ -54,6 +54,10 @@ public class OrderService {
         return orders;
     }
 
+    public List<Order> getOrdersWithoutContract(Long dealerId) {
+    return orderRepository.findOrdersWithoutContractByDealer(dealerId);
+    }
+
     public List<Order> getOrdersByDealer(Long dealerId) {
         List<Order> orders = orderRepository.findByDealerDealerId(dealerId);
         enrichOrdersWithAmountPaid(orders);
@@ -83,6 +87,15 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
         calculateAmountPaidForOrder(order);
         return order;
+    }
+
+    public Double getTotalSalesByDealer(Long dealerId) {
+        Double totalSales = orderRepository.getTotalSalesByDealer(dealerId);
+        return totalSales != null ? totalSales : 0.0;
+    }
+
+    public Long countOrdersByDealerAndStatus(Long dealerId, String status) {
+        return orderRepository.countByDealerAndStatus(dealerId, status);
     }
 
     /**
@@ -295,37 +308,28 @@ public class OrderService {
         return savedOrder;
     }
 
-public Order updateOrderStatus(Long id, String status) {
-    Order order = getOrderById(id);
-    order.setStatus(status);
+    public Order updateOrderStatus(Long id, String status) {
+        Order order = getOrderById(id);
+        order.setStatus(status);
     
-    // ✅ Thêm logic: Khi SHIPPED, cập nhật vehicle
-    if ("SHIPPED".equals(status)) {
-        List<OrderDetail> orderDetails = getOrderDetails(id);
-        for (OrderDetail detail : orderDetails) {
-            Vehicle vehicle = detail.getVehicle();
-            if (vehicle != null) {
-                vehicle.setStatus("SOLD");
-                vehicle.setInventoryStock(null); // Loại khỏi kho đại lý
-                vehicleRepository.save(vehicle);
-                log.info("Vehicle {} sold and removed from dealer inventory", vehicle.getVehicleId());
+        // ✅ Thêm logic: Khi SHIPPED, cập nhật vehicle
+        if ("SHIPPED".equals(status)) {
+            List<OrderDetail> orderDetails = getOrderDetails(id);
+            for (OrderDetail detail : orderDetails) {
+                Vehicle vehicle = detail.getVehicle();
+                if (vehicle != null) {
+                    vehicle.setStatus("SOLD");
+                    vehicle.setInventoryStock(null); // Loại khỏi kho đại lý
+                    vehicleRepository.save(vehicle);
+                    log.info("Vehicle {} sold and removed from dealer inventory", vehicle.getVehicleId());
+                }
             }
         }
-    }
     
-    Order updatedOrder = orderRepository.save(order);
-    log.info("Order {} status updated to: {}", id, status);
+        Order updatedOrder = orderRepository.save(order);
+        log.info("Order {} status updated to: {}", id, status);
     
-    return updatedOrder;
-}
-
-    public Double getTotalSalesByDealer(Long dealerId) {
-        Double totalSales = orderRepository.getTotalSalesByDealer(dealerId);
-        return totalSales != null ? totalSales : 0.0;
-    }
-
-    public Long countOrdersByDealerAndStatus(Long dealerId, String status) {
-        return orderRepository.countByDealerAndStatus(dealerId, status);
+        return updatedOrder;
     }
 
     @Transactional
@@ -339,10 +343,4 @@ public Order updateOrderStatus(Long id, String status) {
         orderRepository.delete(order);
         log.info("Order deleted: {}", id);
     }
-
-    public List<Order> getOrdersWithoutContract(Long dealerId) {
-    return orderRepository.findOrdersWithoutContractByDealer(dealerId);
-    }
-
-
 }

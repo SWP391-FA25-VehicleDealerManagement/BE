@@ -7,13 +7,15 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Schema(description = "Báo cáo doanh thu và số lượng đơn hàng của 1 đại lý")
-public class DealerSalesReportDto {
+@Schema(description = "Báo cáo tổng hợp doanh thu theo đại lý")
+public class DealerSalesSummaryResponse {
 
     private Long dealerId;
     private String dealerName;
+    private String phone;
+    private String address;
     private Integer year;
-    private Integer month;
+    private Integer month; 
     private Double totalRevenue;
     private Long totalOrders;
 }
