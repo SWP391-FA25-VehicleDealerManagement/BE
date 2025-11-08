@@ -40,7 +40,7 @@ public class VehicleContractController {
      * Tạo hợp đồng mới
      */
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'DEALER_MANAGER', 'DEALER_STAFF')")
     public ResponseEntity<ApiResponse<VehicleContractResponse>> createContract(
             @Valid @RequestBody VehicleContractRequest request) {
         VehicleContractResponse response = vehicleContractService.createContract(request);
@@ -48,7 +48,7 @@ public class VehicleContractController {
     }
 
     @PutMapping("/{id}/sign")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER', 'DEALER_STAFF')")
     public ResponseEntity<ApiResponse<VehicleContractResponse>> signContract(
             @PathVariable Long id) {
         
@@ -60,7 +60,7 @@ public class VehicleContractController {
      * Lấy danh sách hợp đồng
      */
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER', 'DEALER_STAFF')")
     public ResponseEntity<ApiResponse<List<VehicleContractResponse>>> getAllContracts() {
         List<VehicleContractResponse> response = vehicleContractService.getAllContracts();
         return ResponseEntity.ok(new ApiResponse<>(true, "All contracts retrieved successfully", response));
@@ -70,7 +70,7 @@ public class VehicleContractController {
      * Lấy hợp đồng theo ID
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER', 'DEALER_STAFF')")
     public ResponseEntity<ApiResponse<VehicleContractResponse>> getContractById(@PathVariable Long id) {
         VehicleContractResponse response = vehicleContractService.getContractById(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Contract retrieved successfully", response));
