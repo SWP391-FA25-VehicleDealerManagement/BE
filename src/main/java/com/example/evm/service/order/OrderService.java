@@ -341,8 +341,12 @@ public Order updateOrderStatus(Long id, String status) {
     }
 
     public List<Order> getOrdersWithoutContract(Long dealerId) {
-    return orderRepository.findOrdersWithoutContractByDealer(dealerId);
+        List<Order> orders = orderRepository.findOrdersWithoutContractByDealer(dealerId);
+        // ✅ Eager load orderDetails để trả về orderDetailId
+        orders.forEach(order -> {
+            order.getOrderDetails().size(); // Force load orderDetails
+        });
+        enrichOrdersWithAmountPaid(orders);
+        return orders;
     }
-
-
 }
