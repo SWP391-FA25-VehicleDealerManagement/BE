@@ -4,10 +4,7 @@ import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.dto.contract.VehicleContractRequest;
 import com.example.evm.dto.contract.VehicleContractResponse;
 import com.example.evm.entity.contract.VehicleContract;
-import com.example.evm.exception.ResourceNotFoundException;
-import com.example.evm.repository.contract.VehicleContractRepository;
 import com.example.evm.service.contract.VehicleContractService;
-import com.example.evm.service.contract.VehicleContractServiceImpl;
 import com.example.evm.service.storage.FileStorageService;
 
 import jakarta.validation.Valid;
@@ -22,9 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.core.io.Resource;
 
-import java.io.IOException;
 import java.util.List;
-import java.nio.file.Files;
 
 @Slf4j
 @RestController
@@ -34,7 +29,6 @@ public class VehicleContractController {
 
     private final VehicleContractService vehicleContractService;
     private final FileStorageService fileStorageService;
-    private final VehicleContractRepository contractRepository;
 
     /**
      * Tạo hợp đồng mới
@@ -74,6 +68,16 @@ public class VehicleContractController {
     public ResponseEntity<ApiResponse<VehicleContractResponse>> getContractById(@PathVariable Long id) {
         VehicleContractResponse response = vehicleContractService.getContractById(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Contract retrieved successfully", response));
+    }
+
+    /**
+     * Lấy tất cả hợp đồng theo dealerId
+     */
+    @GetMapping("/dealer/{dealerId}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER', 'DEALER_STAFF')")
+    public ResponseEntity<ApiResponse<List<VehicleContractResponse>>> getContractsByDealerId(@PathVariable Long dealerId) {
+        List<VehicleContractResponse> response = vehicleContractService.getContractsByDealerId(dealerId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Danh sách hợp đồng của đại lý", response));
     }
 
     /**

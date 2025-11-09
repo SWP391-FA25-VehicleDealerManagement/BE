@@ -9,7 +9,6 @@ import com.example.evm.entity.vehicle.Vehicle;
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.repository.contract.VehicleContractRepository;
 import com.example.evm.repository.order.OrderDetailRepository;
-import com.example.evm.repository.order.OrderRepository;
 import com.example.evm.repository.salePrice.SalePriceRepository;
 import com.example.evm.service.storage.FileStorageService;
 
@@ -22,7 +21,6 @@ import org.apache.poi.xwpf.usermodel.*;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
-import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -40,7 +38,6 @@ import java.util.stream.Collectors;
 public class VehicleContractServiceImpl implements VehicleContractService {
 
     private final VehicleContractRepository vehicleContractRepository;
-    private final OrderRepository orderRepository;
     private final OrderDetailRepository orderDetailRepository;
     private final SalePriceRepository salePriceRepository;
     private final FileStorageService fileStorageService;
@@ -154,6 +151,17 @@ public class VehicleContractServiceImpl implements VehicleContractService {
         VehicleContract contract = vehicleContractRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contract not found with ID: " + id));
         return mapToResponse(contract);
+    }
+
+    /**
+     * Lấy hơp đồng theo Dealer ID
+     */
+    @Override
+    public List<VehicleContractResponse> getContractsByDealerId(Long dealerId) {
+        List<VehicleContract> contracts = vehicleContractRepository.findByDealerDealerId(dealerId); 
+        return contracts.stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
     }
 
     /**

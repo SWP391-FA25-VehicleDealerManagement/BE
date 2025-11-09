@@ -24,6 +24,11 @@ public interface VehicleContractService {
     VehicleContractResponse getContractById(Long id);
 
     /**
+     * Lấy tất cả hợp đồng theo dealer 
+     */
+    List<VehicleContractResponse> getContractsByDealerId(Long dealerId);
+
+    /**
      * 📄 Lấy entity gốc của hợp đồng (phục vụ khi sinh file Word hoặc truy xuất dữ liệu nội bộ).
      */
     VehicleContract getContractEntityById(Long id);
