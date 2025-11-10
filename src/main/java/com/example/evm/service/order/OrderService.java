@@ -21,7 +21,6 @@ import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.promotion.PromotionRepository;
 import com.example.evm.repository.payment.PaymentRepository;
 import com.example.evm.repository.debt.DebtRepository;
-import com.example.evm.entity.payment.Payment;
 import com.example.evm.entity.debt.Debt;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -140,17 +139,12 @@ public class OrderService {
         // (Có thể Payment Pending chưa tạo Debt, hoặc Debt.amountPaid chưa được cập nhật)
         if (amountPaid == 0.0 || amountPaid == null) {
             try {
-                Payment payment = paymentRepository.findByOrderId(order.getOrderId()).orElse(null);
-                if (payment != null && payment.getAmount() != null) {
-                    // ✅ Tính từ Payment: Completed hoặc Pending đều tính (Pending đang chờ callback)
-                    if ("Completed".equalsIgnoreCase(payment.getStatus()) || 
-                        "Pending".equalsIgnoreCase(payment.getStatus())) {
-                        amountPaid = payment.getAmount().doubleValue();
-                        log.debug("✅ Found Payment for Order {}: status = {}, type = {}, amountPaid = {}", 
-                                order.getOrderId(), payment.getStatus(), payment.getPaymentType(), amountPaid);
-                    }
+                BigDecimal completedAmount = paymentRepository.sumCompletedAmountByOrderId(order.getOrderId());
+                if (completedAmount != null && completedAmount.compareTo(BigDecimal.ZERO) > 0) {
+                    amountPaid = completedAmount.doubleValue();
+                    log.debug("✅ Sum completed payments for Order {} = {}", order.getOrderId(), completedAmount);
                 } else {
-                    log.debug("⚠️ No Payment found for Order {}", order.getOrderId());
+                    log.debug("⚠️ No completed Payment found for Order {}", order.getOrderId());
                 }
             } catch (Exception e) {
                 log.warn("⚠️ Error checking Payment for Order {}: {}", order.getOrderId(), e.getMessage());
@@ -160,6 +154,11 @@ public class OrderService {
         // 3. Đảm bảo amountPaid không null
         if (amountPaid == null) {
             amountPaid = 0.0;
+        }
+
+        if (order.getTotalPrice() != null && amountPaid > order.getTotalPrice()) {
+            log.warn("⚠️ Amount paid {} exceeds order total {} for order {}, capping to total.", amountPaid, order.getTotalPrice(), order.getOrderId());
+            amountPaid = order.getTotalPrice();
         }
         
         order.setAmountPaid(amountPaid);

@@ -954,9 +954,24 @@ public class DebtService {
             }
             
             // Tìm Payment từ orderId
-            Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
-            if (payment == null) {
+            List<Payment> payments = paymentRepository.findAllByOrderId(orderId);
+            if (payments == null || payments.isEmpty()) {
                 log.warn("⚠️ No Payment found for Order {} (Debt {})", orderId, debt.getDebtId());
+                return BigDecimal.ZERO;
+            }
+            
+            Payment payment = payments.stream()
+                    .filter(p -> "INSTALLMENT".equalsIgnoreCase(p.getPaymentType()))
+                    .filter(p -> {
+                        String status = p.getStatus();
+                        return status != null && ("Completed".equalsIgnoreCase(status) || "Pending".equalsIgnoreCase(status));
+                    })
+                    .sorted(Comparator.comparing(Payment::getPaymentDate, Comparator.nullsLast(LocalDateTime::compareTo)).reversed())
+                    .findFirst()
+                    .orElse(null);
+            
+            if (payment == null) {
+                log.warn("⚠️ No suitable INSTALLMENT payment found for Order {} (Debt {})", orderId, debt.getDebtId());
                 return BigDecimal.ZERO;
             }
             

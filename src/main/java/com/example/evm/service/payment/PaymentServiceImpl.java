@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.evm.dto.payment.PaymentInfo;
 import com.example.evm.entity.payment.Payment;
+import com.example.evm.entity.order.Order;
 import com.example.evm.repository.order.OrderRepository;
 import com.example.evm.repository.payment.PaymentRepository;
 @Service
@@ -45,6 +46,31 @@ public class PaymentServiceImpl implements PaymentService {
             throw new IllegalArgumentException("Payment amount must be at least 10,000 VND for VNPay");
         }
         
+        Order order = null;
+        if (paymentInfo.getOrderId() != null) {
+            order = orderRepository.findById(paymentInfo.getOrderId())
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid order id " + paymentInfo.getOrderId()));
+        }
+
+        BigDecimal completedAmount = BigDecimal.ZERO;
+        if (paymentInfo.getOrderId() != null) {
+            completedAmount = paymentRepository.sumCompletedAmountByOrderId(paymentInfo.getOrderId());
+            if (completedAmount == null) {
+                completedAmount = BigDecimal.ZERO;
+            }
+        }
+
+        if (order != null && order.getTotalPrice() != null) {
+            BigDecimal orderTotal = BigDecimal.valueOf(order.getTotalPrice());
+            BigDecimal remaining = orderTotal.subtract(completedAmount);
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Order has already been fully paid.");
+            }
+            if (paymentInfo.getAmount().compareTo(remaining) > 0) {
+                throw new IllegalArgumentException("Payment amount exceeds the remaining balance (" + remaining.toPlainString() + " VND).");
+            }
+        }
+        
         Payment payment = new Payment();
         payment.setOrderId(paymentInfo.getOrderId());
         payment.setAmount(paymentInfo.getAmount());
@@ -53,9 +79,6 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setPaymentId(null);
         if(payment.getPaymentDate() == null){
                 payment.setPaymentDate(LocalDateTime.now());
-        }
-        if(payment.getOrderId()!=null && !orderRepository.existsById(payment.getOrderId())){
-            throw new IllegalArgumentException("Invalid order id "+payment.getOrderId());
         }
            // Xử lý theo phương thức thanh toán
         if ("cash".equalsIgnoreCase(payment.getPaymentMethod())) {
