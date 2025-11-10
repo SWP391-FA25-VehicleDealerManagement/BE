@@ -286,6 +286,24 @@ public class VehicleServiceImpl implements VehicleService {
         log.info("🚗 Vehicle {} marked as TEST_DRIVE", vehicle.getVehicleId());
     }
 
+    @Override
+    @Transactional
+    public void returnVehicleFromTestDrive(Long vehicleId) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy xe với ID: " + vehicleId));
+
+        // Kiểm tra trạng thái hiện tại
+        if (!"TEST_DRIVE".equalsIgnoreCase(vehicle.getStatus())) {
+            throw new IllegalStateException("Xe này không ở trạng thái TEST_DRIVE, không thể chuyển về kho.");
+        }
+
+        // Cập nhật trạng thái
+        vehicle.setStatus("IN_DEALER_STOCK");
+        vehicleRepository.save(vehicle);
+
+        log.info("✅ Vehicle {} đã được chuyển từ TEST_DRIVE về IN_DEALER_STOCK", vehicle.getVehicleId());
+    }
+
 
     @Override
     @Transactional

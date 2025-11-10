@@ -2,7 +2,6 @@ package com.example.evm.entity.feedback;
 
 import com.example.evm.entity.testDrive.TestDrive;
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

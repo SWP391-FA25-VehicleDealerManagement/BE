@@ -97,6 +97,7 @@ public class VehicleController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle updated successfully", updated));
     }
 
+    // ĐẶT STATUS XE THÀNH "TEST_DRIVE"
     @PutMapping("/{id}/test-drive")
     @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER')")
     @Operation(summary = "Đặt trạng thái xe thành TEST_DRIVE")
@@ -105,6 +106,17 @@ public class VehicleController {
 
         vehicleService.setVehicleAsTestDrive(vehicleId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Xe đã được đánh dấu là xe lái thử (TEST_DRIVE)", null));
+    }
+
+    // ĐẶT STATUS XE VỀ LẠI KHO DEALER
+    @PutMapping("/{id}/return-test-drive")
+    @PreAuthorize("hasAnyAuthority('DEALER_STAFF', 'DEALER_MANAGER')")
+    @Operation(summary = "Đặt trạng thái xe thành IN_DEALER_STOCK")
+    public ResponseEntity<ApiResponse<String>> returnVehicleFromTestDrive(
+            @PathVariable("id") Long vehicleId) {
+
+        vehicleService.returnVehicleFromTestDrive(vehicleId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Xe đã được chuyển về kho đại lý", null));
     }
 
 

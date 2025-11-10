@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,6 +50,20 @@ public class ReportController {
         List<SalesByStaffDto> reportData = reportService.getSalesByStaff(dealerId, year, month);
         return ResponseEntity.ok(new ApiResponse<>(true, "Báo cáo doanh số nhân viên lấy thành công", reportData));
     }
+
+    // --- Báo cáo doanh số của 1 nhân viên
+    @GetMapping("/staff-sales-report")
+    @Operation(summary = "📊 Báo cáo doanh thu của 1 nhân viên cụ thể")
+    @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'DEALER_STAFF')")
+        public ResponseEntity<ApiResponse<Map<String, Object>>> getStaffSalesReport(
+            @RequestParam Long userId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        Map<String, Object> report = reportService.getStaffSalesReport(userId, year, month);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Báo cáo doanh thu của nhân viên", report));
+    }
+
+
 
     // --- Báo cáo doanh thu của tất cả đại lý
     @GetMapping("/dealers/summary")
