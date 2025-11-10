@@ -12,6 +12,8 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 
 @Service
@@ -61,13 +63,16 @@ public class VNPayService {
         vnp_Params.put("vnp_IpAddr", "127.0.0.1");
 
         // Thời gian tạo và hết hạn
-        Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
+        ZoneId vietnamZone = ZoneId.of("Asia/Ho_Chi_Minh");
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
-        String createDate = formatter.format(cld.getTime());
+        formatter.setTimeZone(TimeZone.getTimeZone(vietnamZone));
+
+        ZonedDateTime nowVietnam = ZonedDateTime.now(vietnamZone);
+        String createDate = formatter.format(Date.from(nowVietnam.toInstant()));
         vnp_Params.put("vnp_CreateDate", createDate);
 
-        cld.add(Calendar.MINUTE, 15);
-        String expireDate = formatter.format(cld.getTime());
+        ZonedDateTime expireVietnam = nowVietnam.plusMinutes(15);
+        String expireDate = formatter.format(Date.from(expireVietnam.toInstant()));
         vnp_Params.put("vnp_ExpireDate", expireDate);
 
         // Sắp xếp params theo tên

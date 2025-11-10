@@ -121,32 +121,6 @@ Table SalePrice {
   effectivedate date
 }
 
-Table Promotions {
-  promo_id bigint [pk, increment]
-  dealer_id bigint [ref: > Dealer.dealer_id]
-  title nvarchar(255)
-  description nvarchar(max)
-  discount_rate decimal(5,2)
-  start_date date
-  end_date date
-}
-
-Table PromotionVehicle {
-  promo_id bigint [ref: > Promotions.promo_id]
-  vehicle_id bigint [ref: > Vehicle.vehicle_id]
-  indexes {
-    (promo_id, vehicle_id) [pk]
-  }
-}
-
-Table PromotionDealer {
-  promo_id bigint [ref: > Promotions.promo_id]
-  dealer_id bigint [ref: > Dealer.dealer_id]
-  indexes {
-    (promo_id, dealer_id) [pk]
-  }
-}
-
 Table TestDrive {
   testdrive_id bigint [pk, increment]
   dealer_id bigint [ref: > Dealer.dealer_id]
@@ -209,7 +183,6 @@ Table OrderDetail {
   orderdetail_id bigint [pk, increment]
   order_id bigint [ref: > Order.order_id]
   vehicle_id bigint [ref: > Vehicle.vehicle_id]
-  promotion_id bigint [ref: > Promotions.promo_id]
   quantity int
   price decimal(18,2)
 }
