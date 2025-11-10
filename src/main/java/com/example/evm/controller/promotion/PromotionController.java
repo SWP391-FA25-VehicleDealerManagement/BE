@@ -24,7 +24,7 @@ public class PromotionController {
     public ResponseEntity<ApiResponse<List<Promotion>>> getAllPromotions() {
         List<Promotion> promotions = promotionService.getAllPromotions();
         return ResponseEntity.ok(new ApiResponse<>(true, "Promotions retrieved successfully", promotions));
-    }
+    }   
 
     @GetMapping("/dealer/{dealerId}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
