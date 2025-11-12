@@ -28,12 +28,16 @@ import org.springframework.context.annotation.Configuration;
     ),
     servers = {
         @Server(
+            description = "Current Server",
+            url = "/"
+        ),
+        @Server(
             description = "Local Development Server",
             url = "http://localhost:8080"
         ),
         @Server(
             description = "Production Server",
-            url = "https://api.evm.com"
+            url = "https://evm-tau.vercel.app"
         )
     },
     security = {
