@@ -18,15 +18,19 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.poi.xwpf.usermodel.*;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTblBorders;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STBorder;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.io.OutputStream;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
@@ -219,69 +223,113 @@ public class VehicleContractServiceImpl implements VehicleContractService {
         // Tạo tài liệu mới
         try (XWPFDocument doc = new XWPFDocument()) {
 
+            // ===== Quốc hiệu, Tiêu ngữ =====
+            addStyledParagraph(doc, "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", 12, true, ParagraphAlignment.CENTER);
+            addStyledParagraph(doc, "Độc lập - Tự do - Hạnh phúc", 12, true, ParagraphAlignment.CENTER);
+            addStyledParagraph(doc, "________________________", 12, false, ParagraphAlignment.CENTER);
+            doc.createParagraph(); // Dòng trống
+
             // ===== Tiêu đề =====
-            XWPFParagraph title = doc.createParagraph();
-            title.setAlignment(ParagraphAlignment.CENTER);
-            XWPFRun titleRun = title.createRun();
-            titleRun.setText("HỢP ĐỒNG MUA BÁN XE Ô TÔ");
-            titleRun.setBold(true);
-            titleRun.setFontSize(16);
+            addStyledParagraph(doc, "HỢP ĐỒNG MUA BÁN Ô TÔ", 16, true, ParagraphAlignment.CENTER);
+            addStyledParagraph(doc, "Số: " + getSafeString(contract.getContractNumber(), "........."), 12, false, ParagraphAlignment.CENTER);
+            
+            // Dòng "Hợp đồng... ký ngày..." đã được BỎ theo template Python mới
+            doc.createParagraph(); // Dòng trống
 
-            // ===== Dòng trống =====
-            doc.createParagraph();
+            // ===== Bố cục 2 cột cho Bên Bán và Bên Mua (Dùng bảng ẩn) =====
+            XWPFTable partyTable = doc.createTable(1, 2);
+            setTableBorders(partyTable, STBorder.NONE); // Ẩn viền bảng
+            setTableColumnWidth(partyTable, 0, 4500); // ~3.1 inch
+            setTableColumnWidth(partyTable, 1, 4500);
 
-            // ===== Thông tin cơ bản =====
-            addParagraph(doc, "Số hợp đồng: " + contract.getContractNumber());
-            addParagraph(doc, "Ngày lập hợp đồng: " +
-                    contract.getContractDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-            doc.createParagraph();
+            XWPFTableCell sellerCell = partyTable.getRow(0).getCell(0);
+            XWPFTableCell buyerCell = partyTable.getRow(0).getCell(1);
+            
+            // Xóa đoạn văn mặc định
+            sellerCell.removeParagraph(0);
+            buyerCell.removeParagraph(0);
 
-            // ===== Các bên =====
-            addParagraph(doc, "BÊN BÁN (Đại lý): " +
-            (contract.getDealer() != null ? contract.getDealer().getDealerName() : "N/A"));
-            addParagraph(doc, "BÊN MUA (Khách hàng): " + 
-            (contract.getCustomer() != null ? contract.getCustomer().getCustomerName() : "N/A"));
-            doc.createParagraph();
-
-            // ===== Thông tin xe =====
-            addParagraph(doc, "Thông tin xe:");
-            if (contract.getVehicle() != null) {
-                Vehicle v = contract.getVehicle();
-                addParagraph(doc, "- Số VIN: " + (v.getVinNumber() != null ? v.getVinNumber() : "N/A"));
-                addParagraph(doc, "- Màu sắc: " + (v.getColor() != null ? v.getColor() : "N/A"));
-                
-                if (v.getVariant() != null) {
-                    addParagraph(doc, "- Phiên bản: " + (v.getVariant().getName() != null ? v.getVariant().getName() : "N/A"));
-                    if (v.getVariant().getModel() != null) {
-                        addParagraph(doc, "- Mẫu xe: " + (v.getVariant().getModel().getName() != null ? v.getVariant().getModel().getName() : "N/A"));
-                    } else {
-                        addParagraph(doc, "- Mẫu xe: N/A");
-                    }
-                } else {
-                    addParagraph(doc, "- Phiên bản: N/A");
-                    addParagraph(doc, "- Mẫu xe: N/A");
-                }
-            } else {
-                addParagraph(doc, "N/A - Không có thông tin xe");
+            // --- Cột Bên Bán ---
+            addCellParagraph(sellerCell, "BÊN BÁN (ĐẠI LÝ)", 12, true, ParagraphAlignment.LEFT, false);
+            if (contract.getDealer() != null) {
+                addCellParagraph(sellerCell, "Tên đơn vị: " + getSafeString(contract.getDealer().getDealerName()), 12, false, ParagraphAlignment.LEFT, false);
+                addCellParagraph(sellerCell, "Địa chỉ: " + getSafeString(contract.getDealer().getAddress()), 12, false, ParagraphAlignment.LEFT, false);
+                addCellParagraph(sellerCell, "Hotline: " + getSafeString(contract.getDealer().getPhone()), 12, false, ParagraphAlignment.LEFT, false);
             }
+
+            // --- Cột Bên Mua ---
+            addCellParagraph(buyerCell, "BÊN MUA (KHÁCH HÀNG)", 12, true, ParagraphAlignment.LEFT, false);
+            if (contract.getCustomer() != null) {
+                addCellParagraph(buyerCell, "Họ và tên: " + getSafeString(contract.getCustomer().getCustomerName()), 12, false, ParagraphAlignment.LEFT, false);
+                addCellParagraph(buyerCell, "Số điện thoại: " + getSafeString(contract.getCustomer().getPhone()), 12, false, ParagraphAlignment.LEFT, false);
+                addCellParagraph(buyerCell, "Email: " + getSafeString(contract.getCustomer().getEmail()), 12, false, ParagraphAlignment.LEFT, false);
+            }
+            
+            doc.createParagraph(); // Dòng trống
+
+            // ===== ĐIỀU 1. THÔNG TIN XE =====
+            addStyledParagraph(doc, "ĐIỀU 1. TÊN HÀNG – PHIÊN BẢN – MÀU XE – GIÁ TRỊ XE", 12, true, ParagraphAlignment.LEFT);
             doc.createParagraph();
 
-            // ===== Giá & thanh toán =====
-            addParagraph(doc, "Giá bán: " + 
-                (contract.getSalePrice() != null ? contract.getSalePrice().toString() + " VND" : "N/A"));
-            addParagraph(doc, "Phương thức thanh toán: " + 
-                (contract.getPaymentMethod() != null ? contract.getPaymentMethod() : "N/A"));
+            // --- Bảng thông tin xe (4 cột) ---
+            XWPFTable itemTable = doc.createTable(2, 4); // 1 hàng tiêu đề, 1 hàng dữ liệu
+            itemTable.setWidth("100%");
+
+            // Hàng tiêu đề
+            setTableCellText(itemTable.getRow(0).getCell(0), "Tên hàng", true);
+            setTableCellText(itemTable.getRow(0).getCell(1), "Phiên bản", true);
+            setTableCellText(itemTable.getRow(0).getCell(2), "Màu xe", true);
+            setTableCellText(itemTable.getRow(0).getCell(3), "Giá bán (VND)", true);
+
+            // Hàng dữ liệu
+            Vehicle v = contract.getVehicle();
+            String modelName = (v != null && v.getVariant() != null && v.getVariant().getModel() != null) ? v.getVariant().getModel().getName() : "N/A";
+            String variantName = (v != null && v.getVariant() != null) ? v.getVariant().getName() : "N/A";
+            String color = (v != null) ? v.getColor() : "N/A";
+            String price = (contract.getSalePrice() != null) ? contract.getSalePrice().toString() : "N/A";
+            
+            setTableCellText(itemTable.getRow(1).getCell(0), getSafeString(modelName), false);
+            setTableCellText(itemTable.getRow(1).getCell(1), getSafeString(variantName), false);
+            setTableCellText(itemTable.getRow(1).getCell(2), getSafeString(color), false);
+            setTableCellText(itemTable.getRow(1).getCell(3), getSafeString(price), false);
+
+            doc.createParagraph(); // Dòng trống
+
+            // ===== ĐIỀU 2. PHƯƠNG THỨC THANH TOÁN =====
+            addStyledParagraph(doc, "ĐIỀU 2. PHƯƠNG THỨC THANH TOÁN", 12, true, ParagraphAlignment.LEFT);
+            addStyledParagraph(doc, getSafeString(contract.getPaymentMethod(), "Chưa cập nhật"), 12, false, ParagraphAlignment.LEFT);
             doc.createParagraph();
 
-            // ===== Ghi chú & Ký tên =====
-            if (contract.getNotes() != null && !contract.getNotes().isEmpty()) {
-                addParagraph(doc, "Ghi chú: " + contract.getNotes());
-                doc.createParagraph();
-             }
-             addParagraph(doc, "ĐẠI DIỆN BÊN BÁN: ______________________");
-             addParagraph(doc, "ĐẠI DIỆN BÊN MUA: ______________________");
+            // ===== ĐIỀU 3. CAM KẾT CHUNG =====
+            addStyledParagraph(doc, "ĐIỀU 3. CAM KẾT CHUNG", 12, true, ParagraphAlignment.LEFT);
+            addStyledParagraph(doc, "Hai bên cam kết thực hiện đúng các điều khoản của Hợp đồng.", 12, false, ParagraphAlignment.LEFT);
+            doc.createParagraph();
 
-            // ✅ Ghi file ra đĩa bằng Files.newOutputStream
+            // ===== Bố cục 2 cột cho Ký tên (Dùng bảng ẩn) =====
+            XWPFTable sigTable = doc.createTable(1, 2);
+            setTableBorders(sigTable, STBorder.NONE);
+            setTableColumnWidth(sigTable, 0, 4500);
+            setTableColumnWidth(sigTable, 1, 4500);
+
+            XWPFTableCell sellerSigCell = sigTable.getRow(0).getCell(0);
+            XWPFTableCell buyerSigCell = sigTable.getRow(0).getCell(1);
+            sellerSigCell.removeParagraph(0);
+            buyerSigCell.removeParagraph(0);
+
+            // --- Cột ký tên Bên Bán ---
+            addCellParagraph(sellerSigCell, "ĐẠI DIỆN BÊN BÁN", 12, true, ParagraphAlignment.CENTER, false);
+            addCellParagraph(sellerSigCell, "(ký, ghi rõ họ tên, đóng dấu)", 12, false, ParagraphAlignment.CENTER, true);
+            addCellParagraph(sellerSigCell, "\n\n\n\n", 12, false, ParagraphAlignment.CENTER, false); // Khoảng trống
+            
+            // --- Cột ký tên Bên Mua ---
+            addCellParagraph(buyerSigCell, "ĐẠI DIỆN BÊN MUA", 12, true, ParagraphAlignment.CENTER, false);
+            addCellParagraph(buyerSigCell, "(ký, ghi rõ họ tên)", 12, false, ParagraphAlignment.CENTER, true);
+            addCellParagraph(buyerSigCell, "\n\n\n\n", 12, false, ParagraphAlignment.CENTER, false); // Khoảng trống
+
+            doc.createParagraph();
+            addStyledParagraph(doc, "Ngày tạo hợp đồng: " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), 12, false, ParagraphAlignment.LEFT);
+
+            // ===== Ghi file =====
             try (OutputStream out = Files.newOutputStream(filePath,
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
                 doc.write(out);
@@ -300,14 +348,81 @@ public class VehicleContractServiceImpl implements VehicleContractService {
     /**
      * Hàm helper để thêm đoạn văn bản (paragraph) an toàn
      */
-    private void addParagraph(XWPFDocument doc, String text) {
+    private void addStyledParagraph(XWPFDocument doc, String text, int fontSize, boolean bold, ParagraphAlignment align) {
         XWPFParagraph p = doc.createParagraph();
+        p.setAlignment(align);
         XWPFRun run = p.createRun();
-        run.setFontSize(12);
+        run.setFontSize(fontSize);
+        run.setBold(bold);
         run.setText(text);
     }
 
+    /**
+     * Hàm helper để thêm paragraph vào một ô (Cell) của bảng
+     */
+    private void addCellParagraph(XWPFTableCell cell, String text, int fontSize, boolean bold, ParagraphAlignment align, boolean italic) {
+        XWPFParagraph p = cell.addParagraph();
+        p.setAlignment(align);
+        XWPFRun run = p.createRun();
+        run.setFontSize(fontSize);
+        run.setBold(bold);
+        run.setItalic(italic);
+        run.setText(text);
+    }
 
+    /**
+     * Hàm helper để set text cho ô (Cell) của bảng (ghi đè paragraph đầu tiên)
+     */
+    private void setTableCellText(XWPFTableCell cell, String text, boolean bold) {
+        XWPFParagraph p = cell.getParagraphArray(0) != null ? cell.getParagraphArray(0) : cell.addParagraph();
+        p.setAlignment(ParagraphAlignment.LEFT);
+        
+        // Xóa các run cũ nếu có
+        while(p.getRuns().size() > 0) {
+            p.removeRun(0);
+        }
+        
+        XWPFRun run = p.createRun();
+        run.setFontSize(12);
+        run.setBold(bold);
+        run.setText(text);
+    }
+
+    /**
+     * Hàm helper để ẩn viền bảng
+     */
+    private void setTableBorders(XWPFTable table, STBorder.Enum borderType) {
+        try {
+            CTTblBorders borders = table.getCTTbl().getTblPr().addNewTblBorders();
+            borders.addNewTop().setVal(borderType);
+            borders.addNewBottom().setVal(borderType);
+            borders.addNewLeft().setVal(borderType);
+            borders.addNewRight().setVal(borderType);
+            borders.addNewInsideH().setVal(borderType);
+            borders.addNewInsideV().setVal(borderType);
+        } catch (Exception e) {
+            // Handle exception
+        }
+    }
+
+    /**
+     * Hàm helper để set độ rộng cột (tính bằng twips, 1 inch = 1440)
+     */
+    private void setTableColumnWidth(XWPFTable table, int colIndex, int width) {
+        BigInteger w = BigInteger.valueOf(width);
+        table.getRow(0).getCell(colIndex).getCTTc().addNewTcPr().addNewTcW().setW(w);
+    }
+
+    /**
+     * Hàm helper để lấy chuỗi an toàn (tránh "null" trong file word)
+     */
+    private String getSafeString(String str, String defaultVal) {
+        return (str != null && !str.isEmpty()) ? str : defaultVal;
+    }
+
+    private String getSafeString(String str) {
+        return getSafeString(str, "N/A");
+    }
 
     /**
      * 🔄 Map Entity → DTO Response
