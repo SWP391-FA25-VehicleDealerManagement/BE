@@ -3,6 +3,7 @@ package com.example.evm.controller.promotion;
 import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.entity.promotion.Promotion;
 import com.example.evm.service.promotion.PromotionService;
+import io.swagger.v3.oas.annotations.Hidden;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Slf4j
+@Hidden
 @RestController
 @RequestMapping("/api/promotions")
 @RequiredArgsConstructor
