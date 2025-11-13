@@ -313,29 +313,42 @@ public class OrderService {
         return savedOrder;
     }
 
-    public Order updateOrderStatus(Long id, String status) {
-        Order order = getOrderById(id);
-        order.setStatus(status);
-    
-        // ✅ Thêm logic: Khi SHIPPED, cập nhật vehicle
-        if ("SHIPPED".equals(status)) {
-            List<OrderDetail> orderDetails = getOrderDetails(id);
-            for (OrderDetail detail : orderDetails) {
-                Vehicle vehicle = detail.getVehicle();
-                if (vehicle != null) {
-                    vehicle.setStatus("SOLD");
-                    vehicle.setInventoryStock(null); // Loại khỏi kho đại lý
-                    vehicleRepository.save(vehicle);
-                    log.info("Vehicle {} sold and removed from dealer inventory", vehicle.getVehicleId());
-                }
+   public Order updateOrderStatus(Long id, String status) {
+    Order order = getOrderById(id);
+    order.setStatus(status);
+
+    try {
+        List<com.example.evm.entity.payment.Payment> payments = paymentRepository
+            .findAllByOrderId(id);
+
+        if (!payments.isEmpty()) {
+            String latestPaymentMethod = payments.get(0).getPaymentMethod();
+            order.setPaymentMethod(latestPaymentMethod);
+            log.info("Updated order {} paymentMethod to: {}", id, latestPaymentMethod);
+        }
+    } catch (Exception e) {
+        log.warn("Could not update paymentMethod for order {}: {}", id, e.getMessage());
+    }
+
+    // Thêm logic: Khi SHIPPED, cập nhật vehicle
+    if ("SHIPPED".equals(status)) {
+        List<OrderDetail> orderDetails = getOrderDetails(id);
+        for (OrderDetail detail : orderDetails) {
+            Vehicle vehicle = detail.getVehicle();
+            if (vehicle != null) {
+                vehicle.setStatus("SOLD");
+                vehicle.setInventoryStock(null); // Loại khỏi kho đại lý
+                vehicleRepository.save(vehicle);
+                log.info("Vehicle {} sold and removed from dealer inventory", vehicle.getVehicleId());
             }
         }
-    
-        Order updatedOrder = orderRepository.save(order);
-        log.info("Order {} status updated to: {}", id, status);
-    
-        return updatedOrder;
     }
+
+    Order updatedOrder = orderRepository.save(order);
+    log.info("Order {} status updated to: {}", id, status);
+
+    return updatedOrder;
+}
 
     @Transactional
     public void deleteOrder(Long id) {
