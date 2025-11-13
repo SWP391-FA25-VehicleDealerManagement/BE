@@ -62,27 +62,57 @@ public class DebtService {
     }
 
     // 🆕 Lấy danh sách NỢ CỦA DEALER (dealer nợ hãng) - EVM xem
+    @Transactional
     public List<Debt> getDealerDebts() {
-        return debtRepository.findByDebtType("DEALER_DEBT");
+        List<Debt> debts = debtRepository.findByDebtType("DEALER_DEBT");
+        // ✅ Tính lại amountPaid cho mỗi debt và persist vào DB
+        debts.forEach(debt -> {
+            recalculateAmountPaid(debt);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debtRepository.save(debt);
+        });
+        return debts;
     }
 
     // 🆕 Lấy danh sách NỢ CỦA DEALER theo dealerId (dealer nợ hãng) - EVM xem
+    @Transactional
     public List<Debt> getDealerDebtsByDealerId(Long dealerId) {
-        return debtRepository.findByDebtTypeAndDealerDealerId("DEALER_DEBT", dealerId);
+        List<Debt> debts = debtRepository.findByDebtTypeAndDealerDealerId("DEALER_DEBT", dealerId);
+        // ✅ Tính lại amountPaid cho mỗi debt và persist vào DB
+        debts.forEach(debt -> {
+            recalculateAmountPaid(debt);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debtRepository.save(debt);
+        });
+        return debts;
     }
 
     // 🆕 Lấy danh sách NỢ CỦA CUSTOMER (customer nợ dealer) - Dealer xem
+    @Transactional
     public List<Debt> getCustomerDebts(Long dealerId) {
-        return debtRepository.findByDebtTypeAndDealerDealerId("CUSTOMER_DEBT", dealerId);
+        List<Debt> debts = debtRepository.findByDebtTypeAndDealerDealerId("CUSTOMER_DEBT", dealerId);
+        // ✅ Tính lại amountPaid cho mỗi debt và persist vào DB
+        debts.forEach(debt -> {
+            recalculateAmountPaid(debt);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debtRepository.save(debt);
+        });
+        return debts;
     }
 
     // Lấy danh sách nợ theo dealer (deprecated - dùng getDealerDebtsByDealerId hoặc getCustomerDebts)
     @Deprecated
-    // ✅ Tự động tính lại amountPaid cho tất cả debts
+    // ✅ Tự động tính lại amountPaid cho tất cả debts và persist vào DB
+    @Transactional
     public List<Debt> getDebtsByDealer(Long dealerId) {
         List<Debt> debts = debtRepository.findByDealerDealerId(dealerId);
-        // Tính lại amountPaid cho mỗi debt
-        debts.forEach(this::recalculateAmountPaid);
+        // Tính lại amountPaid cho mỗi debt và persist vào DB
+        debts.forEach(debt -> {
+            recalculateAmountPaid(debt);
+            // ✅ Persist amountPaid vào DB để đảm bảo dữ liệu nhất quán
+            debt.setUpdatedDate(LocalDateTime.now());
+            debtRepository.save(debt);
+        });
         return debts;
     }
 
@@ -119,27 +149,44 @@ public class DebtService {
     }
     
     /**
-     * ✅ Tính lại amountPaid từ Payment ban đầu + DebtPayments CONFIRMED (không lưu vào DB)
+     * ✅ Tính lại amountPaid từ Payment ban đầu + DebtPayments CONFIRMED hoặc từ tổng paidAmount của schedules
      * Method này chỉ tính toán trong memory, không persist
+     * 
+     * Logic:
+     * 1. Nếu có schedules: Tính từ tổng paidAmount của tất cả schedules (ưu tiên vì chính xác nhất)
+     * 2. Nếu không có schedules: Tính từ Initial Payment + DebtPayments CONFIRMED
      */
     private void recalculateAmountPaid(Debt debt) {
-        // 1. Lấy số tiền ban đầu từ Payment (Order)
-        BigDecimal initialPaymentAmount = getInitialPaymentAmountFromOrder(debt);
+        BigDecimal totalPaid;
         
-        // 2. Tính tổng DebtPayments CONFIRMED
-        BigDecimal totalPaidFromDebtPayments = debtPaymentRepository.findByDebtDebtIdAndStatus(debt.getDebtId(), "CONFIRMED")
-                .stream()
-                .map(DebtPayment::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Kiểm tra xem có schedules không
+        List<DebtSchedule> schedules = debtScheduleRepository.findByDebtOrderByPeriodNo(debt.getDebtId());
         
-        // 3. amountPaid = số tiền ban đầu + tổng DebtPayments CONFIRMED
-        BigDecimal totalPaid = initialPaymentAmount.add(totalPaidFromDebtPayments);
+        if (!schedules.isEmpty()) {
+            // ✅ Có schedules: Tính từ tổng paidAmount của tất cả schedules (chính xác nhất)
+            totalPaid = schedules.stream()
+                    .map(s -> s.getPaidAmount() != null ? s.getPaidAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            log.info("💰 Recalculated amountPaid for Debt {} from schedules: Total={}", 
+                    debt.getDebtId(), totalPaid);
+        } else {
+            // ✅ Không có schedules: Tính từ Initial Payment + DebtPayments CONFIRMED
+            BigDecimal initialPaymentAmount = getInitialPaymentAmountFromOrder(debt);
+            
+            BigDecimal totalPaidFromDebtPayments = debtPaymentRepository.findByDebtDebtIdAndStatus(debt.getDebtId(), "CONFIRMED")
+                    .stream()
+                    .map(DebtPayment::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            totalPaid = initialPaymentAmount.add(totalPaidFromDebtPayments);
+            
+            log.info("💰 Recalculated amountPaid for Debt {}: Initial={}, DebtPayments={}, Total={}", 
+                    debt.getDebtId(), initialPaymentAmount, totalPaidFromDebtPayments, totalPaid);
+        }
         
-        // 4. Set vào debt object (không lưu vào DB - chỉ trong memory)
+        // Set vào debt object (không lưu vào DB - chỉ trong memory)
         debt.setAmountPaid(totalPaid);
-        
-        log.info("💰 Recalculated amountPaid for Debt {}: Initial={}, DebtPayments={}, Total={}", 
-                debt.getDebtId(), initialPaymentAmount, totalPaidFromDebtPayments, totalPaid);
     }
 
     // Lấy danh sách các kỳ thanh toán (schedule) theo debtId

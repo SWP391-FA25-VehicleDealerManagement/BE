@@ -37,7 +37,7 @@ import org.springframework.context.annotation.Configuration;
         ),
         @Server(
             description = "Production Server",
-            url = "https://evm-tau.vercel.app"
+            url = "http://54.179.165.189:8080"
         )
     },
     security = {
