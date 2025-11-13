@@ -66,11 +66,12 @@ public class DebtService {
     public List<Debt> getDealerDebts() {
         List<Debt> debts = debtRepository.findByDebtType("DEALER_DEBT");
         // ✅ Tính lại amountPaid cho mỗi debt và persist vào DB
-        debts.forEach(debt -> {
+        for (Debt debt : debts) {
             recalculateAmountPaid(debt);
             debt.setUpdatedDate(LocalDateTime.now());
             debtRepository.save(debt);
-        });
+            debtRepository.flush(); // Force DB update
+        }
         return debts;
     }
 
@@ -79,11 +80,12 @@ public class DebtService {
     public List<Debt> getDealerDebtsByDealerId(Long dealerId) {
         List<Debt> debts = debtRepository.findByDebtTypeAndDealerDealerId("DEALER_DEBT", dealerId);
         // ✅ Tính lại amountPaid cho mỗi debt và persist vào DB
-        debts.forEach(debt -> {
+        for (Debt debt : debts) {
             recalculateAmountPaid(debt);
             debt.setUpdatedDate(LocalDateTime.now());
             debtRepository.save(debt);
-        });
+            debtRepository.flush(); // Force DB update
+        }
         return debts;
     }
 
