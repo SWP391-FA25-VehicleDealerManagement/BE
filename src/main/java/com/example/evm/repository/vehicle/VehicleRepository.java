@@ -1,6 +1,7 @@
 package com.example.evm.repository.vehicle;
 
 import com.example.evm.dto.report.DealerInventoryReportDto;
+import com.example.evm.dto.report.ManufacturerInventoryReportDto;
 import com.example.evm.entity.vehicle.Vehicle;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -176,4 +177,21 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
         ORDER BY COUNT(v.vehicleId) DESC
     """)
     List<DealerInventoryReportDto> getDealerInventoryReport();
+
+    // 📦 Báo cáo tồn kho ở kho của hãng sản xuất
+     @Query("""
+       SELECT new com.example.evm.dto.report.ManufacturerInventoryReportDto(
+              ms.manufacturerStockId,
+              ms.warehouseName,
+              ms.location,
+              COUNT(v.vehicleId),
+              SUM(CASE WHEN v.status = 'IN_MANUFACTURER_STOCK' THEN 1 ELSE 0 END),
+              SUM(CASE WHEN v.status = 'SOLD' THEN 1 ELSE 0 END)
+       )
+       FROM Vehicle v
+       JOIN v.manufacturerStock ms
+       GROUP BY ms.manufacturerStockId, ms.warehouseName, ms.location
+       ORDER BY COUNT(v.vehicleId) DESC
+       """)
+       List<ManufacturerInventoryReportDto> getManufacturerInventoryReport();
 }

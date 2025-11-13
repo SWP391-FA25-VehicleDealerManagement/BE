@@ -5,6 +5,7 @@ import com.example.evm.dto.report.DealerInventoryReportDto;
 import com.example.evm.dto.report.DealerSalesReportDto;
 import com.example.evm.dto.report.DealerSalesSummaryResponse;
 import com.example.evm.dto.report.DealerTurnoverReportDto;
+import com.example.evm.dto.report.ManufacturerInventoryReportDto;
 import com.example.evm.dto.report.SalesByStaffDto;
 import com.example.evm.service.report.ReportService;
 
@@ -85,6 +86,15 @@ public class ReportController {
         List<DealerInventoryReportDto> reportData = reportService.getInventoryReport();
         return ResponseEntity.ok(new ApiResponse<>(true, "Báo cáo tồn kho lấy thành công", reportData));
     }
+
+    // 📦 Báo cáo tồn kho hãng sản xuất
+    @GetMapping("/inventory/manufacturer")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
+    public ResponseEntity<ApiResponse<List<ManufacturerInventoryReportDto>>> getManufacturerInventoryReport() {
+        List<ManufacturerInventoryReportDto> report = reportService.getManufacturerInventoryReport();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Báo cáo tồn kho của hãng sản xuất", report));
+    }
+
 
     // --- Báo cáo tốc độ tiêu thụ
     @GetMapping("/turnover")

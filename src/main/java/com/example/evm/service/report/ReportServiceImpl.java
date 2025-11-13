@@ -4,6 +4,7 @@ import com.example.evm.dto.report.DealerInventoryReportDto;
 import com.example.evm.dto.report.DealerSalesReportDto;
 import com.example.evm.dto.report.DealerSalesSummaryResponse;
 import com.example.evm.dto.report.DealerTurnoverReportDto;
+import com.example.evm.dto.report.ManufacturerInventoryReportDto;
 import com.example.evm.dto.report.SalesByStaffDto;
 import com.example.evm.dto.report.StaffSalesReportDto;
 import com.example.evm.repository.order.OrderRepository;
@@ -45,6 +46,13 @@ public class ReportServiceImpl implements ReportService {
         log.info("📦 Generating dealer inventory report...");
         return vehicleRepository.getDealerInventoryReport();
     }
+
+    @Override
+    public List<ManufacturerInventoryReportDto> getManufacturerInventoryReport() {
+        log.info("🏭 Generating manufacturer inventory report...");
+        return vehicleRepository.getManufacturerInventoryReport();
+    }
+
 
     @Override
     public List<DealerTurnoverReportDto> getTurnoverReport() {
