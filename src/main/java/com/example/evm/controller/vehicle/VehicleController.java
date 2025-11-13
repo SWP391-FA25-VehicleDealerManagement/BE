@@ -154,7 +154,6 @@ public class VehicleController {
             log.error("Could not determine file type for variant image: {}", filename, e);
         }
 
-        // Nếu không xác định được, vẫn dùng loại mặc định
         if(contentType == null) {
             contentType = "application/octet-stream";
         }
