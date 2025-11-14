@@ -14,10 +14,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.evm.dto.debt.CreateDebtPaymentRequest;
+import com.example.evm.dto.debt.DebtResponse;
 import com.example.evm.entity.debt.Debt;
 import com.example.evm.entity.debt.DebtPayment;
 import com.example.evm.entity.debt.DebtSchedule;
 import com.example.evm.exception.ResourceNotFoundException;
+import com.example.evm.mapper.DebtMapper;
 import com.example.evm.repository.debt.DebtRepository;
 import com.example.evm.repository.debt.DebtScheduleRepository;
 import com.example.evm.repository.debt.DebtPaymentRepository;
@@ -53,6 +55,7 @@ public class DebtService {
     private final UserRepository userRepository;
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final DebtMapper debtMapper;
 
     // ================== CÁC HÀM LẤY DỮ LIỆU CƠ BẢN ==================
 
@@ -1307,5 +1310,86 @@ public class DebtService {
 
         log.info("✅ Direct payment for DebtSchedule {} processed. Amount: {}, Method: {}, Notes: {}", scheduleId, amount, paymentMethod, notes);
         return schedule;
+    }
+    
+    // ================== ✅ METHODS TRẢ VỀ DTO (DebtResponse) ==================
+    
+    /**
+     * ✅ Lấy danh sách NỢ CỦA DEALER với đầy đủ thông tin (DTO)
+     */
+    @Transactional
+    public List<DebtResponse> getDealerDebtsWithFullInfo() {
+        List<Debt> debts = debtRepository.findByDebtType("DEALER_DEBT");
+        // Tính lại amountPaid cho mỗi debt
+        for (Debt debt : debts) {
+            recalculateAmountPaid(debt);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debtRepository.save(debt);
+            debtRepository.flush();
+        }
+        log.info("✅ Retrieved and recalculated {} dealer debts with full info", debts.size());
+        return debtMapper.toResponseList(debts);
+    }
+    
+    /**
+     * ✅ Lấy danh sách NỢ CỦA DEALER theo dealerId với đầy đủ thông tin (DTO)
+     */
+    @Transactional
+    public List<DebtResponse> getDealerDebtsByDealerIdWithFullInfo(Long dealerId) {
+        List<Debt> debts = debtRepository.findByDebtTypeAndDealerDealerId("DEALER_DEBT", dealerId);
+        // Tính lại amountPaid cho mỗi debt
+        for (Debt debt : debts) {
+            recalculateAmountPaid(debt);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debtRepository.save(debt);
+            debtRepository.flush();
+        }
+        log.info("✅ Retrieved and recalculated {} debts for dealer {} with full info", debts.size(), dealerId);
+        return debtMapper.toResponseList(debts);
+    }
+    
+    /**
+     * ✅ Lấy danh sách NỢ CỦA CUSTOMER với đầy đủ thông tin (DTO)
+     */
+    @Transactional
+    public List<DebtResponse> getCustomerDebtsWithFullInfo(Long dealerId) {
+        List<Debt> debts = debtRepository.findByDebtTypeAndDealerDealerId("CUSTOMER_DEBT", dealerId);
+        // Tính lại amountPaid cho mỗi debt
+        for (Debt debt : debts) {
+            recalculateAmountPaid(debt);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debtRepository.save(debt);
+            debtRepository.flush();
+        }
+        log.info("✅ Retrieved and recalculated {} customer debts with full info", debts.size());
+        return debtMapper.toResponseList(debts);
+    }
+    
+    /**
+     * ✅ Lấy chi tiết một khoản nợ với đầy đủ thông tin (DTO)
+     */
+    @Transactional
+    public DebtResponse getDebtByIdWithFullInfo(Long id) {
+        Debt debt = debtRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Debt not found with id: " + id));
+        
+        // Tính lại amountPaid
+        recalculateAmountPaid(debt);
+        debt.setUpdatedDate(LocalDateTime.now());
+        debtRepository.save(debt);
+        debtRepository.flush();
+        
+        log.info("✅ Retrieved debt {} with full info", id);
+        return debtMapper.toResponse(debt);
+    }
+    
+    /**
+     * ✅ Lấy tất cả debts với đầy đủ thông tin (DTO)
+     */
+    @Transactional
+    public List<DebtResponse> getAllDebtsWithFullInfo() {
+        List<Debt> debts = debtRepository.findAll();
+        log.info("✅ Retrieved {} debts with full info", debts.size());
+        return debtMapper.toResponseList(debts);
     }
 }

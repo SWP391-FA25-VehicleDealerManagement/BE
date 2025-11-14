@@ -2,6 +2,7 @@ package com.example.evm.controller.debt;
 
 import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.dto.debt.CreateDebtPaymentRequest;
+import com.example.evm.dto.debt.DebtResponse;
 import com.example.evm.entity.debt.Debt;
 import com.example.evm.entity.debt.DebtPayment;
 import com.example.evm.entity.debt.DebtSchedule;
@@ -87,8 +88,8 @@ public class DebtController {
      */
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<List<Debt>>> getAllDebts() {
-        List<Debt> debts = debtService.getAllDebts();
+    public ResponseEntity<ApiResponse<List<DebtResponse>>> getAllDebts() {
+        List<DebtResponse> debts = debtService.getAllDebtsWithFullInfo();
         return ResponseEntity.ok(new ApiResponse<>(true, "All debts retrieved successfully", debts));
     }
 
@@ -100,9 +101,9 @@ public class DebtController {
      */
     @GetMapping("/dealer-debts")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<List<Debt>>> getDealerDebts() {
+    public ResponseEntity<ApiResponse<List<DebtResponse>>> getDealerDebts() {
         try {
-            List<Debt> debts = debtService.getDealerDebts();
+            List<DebtResponse> debts = debtService.getDealerDebtsWithFullInfo();
             log.info("✅ Retrieved {} dealer debts", debts.size());
             return ResponseEntity.ok(new ApiResponse<>(true, "Dealer debts retrieved successfully", debts));
         } catch (Exception e) {
@@ -119,9 +120,9 @@ public class DebtController {
      */
     @GetMapping("/dealer-debts/{dealerId}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    public ResponseEntity<ApiResponse<List<Debt>>> getDealerDebtsByDealerId(@PathVariable Long dealerId) {
+    public ResponseEntity<ApiResponse<List<DebtResponse>>> getDealerDebtsByDealerId(@PathVariable Long dealerId) {
         try {
-            List<Debt> debts = debtService.getDealerDebtsByDealerId(dealerId);
+            List<DebtResponse> debts = debtService.getDealerDebtsByDealerIdWithFullInfo(dealerId);
             log.info("✅ Retrieved {} debts for dealer {}", debts.size(), dealerId);
             return ResponseEntity.ok(new ApiResponse<>(true, "Dealer debts retrieved successfully", debts));
         } catch (Exception e) {
@@ -138,9 +139,9 @@ public class DebtController {
      */
     @GetMapping("/customer-debts/{dealerId}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<List<Debt>>> getCustomerDebts(@PathVariable Long dealerId) {
+    public ResponseEntity<ApiResponse<List<DebtResponse>>> getCustomerDebts(@PathVariable Long dealerId) {
         try {
-            List<Debt> debts = debtService.getCustomerDebts(dealerId);
+            List<DebtResponse> debts = debtService.getCustomerDebtsWithFullInfo(dealerId);
             log.info("✅ Retrieved {} customer debts for dealer {}", debts.size(), dealerId);
             return ResponseEntity.ok(new ApiResponse<>(true, "Customer debts retrieved successfully", debts));
         } catch (Exception e) {
@@ -157,8 +158,8 @@ public class DebtController {
     @Deprecated
     @GetMapping("/dealer/{dealerId}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<List<Debt>>> getDebtsByDealer(@PathVariable Long dealerId) {
-        List<Debt> debts = debtService.getDebtsByDealer(dealerId);
+    public ResponseEntity<ApiResponse<List<DebtResponse>>> getDebtsByDealer(@PathVariable Long dealerId) {
+        List<DebtResponse> debts = debtService.getDealerDebtsByDealerIdWithFullInfo(dealerId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Debts for dealer retrieved successfully", debts));
     }
 
@@ -235,8 +236,8 @@ public class DebtController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
-    public ResponseEntity<ApiResponse<Debt>> getDebtById(@PathVariable Long id) {
-        Debt debt = debtService.getDebtById(id);
+    public ResponseEntity<ApiResponse<DebtResponse>> getDebtById(@PathVariable Long id) {
+        DebtResponse debt = debtService.getDebtByIdWithFullInfo(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Debt retrieved successfully", debt));
     }
 
