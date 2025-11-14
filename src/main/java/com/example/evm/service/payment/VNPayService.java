@@ -61,7 +61,8 @@ public class VNPayService {
         vnp_Params.put("vnp_Locale", "vn");
         vnp_Params.put("vnp_ReturnUrl", vnp_ReturnUrl);
         vnp_Params.put("vnp_IpAddr", "127.0.0.1");
-
+        vnp_Params.put("vnp_BankCode", "");      // ĐỂ TRỐNG = HIỆN TẤT CẢ NGÂN HÀNG DOANH NGHIỆP
+        vnp_Params.put("vnp_PaymentType", "02"); // 02 = BẮT BUỘC CHỈ INTERNET BANKING
         // Thời gian tạo và hết hạn
         ZoneId vietnamZone = ZoneId.of("Asia/Ho_Chi_Minh");
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
