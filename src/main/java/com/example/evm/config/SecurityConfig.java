@@ -67,8 +67,6 @@ public class SecurityConfig {
                 
                 // ✅ /api/auth/me cần JWT
                 .requestMatchers("/api/auth/me").authenticated()
-                 
-                .requestMatchers("/api/payments/vnpay_return").permitAll()
 
                 // ✅ Các request khác phải có JWT
                 .anyRequest().authenticated()

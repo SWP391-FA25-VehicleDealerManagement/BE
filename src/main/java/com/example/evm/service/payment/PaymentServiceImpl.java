@@ -16,15 +16,10 @@ import com.example.evm.repository.payment.PaymentRepository;
 @Service
 public class PaymentServiceImpl implements PaymentService {
 
-    private final VNPayService VNPayService;
     @Autowired
     private PaymentRepository paymentRepository;
     @Autowired
     private OrderRepository orderRepository;
-
-    PaymentServiceImpl(VNPayService VNPayService) {
-        this.VNPayService = VNPayService;
-    }
 
     @Override
     public List<Payment> getAllPayments() {
@@ -39,13 +34,6 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public Payment createPayment(PaymentInfo paymentInfo) {
-        // ✅ Validate số tiền tối thiểu cho VNPay
-        if (("BANK_TRANSFER".equalsIgnoreCase(paymentInfo.getPaymentMethod()) || 
-             "TRANSFER".equalsIgnoreCase(paymentInfo.getPaymentMethod())) 
-            && paymentInfo.getAmount().compareTo(new BigDecimal("10000")) < 0) {
-            throw new IllegalArgumentException("Payment amount must be at least 10,000 VND for VNPay");
-        }
-        
         Order order = null;
         if (paymentInfo.getOrderId() != null) {
             order = orderRepository.findById(paymentInfo.getOrderId())
@@ -80,14 +68,8 @@ public class PaymentServiceImpl implements PaymentService {
         if(payment.getPaymentDate() == null){
                 payment.setPaymentDate(LocalDateTime.now());
         }
-           // Xử lý theo phương thức thanh toán
-        if ("cash".equalsIgnoreCase(payment.getPaymentMethod())) {
-            payment.setStatus("Completed"); // Hoàn thành ngay
-        } else if ("transfer".equalsIgnoreCase(payment.getPaymentMethod()) || "BANK_TRANSFER".equalsIgnoreCase(payment.getPaymentMethod())) {
-            payment.setStatus("Pending"); // Chờ VNPay xử lý
-        } else {
-            throw new IllegalArgumentException("Unsupported payment method: " + payment.getPaymentMethod());
-        }
+        // Tất cả thanh toán đều hoàn thành ngay
+        payment.setStatus("Completed");
         return paymentRepository.save(payment);
     }
 
@@ -107,7 +89,7 @@ public class PaymentServiceImpl implements PaymentService {
       paymentRepository.deleteById(id);
     }
 
-    // ✅ Cập nhật trạng thái thanh toán (dùng cho callback VNPay)
+    // Cập nhật trạng thái thanh toán
     public Payment updatePaymentStatus(Long paymentId, String status) {
        Payment payment = paymentRepository.findById(paymentId)
         .orElseThrow(()-> new IllegalArgumentException("Payment with paymentId " + paymentId + " not found"));
@@ -118,22 +100,14 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public PaymentResponse createPaymentResponse(Payment payment) {
         try {
-            payment.setStatus("Pending");
+            payment.setStatus("Completed");
             payment.setPaymentDate(LocalDateTime.now());
             payment.setOrderId(System.currentTimeMillis());
             paymentRepository.save(payment);
 
-            String redirectUrl=null;
-
-            if ("TRANSFER".equalsIgnoreCase(payment.getPaymentMethod())) {
-                redirectUrl= VNPayService.createVNPayUrl(payment);
-            }
-
-            return new PaymentResponse(true,
-            redirectUrl!=null ? "Redirect to VnPay": "Create payment successfully",
-            redirectUrl !=null ? redirectUrl: payment);
+            return new PaymentResponse(true, "Create payment successfully", payment);
         } catch (Exception e) {
-           return new PaymentResponse(false,"Erorr"+e.getMessage(),null);
+           return new PaymentResponse(false,"Error: " + e.getMessage(),null);
         }
     }
 }
