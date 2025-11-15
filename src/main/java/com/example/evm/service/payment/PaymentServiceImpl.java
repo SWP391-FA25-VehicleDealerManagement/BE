@@ -7,12 +7,19 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.evm.dto.payment.PaymentInfo;
 import com.example.evm.entity.payment.Payment;
 import com.example.evm.entity.order.Order;
+import com.example.evm.entity.debt.Debt;
 import com.example.evm.repository.order.OrderRepository;
 import com.example.evm.repository.payment.PaymentRepository;
+import com.example.evm.repository.debt.DebtRepository;
+import com.example.evm.service.debt.DebtService;
+
+import lombok.extern.slf4j.Slf4j;
+@Slf4j
 @Service
 public class PaymentServiceImpl implements PaymentService {
 
@@ -20,6 +27,10 @@ public class PaymentServiceImpl implements PaymentService {
     private PaymentRepository paymentRepository;
     @Autowired
     private OrderRepository orderRepository;
+    @Autowired
+    private DebtRepository debtRepository;
+    @Autowired
+    private DebtService debtService;
 
     @Override
     public List<Payment> getAllPayments() {
@@ -33,6 +44,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional
     public Payment createPayment(PaymentInfo paymentInfo) {
         Order order = null;
         if (paymentInfo.getOrderId() != null) {
@@ -70,8 +82,93 @@ public class PaymentServiceImpl implements PaymentService {
         }
         // Tất cả thanh toán đều hoàn thành ngay
         payment.setStatus("Completed");
-        return paymentRepository.save(payment);
+        Payment savedPayment = paymentRepository.save(payment);
+        
+        // ✅ TỰ ĐỘNG cập nhật DEALER_DEBT khi dealer nhận tiền từ khách
+        log.info("🔍 Payment created for Order {}: dealer={}, customer={}, amount={}", 
+                order != null ? order.getOrderId() : "null",
+                order != null && order.getDealer() != null ? order.getDealer().getDealerId() : "null",
+                order != null && order.getCustomer() != null ? order.getCustomer().getCustomerId() : "null",
+                paymentInfo.getAmount());
+        
+        // ✅ FIX: Tạo DEALER_DEBT SAU KHI thanh toán cho TẤT CẢ order của dealer
+        if (order != null && order.getDealer() != null) {
+            log.info("✅ Creating/Updating DEALER_DEBT for dealer {} - Order {} after payment (customer={})", 
+                    order.getDealer().getDealerId(), order.getOrderId(), 
+                    order.getCustomer() != null ? order.getCustomer().getCustomerId() : "null");
+            createOrUpdateDealerDebt(order, paymentInfo.getAmount());
+        }
+        
+        return savedPayment;
     }
+    
+    /**
+     * ✅ Tạo hoặc cập nhật DEALER_DEBT sau khi thanh toán
+     * Logic: Thanh toán xong → Tạo debt với amountDue = total - amountPaid
+     */
+    private void createOrUpdateDealerDebt(Order order, BigDecimal paymentAmount) {
+        try {
+            log.info("🔍 Looking for existing DEALER_DEBT with Order {}", order.getOrderId());
+            
+            // Tìm xem đã có DEALER_DEBT cho order này chưa
+            List<Debt> activeDebts = debtRepository.findByDebtTypeAndDealerDealerIdAndStatus(
+                    "DEALER_DEBT", 
+                    order.getDealer().getDealerId(), 
+                    "ACTIVE");
+            
+            String searchPattern = "Order: " + order.getOrderId();
+            Debt dealerDebt = activeDebts.stream()
+                    .filter(d -> d.getNotes() != null && d.getNotes().contains(searchPattern))
+                    .findFirst()
+                    .orElse(null);
+            
+            if (dealerDebt != null) {
+                // Đã có debt → Cập nhật amountPaid
+                log.info("✅ Found existing DEALER_DEBT {}, updating amountPaid", dealerDebt.getDebtId());
+                BigDecimal currentPaid = dealerDebt.getAmountPaid() != null ? dealerDebt.getAmountPaid() : BigDecimal.ZERO;
+                BigDecimal newPaid = currentPaid.add(paymentAmount);
+                dealerDebt.setAmountPaid(newPaid);
+                dealerDebt.setUpdatedDate(LocalDateTime.now());
+                
+                if (dealerDebt.getAmountDue().subtract(newPaid).compareTo(BigDecimal.ZERO) <= 0) {
+                    dealerDebt.setStatus("PAID");
+                }
+                
+                debtRepository.save(dealerDebt);
+                log.info("✅ Updated DEALER_DEBT {}: amountPaid = {}", dealerDebt.getDebtId(), newPaid);
+            } else {
+                // Chưa có debt → Tạo mới SAU KHI thanh toán
+                log.info("✅ Creating NEW DEALER_DEBT for Order {} after payment", order.getOrderId());
+                
+                BigDecimal orderTotal = BigDecimal.valueOf(order.getTotalPrice() != null ? order.getTotalPrice() : 0);
+                BigDecimal remainingDebt = orderTotal.subtract(paymentAmount);
+                
+                Debt newDebt = new Debt();
+                newDebt.setDealer(order.getDealer());
+                newDebt.setUser(order.getUser());
+                newDebt.setCustomer(null);
+                newDebt.setDebtType("DEALER_DEBT");
+                newDebt.setAmountDue(orderTotal);
+                newDebt.setAmountPaid(paymentAmount); // ✅ Set ngay số tiền đã trả
+                newDebt.setPaymentMethod("BANK_TRANSFER");
+                newDebt.setStatus("ACTIVE");
+                newDebt.setNotes("Auto-generated after payment - Order: " + order.getOrderId());
+                newDebt.setStartDate(LocalDateTime.now());
+                newDebt.setDueDate(LocalDateTime.now().plusMonths(12));
+                newDebt.setCreatedDate(LocalDateTime.now());
+                
+                // ✅ Gọi debtService.createDebt() để tự động tạo schedule
+                Debt savedDebt = debtService.createDebt(newDebt);
+                
+                log.info("✅ Created DEALER_DEBT {}: amountDue={}, amountPaid={}, remaining={}, schedules={}", 
+                        savedDebt.getDebtId(), orderTotal, paymentAmount, remainingDebt, 
+                        savedDebt.getDebtSchedules().size());
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to create/update DEALER_DEBT for order {}: {}", order.getOrderId(), e.getMessage(), e);
+        }
+    }
+    
 
     @Override
     public Payment updatePayment(Payment payment) {

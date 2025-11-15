@@ -22,6 +22,8 @@ import com.example.evm.dto.order.OrderRequestDto;
 import com.example.evm.dto.order.OrderDetailRequestDto;
 import com.example.evm.entity.order.Order;
 import com.example.evm.entity.debt.Debt;
+import com.example.evm.entity.payment.Payment;
+import com.example.evm.repository.payment.PaymentRepository;
 import com.example.evm.repository.vehicle.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +47,7 @@ public class DealerRequestService {
     private final VehicleVariantRepository variantRepository;
     private final InventoryStockRepository inventoryStockRepository;
     private final VehicleRepository vehicleRepository;
+    private final PaymentRepository paymentRepository;
     private final OrderService orderService;
     private final DebtService debtService;
 
@@ -178,20 +181,20 @@ request.setRequestDate(LocalDateTime.now());
             // Add vehicles to dealer stock
             addStockToDealerOnDelivery(request);
             
-            // ✅ TỰ ĐỘNG tạo Order và Debt khi giao hàng
+            // ✅ TỰ ĐỘNG tạo Order khi giao hàng (KHÔNG tạo Debt - chờ thanh toán)
             try {
                 // Luôn tạo Order từ kho dealer khi xác nhận đã nhận
                 Order createdOrder = createOrderFromRequestUsingDealerStock(
                         request.getRequestId(),
                         request.getCreatedBy().getUserId(),
                         "BANK_TRANSFER");
-                log.info("✅ Created Order {} from DealerRequest {} upon DELIVERED", 
+                log.info("✅ Created Order {} from DealerRequest {} upon DELIVERED (Debt will be created after payment)", 
                         createdOrder.getOrderId(), request.getRequestId());
 
-                createDebtFromExistingOrder(request);
-                log.info("Request {} DELIVERED - Order and Debt created automatically", id);
+                // ❌ BỎ: Không tạo Debt ngay - chờ thanh toán xong
+                // createDebtFromExistingOrder(request);
             } catch (Exception e) {
-                log.error("Failed to create Order/Debt for request {}: {}", id, e.getMessage());
+                log.error("Failed to create Order for request {}: {}", id, e.getMessage());
                 // Không throw exception để không ảnh hưởng đến việc cập nhật status
             }
         }
@@ -254,17 +257,36 @@ request.setRequestDate(LocalDateTime.now());
                 .mapToDouble(detail -> detail.getPrice() * detail.getQuantity())
                 .sum();
         
+        // ✅ FIX: Tính ngay amountPaid từ payment của order này
+        BigDecimal amountPaid = BigDecimal.ZERO;
+        try {
+            List<Payment> payments = paymentRepository.findAllByOrderId(order.getOrderId());
+            amountPaid = payments.stream()
+                    .filter(p -> "Completed".equalsIgnoreCase(p.getStatus()))
+                    .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            log.info("💰 Found {} completed payments for Order {}: Total={}", 
+                    payments.stream().filter(p -> "Completed".equalsIgnoreCase(p.getStatus())).count(),
+                    order.getOrderId(), amountPaid);
+        } catch (Exception e) {
+            log.error("❌ Failed to calculate amountPaid from Order {}: {}", order.getOrderId(), e.getMessage());
+        }
+        
         debt.setAmountDue(BigDecimal.valueOf(totalAmount));
-        debt.setAmountPaid(BigDecimal.ZERO);
+        debt.setAmountPaid(amountPaid); // ✅ Set ngay từ đầu
         debt.setPaymentMethod("BANK_TRANSFER");
         debt.setDebtType("DEALER_DEBT"); // Dealer nợ EVM
         debt.setStatus("ACTIVE");
-        debt.setNotes("Auto-generated from DealerRequest: " + request.getRequestId());
+        // ✅ FIX: Thêm orderId vào notes để có thể tìm được Order sau này
+        debt.setNotes("Auto-generated from DealerRequest: " + request.getRequestId() + " - Order: " + order.getOrderId());
         debt.setStartDate(LocalDateTime.now());
         debt.setDueDate(LocalDateTime.now().plusMonths(12)); // 12 tháng trả góp
         
         // Tạo Debt
         debtService.createDebt(debt);
+        
+        log.info("✅ Created DEALER_DEBT from DealerRequest {}, Order {}, Amount: {}, AmountPaid: {}", 
+                request.getRequestId(), order.getOrderId(), totalAmount, amountPaid);
     }
 
     /**
