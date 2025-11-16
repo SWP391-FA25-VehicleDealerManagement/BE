@@ -39,7 +39,6 @@ public class SalePrice {
      @JsonIgnoreProperties({
         "vehicles", 
         "detail", 
-        "model",  
         "hibernateLazyInitializer",  
         "handler"  
     })
