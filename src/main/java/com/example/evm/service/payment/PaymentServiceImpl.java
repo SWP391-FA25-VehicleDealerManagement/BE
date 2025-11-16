@@ -99,6 +99,9 @@ public class PaymentServiceImpl implements PaymentService {
             createOrUpdateDealerDebt(order, paymentInfo.getAmount());
         }
         
+        // ❌ BỎ: KHÔNG tạo CUSTOMER_DEBT ngay khi thanh toán
+        // CUSTOMER_DEBT sẽ được tạo SAU KHI Order status = "Completed"
+        
         return savedPayment;
     }
     
@@ -137,11 +140,19 @@ public class PaymentServiceImpl implements PaymentService {
                 debtRepository.save(dealerDebt);
                 log.info("✅ Updated DEALER_DEBT {}: amountPaid = {}", dealerDebt.getDebtId(), newPaid);
             } else {
-                // Chưa có debt → Tạo mới SAU KHI thanh toán
-                log.info("✅ Creating NEW DEALER_DEBT for Order {} after payment", order.getOrderId());
-                
+                // Chưa có debt → Kiểm tra xem có còn nợ không trước khi tạo
                 BigDecimal orderTotal = BigDecimal.valueOf(order.getTotalPrice() != null ? order.getTotalPrice() : 0);
                 BigDecimal remainingDebt = orderTotal.subtract(paymentAmount);
+                
+                // ✅ FIX: Chỉ tạo debt khi còn nợ (không thanh toán full)
+                if (remainingDebt.compareTo(BigDecimal.ZERO) <= 0) {
+                    log.info("✅ Order {} paid in FULL ({}đ) - NO DEBT CREATED", 
+                            order.getOrderId(), paymentAmount);
+                    return;
+                }
+                
+                log.info("✅ Creating NEW DEALER_DEBT for Order {} - Paid: {}, Remaining: {}", 
+                        order.getOrderId(), paymentAmount, remainingDebt);
                 
                 Debt newDebt = new Debt();
                 newDebt.setDealer(order.getDealer());

@@ -22,6 +22,7 @@ import com.example.evm.repository.promotion.PromotionRepository;
 import com.example.evm.repository.payment.PaymentRepository;
 import com.example.evm.repository.debt.DebtRepository;
 import com.example.evm.entity.debt.Debt;
+import com.example.evm.service.debt.DebtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,7 @@ public class OrderService {
     private final PromotionRepository promotionRepository;
     private final PaymentRepository paymentRepository;
     private final DebtRepository debtRepository;
+    private final DebtService debtService;
 
     public List<Order> getAllOrders() {
         List<Order> orders = orderRepository.findAll();
@@ -313,6 +315,7 @@ public class OrderService {
         return savedOrder;
     }
 
+   @Transactional
    public Order updateOrderStatus(Long id, String status) {
     Order order = getOrderById(id);
     order.setStatus(status);
@@ -341,6 +344,37 @@ public class OrderService {
                 vehicleRepository.save(vehicle);
                 log.info("Vehicle {} sold and removed from dealer inventory", vehicle.getVehicleId());
             }
+        }
+    }
+    
+    // ✅ FIX: Tạo CUSTOMER_DEBT SAU KHI Order được đánh dấu "Completed"
+    if ("Completed".equals(status) && order.getCustomer() != null) {
+        log.info("✅ Order {} marked as Completed - Creating CUSTOMER_DEBT for customer {}", 
+                id, order.getCustomer().getCustomerId());
+        
+        try {
+            // Lấy payment mới nhất của order này để tạo debt
+            List<com.example.evm.entity.payment.Payment> payments = paymentRepository.findAllByOrderId(id);
+            log.info("🔍 Found {} payments for Order {}", payments.size(), id);
+            
+            if (!payments.isEmpty()) {
+                // Lấy payment đầu tiên (hoặc payment có type = INSTALLMENT)
+                com.example.evm.entity.payment.Payment payment = payments.stream()
+                        .filter(p -> "INSTALLMENT".equals(p.getPaymentType()))
+                        .findFirst()
+                        .orElse(payments.get(0));
+                
+                log.info("🔍 Using Payment {} (type={}, amount={}) to create debt", 
+                        payment.getPaymentId(), payment.getPaymentType(), payment.getAmount());
+                
+                debtService.autoCreateDebtFromPayment(payment.getPaymentId());
+                log.info("✅ CUSTOMER_DEBT auto-created from Payment {} for Order {}", 
+                        payment.getPaymentId(), id);
+            } else {
+                log.warn("⚠️ No payment found for Order {} - Cannot create CUSTOMER_DEBT", id);
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to create CUSTOMER_DEBT for Order {}: {}", id, e.getMessage(), e);
         }
     }
 
