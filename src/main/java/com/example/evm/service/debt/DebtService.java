@@ -164,21 +164,36 @@ public class DebtService {
     private void recalculateAmountPaid(Debt debt) {
         BigDecimal totalPaid;
         
-        // Case 1: Nếu có DebtSchedule, tính từ schedules. 
-        // Nếu tổng từ schedules = 0 (chưa hạch toán vào từng kỳ), tiếp tục tính từ Payment của Order.
+        // ✅ FIX: Luôn tính số tiền ban đầu từ Order payment trước
+        BigDecimal initialPaymentAmount = getInitialPaymentAmountFromOrder(debt);
+        
+        // Case 1: Nếu có DebtSchedule, tính từ schedules + số tiền ban đầu
         List<DebtSchedule> schedules = debtScheduleRepository.findByDebtOrderByPeriodNo(debt.getDebtId());
         if (!schedules.isEmpty()) {
             BigDecimal totalFromSchedules = schedules.stream()
                     .map(s -> s.getPaidAmount() != null ? s.getPaidAmount() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             if (totalFromSchedules.compareTo(BigDecimal.ZERO) > 0) {
-                log.info("💰 Recalculated amountPaid for Debt {} from schedules: Total={}", 
-                        debt.getDebtId(), totalFromSchedules);
-                debt.setAmountPaid(totalFromSchedules);
+                // ✅ Cộng thêm số tiền ban đầu từ Order
+                BigDecimal totalWithInitial = initialPaymentAmount.add(totalFromSchedules);
+                
+                // ✅ FIX: Auto-fix nếu chênh lệch < 1000đ (làm tròn)
+                BigDecimal remainingAmount = debt.getAmountDue().subtract(totalWithInitial);
+                if (remainingAmount.abs().compareTo(new BigDecimal("1000")) < 0 && remainingAmount.compareTo(BigDecimal.ZERO) != 0) {
+                    log.info("🔧 Auto-fixing rounding difference for Debt {} (from schedules): {} -> {} (diff: {}đ)", 
+                            debt.getDebtId(), totalWithInitial, debt.getAmountDue(), remainingAmount);
+                    totalWithInitial = debt.getAmountDue(); // Đặt bằng chính xác amountDue
+                }
+                
+                log.info("💰 Recalculated amountPaid for Debt {} from schedules: InitialPayment={}, SchedulesPaid={}, Total={}", 
+                        debt.getDebtId(), initialPaymentAmount, totalFromSchedules, totalWithInitial);
+                debt.setAmountPaid(totalWithInitial);
                 return;
             } else {
-                log.info("ℹ️ Debt {} has schedules but no paidAmount yet. Falling back to Order payments.", 
-                        debt.getDebtId());
+                log.info("ℹ️ Debt {} has schedules but no paidAmount yet. Using only initial payment: {}", 
+                        debt.getDebtId(), initialPaymentAmount);
+                debt.setAmountPaid(initialPaymentAmount);
+                return;
             }
         }
         
@@ -1372,16 +1387,12 @@ public class DebtService {
             throw new IllegalArgumentException("DebtSchedule is not linked to a Debt");
         }
 
-        // Tính lại tổng số tiền đã thanh toán cho Debt từ tất cả các schedule đã thanh toán
-        BigDecimal totalPaidFromSchedules = debtScheduleRepository.findByDebtOrderByPeriodNo(debt.getDebtId())
-                .stream()
-                .map(s -> s.getPaidAmount() != null ? s.getPaidAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        debt.setAmountPaid(totalPaidFromSchedules);
+        // ✅ FIX: Tính lại amountPaid bằng cách gọi recalculateAmountPaid
+        // Hàm này sẽ tự động tính cả: số tiền ban đầu từ Order + tổng paidAmount từ schedules + DebtPayments
+        recalculateAmountPaid(debt);
 
         // 5. Cập nhật status của Debt với auto-fix rounding
-        updateDebtStatusWithRounding(debt, totalPaidFromSchedules);
+        updateDebtStatusWithRounding(debt, debt.getAmountPaid());
         debt.setUpdatedDate(LocalDateTime.now());
         debtRepository.save(debt);
 
