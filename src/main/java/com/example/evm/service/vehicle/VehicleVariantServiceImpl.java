@@ -214,7 +214,7 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
     @Transactional
     public VehicleDetailResponse updateDetails(Long variantId, VehicleDetailRequest request) {
         // 1. Tìm Detail hiện có
-        VehicleDetail detail = detailRepository.findById(variantId)
+        VehicleDetail detail = detailRepository.findByVariant_VariantId(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "VehicleDetail not found for Variant ID: " + variantId + ". Cannot update."
                 ));
