@@ -14,6 +14,7 @@ import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
 import com.example.evm.repository.salePrice.SalePriceRepository;
 import com.example.evm.service.storage.FileStorageService;
+import com.example.evm.exception.ForeignKeyConstraintException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -314,7 +315,7 @@ public class VehicleServiceImpl implements VehicleService {
         // 1️⃣ Kiểm tra liên kết với OrderDetail
         boolean hasOrder = orderDetailRepository.existsByVehicle_VehicleId(vehicleId);
         if (hasOrder) {
-            throw new IllegalStateException("Cannot delete vehicle because it is linked to existing orders.");
+            throw new ForeignKeyConstraintException("Xe này đang liên kết với đơn hàng, không thể xóa.");
         }
 
         // 4️⃣ Xóa

@@ -14,6 +14,7 @@ import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.vehicle.VehicleDetailRepository;
 import com.example.evm.repository.vehicle.VehicleModelRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
+import com.example.evm.exception.ForeignKeyConstraintException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -316,7 +317,7 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
         // 1. Kiểm tra xem Variant có đang được Vehicle nào sử dụng không
         if (vehicleRepository.existsByVariantVariantId(id)) {
             // Nếu đang được sử dụng -> Báo lỗi, không cho xóa
-            throw new DataIntegrityViolationException(
+            throw new ForeignKeyConstraintException(
                 "Không thể xóa. Phiên bản (Variant) này đang được liên kết với ít nhất một xe (Vehicle) cụ thể."
             );
         }

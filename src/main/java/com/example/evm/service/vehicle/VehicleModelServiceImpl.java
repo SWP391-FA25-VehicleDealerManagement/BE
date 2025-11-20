@@ -6,11 +6,11 @@ import com.example.evm.entity.vehicle.VehicleModel;
 import com.example.evm.exception.ResourceNotFoundException;
 import com.example.evm.repository.vehicle.VehicleModelRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
+import com.example.evm.exception.ForeignKeyConstraintException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,7 +76,7 @@ public class VehicleModelServiceImpl implements VehicleModelService {
         // 2. Kiểm tra bảng con (VehicleVariant)
         if (variantRepository.existsByModelModelId(id)) {
             // Nếu đang được sử dụng -> Báo lỗi, không cho xóa
-            throw new DataIntegrityViolationException(
+            throw new ForeignKeyConstraintException(
                 "Không thể xóa. Dòng xe (Model) này đang được liên kết với ít nhất một phiên bản (Variant)."
             );
         }
