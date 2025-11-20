@@ -35,6 +35,7 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.example.evm.util.DateTimeUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -70,7 +71,7 @@ public class DealerRequestService {
         DealerRequest request = new DealerRequest();
         request.setDealer(dealer);
         request.setCreatedBy(user);
-request.setRequestDate(LocalDateTime.now());
+        request.setRequestDate(DateTimeUtils.nowVietnam());
         request.setRequiredDate(dto.getRequiredDate());
         
         request.setPriority(dto.getPriority() != null ? dto.getPriority() : "NORMAL");
@@ -170,14 +171,14 @@ request.setRequestDate(LocalDateTime.now());
         request.setStatus(status);
 
         if ("APPROVED".equals(status)) {
-            request.setApprovedDate(LocalDateTime.now());
+            request.setApprovedDate(DateTimeUtils.nowVietnam());
             request.setApprovedBy(approvedBy);
             log.info("Request {} APPROVED by {}", id, approvedBy);
         } else if ("SHIPPED".equals(status)) {
-            request.setShippedDate(LocalDateTime.now());
+            request.setShippedDate(DateTimeUtils.nowVietnam());
             log.info("Request {} SHIPPED", id);
         } else if ("DELIVERED".equals(status)) {
-            request.setDeliveryDate(LocalDateTime.now());
+            request.setDeliveryDate(DateTimeUtils.nowVietnam());
             // Add vehicles to dealer stock
             addStockToDealerOnDelivery(request);
             
@@ -279,8 +280,8 @@ request.setRequestDate(LocalDateTime.now());
         debt.setStatus("ACTIVE");
         // ✅ FIX: Thêm orderId vào notes để có thể tìm được Order sau này
         debt.setNotes("Auto-generated from DealerRequest: " + request.getRequestId() + " - Order: " + order.getOrderId());
-        debt.setStartDate(LocalDateTime.now());
-        debt.setDueDate(LocalDateTime.now().plusMonths(12)); // 12 tháng trả góp
+        debt.setStartDate(DateTimeUtils.nowVietnam());
+        debt.setDueDate(DateTimeUtils.nowVietnam().plusMonths(12)); // 12 tháng trả góp
         
         // Tạo Debt
         debtService.createDebt(debt);
