@@ -50,19 +50,14 @@ public class InventoryController {
         log.info("Allocating {} vehicles (variant: {}, color: {}) to dealer {}", 
                 quantity, variantId, color, dealerId);
         
-        try {
-            AllocationResponse response = inventoryService.allocateVehiclesToDealer(
-                    dealerId, variantId, color, quantity);
-            return ResponseEntity.ok(new ApiResponse<>(true,
-                    "Vehicles allocated successfully", response));
-        } catch (IllegalStateException ex) {
-            // Trả về thông báo không đủ số lượng và số lượng còn lại trong kho (đã có trong message)
-            return ResponseEntity.badRequest().body(new ApiResponse<>(
-                    false,
-                    ex.getMessage(),
-                    null
-            ));
-        }
+        // ✅ Sửa: Luôn cho phép phân bổ, kể cả khi không có xe (hãng sẽ giao sau)
+        AllocationResponse response = inventoryService.allocateVehiclesToDealer(
+                dealerId, variantId, color, quantity);
+        
+        // Response message đã được xử lý trong service, luôn trả về success
+        // Message sẽ thông báo rõ: đã phân bổ bao nhiêu, thiếu bao nhiêu, hãng sẽ giao sau
+        return ResponseEntity.ok(new ApiResponse<>(true,
+                response.getMessage(), response));
     }
 
     /**
@@ -89,11 +84,22 @@ public class InventoryController {
         log.info("Recalling {} vehicles (variant: {}, color: {}) from dealer {}", 
                 quantity, variantId, color, dealerId);
         
-        inventoryService.recallVehiclesFromDealer(dealerId, variantId, color, quantity);
-        
-        String message = String.format("✅ Successfully recalled %d vehicles from dealer", quantity);
-        
-        return ResponseEntity.ok(new ApiResponse<>(true, message, message));
+        try {
+            inventoryService.recallVehiclesFromDealer(dealerId, variantId, color, quantity);
+            
+            // Message sẽ được log trong service, ở đây chỉ trả về success
+            String message = String.format("✅ Đã xử lý yêu cầu thu hồi %d xe từ đại lý. " +
+                    "Xem log để biết số lượng thực tế được thu hồi.", quantity);
+            
+            return ResponseEntity.ok(new ApiResponse<>(true, message, message));
+        } catch (IllegalStateException ex) {
+            // Nếu có exception (không nên xảy ra nữa sau khi sửa, nhưng giữ lại để an toàn)
+            return ResponseEntity.badRequest().body(new ApiResponse<>(
+                    false,
+                    ex.getMessage(),
+                    null
+            ));
+        }
     }
 }
 

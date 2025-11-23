@@ -32,7 +32,7 @@ public class DealerRequestDetail {
     private DealerRequest dealerRequest;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "variant_id", nullable = false)
+    @JoinColumn(name = "variant_id", nullable = true)  // ✅ Cho phép NULL - variantId là optional
     @JsonIgnore  // ✅ Tránh lazy loading issues, dùng DTO để trả về
     private VehicleVariant vehicleVariant;
 

@@ -1,5 +1,7 @@
 package com.example.evm.entity.vehicle;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,6 +28,7 @@ public class VehicleVariant {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "model_id", nullable = false)
+    @JsonIgnore  // ✅ Tránh lazy loading issues, dùng DTO để trả về
     private VehicleModel model;
 
     @Column(name = "name", nullable = false, length = 150)
@@ -40,5 +43,6 @@ public class VehicleVariant {
     // ===== QUAN HỆ 1-1 VỚI VEHICLEDETAIL =====
     // Một variant có một bộ thông số kỹ thuật
     @OneToOne(mappedBy = "variant", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JsonIgnore  // ✅ Tránh lazy loading issues, dùng DTO để trả về
     private VehicleDetail detail;
 }

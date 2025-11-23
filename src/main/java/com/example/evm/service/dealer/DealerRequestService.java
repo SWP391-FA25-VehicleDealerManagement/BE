@@ -31,7 +31,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -81,12 +80,16 @@ public class DealerRequestService {
 
         // Add details
         for (RequestDetailDto detailDto : dto.getRequestDetails()) {
-            VehicleVariant variant = variantRepository.findById(detailDto.getVariantId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Variant not found with id: " + detailDto.getVariantId()));
+            // ✅ Variant ID là optional - chỉ tìm variant nếu được cung cấp
+            VehicleVariant variant = null;
+            if (detailDto.getVariantId() != null) {
+                variant = variantRepository.findById(detailDto.getVariantId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Variant not found with id: " + detailDto.getVariantId()));
+            }
 
             DealerRequestDetail detail = new DealerRequestDetail();
             detail.setDealerRequest(request);
-            detail.setVehicleVariant(variant);
+            detail.setVehicleVariant(variant);  // ✅ Có thể là null
             detail.setColor(detailDto.getColor());
             detail.setQuantity(detailDto.getQuantity());
             detail.setUnitPrice(detailDto.getUnitPrice());
@@ -316,6 +319,12 @@ public class DealerRequestService {
         List<OrderDetailRequestDto> detailDtos = new java.util.ArrayList<>();
 
         for (DealerRequestDetail d : request.getRequestDetails()) {
+            // ✅ Bỏ qua details không có variantId - không thể tìm xe
+            if (d.getVehicleVariant() == null) {
+                log.warn("⚠️ Skipping detail {} - no variantId specified. Cannot create order without variant.", d.getDetailId());
+                continue;
+            }
+            
             // Tìm xe available theo variant + color
             List<com.example.evm.entity.vehicle.Vehicle> available = vehicleRepository
                     .findAvailableInManufacturerStock(d.getVehicleVariant().getVariantId(), d.getColor());
@@ -384,6 +393,12 @@ public class DealerRequestService {
                 .findByDealerIdWithFullInfo(dealerId);
 
         for (DealerRequestDetail d : request.getRequestDetails()) {
+            // ✅ Bỏ qua details không có variantId - không thể match xe
+            if (d.getVehicleVariant() == null) {
+                log.warn("⚠️ Skipping detail {} - no variantId specified. Cannot match vehicles without variant.", d.getDetailId());
+                continue;
+            }
+            
             List<com.example.evm.entity.vehicle.Vehicle> matched = dealerVehicles.stream()
                     .filter(v -> v.getVariant() != null
                             && v.getVariant().getVariantId().equals(d.getVehicleVariant().getVariantId())
@@ -514,9 +529,18 @@ private DealerRequestResponse convertToResponseDto(DealerRequest request) {
                 .map(detail -> {
                     RequestDetailResponse detailResponse = new RequestDetailResponse();
                     detailResponse.setDetailId(detail.getDetailId());
-                    detailResponse.setVariantId(detail.getVehicleVariant().getVariantId());
-                    detailResponse.setVariantName(detail.getVehicleVariant().getName());
-                    detailResponse.setModelName(detail.getVehicleVariant().getModel().getName());
+                    // ✅ Xử lý trường hợp variant có thể null
+                    if (detail.getVehicleVariant() != null) {
+                        detailResponse.setVariantId(detail.getVehicleVariant().getVariantId());
+                        detailResponse.setVariantName(detail.getVehicleVariant().getName());
+                        if (detail.getVehicleVariant().getModel() != null) {
+                            detailResponse.setModelName(detail.getVehicleVariant().getModel().getName());
+                        }
+                    } else {
+                        detailResponse.setVariantId(null);
+                        detailResponse.setVariantName(null);
+                        detailResponse.setModelName(null);
+                    }
                     detailResponse.setColor(detail.getColor());
                     detailResponse.setQuantity(detail.getQuantity());
                     detailResponse.setUnitPrice(detail.getUnitPrice());

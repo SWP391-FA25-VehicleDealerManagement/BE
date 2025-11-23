@@ -35,6 +35,7 @@ public class Vehicle {
     // ===== QUAN HỆ VỚI VARIANT =====
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id", nullable = false)
+    @JsonIgnore  // ✅ Tránh lazy loading issues, dùng DTO để trả về
     private VehicleVariant variant;
 
     // ===== THÔNG TIN XE =====

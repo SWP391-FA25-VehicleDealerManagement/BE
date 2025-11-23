@@ -146,7 +146,7 @@ public class InventoryService {
         }
 
         // 7. Build response với thông tin về số lượng yêu cầu và số lượng thiếu
-        return buildAllocationResponse(allocatedVehicles, updatedRequest, dealer, quantity, availableCount);
+        return buildAllocationResponse(allocatedVehicles, updatedRequest, dealer, quantity, availableCount, variantId, color);
     }
 
     /**
@@ -161,60 +161,101 @@ public class InventoryService {
     public void recallVehiclesFromDealer(Long dealerId, Long variantId, String color, Integer quantity) {
         log.info("Recalling {} vehicles (variant: {}, color: {}) from dealer {}", quantity, variantId, color, dealerId);
 
-        // 1. Tìm xe của dealer
+        // 1. ✅ Sửa: Tìm TẤT CẢ xe của dealer theo variant+color mà vẫn còn trong kho dealer
+        // (inventoryStock != null), bất kể status (IN_DEALER_STOCK, IN_TRANSIT, TEST_DRIVE, etc.)
+        // Loại trừ những xe đã bán (status = "SOLD" hoặc inventoryStock = null)
         List<Vehicle> dealerVehicles = vehicleRepository.findByDealerIdWithFullInfo(dealerId)
                 .stream()
-                .filter(v -> v.getVariant().getVariantId().equals(variantId) 
+                .filter(v -> v.getVariant() != null 
+                          && v.getVariant().getVariantId().equals(variantId) 
+                          && v.getColor() != null
                           && v.getColor().equalsIgnoreCase(color)
-                          && "IN_DEALER_STOCK".equals(v.getStatus()))
+                          && v.getInventoryStock() != null  // Vẫn còn trong kho dealer
+                          && !"SOLD".equalsIgnoreCase(v.getStatus()))  // Chưa bán
                 .limit(quantity)
                 .toList();
 
-        // 2. Kiểm tra số lượng và tạo message chi tiết nếu không đủ
-        if (dealerVehicles.size() < quantity) {
-            // Lấy thông tin variant để tạo message chi tiết
-            String variantInfo = "Unknown variant";
-            String dealerName = "Unknown dealer";
-            
-            try {
-                Dealer dealer = dealerRepository.findById(dealerId)
-                        .orElse(null);
-                if (dealer != null) {
-                    dealerName = dealer.getDealerName();
-                }
-                
-                if (!dealerVehicles.isEmpty()) {
-                    Vehicle firstVehicle = dealerVehicles.get(0);
-                    String modelName = firstVehicle.getVariant().getModel().getName();
-                    String variantName = firstVehicle.getVariant().getName();
-                    variantInfo = String.format("%s - %s (màu %s)", modelName, variantName, color);
-                }
-            } catch (Exception e) {
-                log.warn("Could not fetch dealer/variant info", e);
+        // 2. Lấy thông tin variant và dealer để tạo message
+        String variantInfo = "Unknown variant";
+        String dealerName = "Unknown dealer";
+        
+        try {
+            Dealer dealer = dealerRepository.findById(dealerId)
+                    .orElse(null);
+            if (dealer != null) {
+                dealerName = dealer.getDealerName();
             }
+            
+            if (!dealerVehicles.isEmpty()) {
+                Vehicle firstVehicle = dealerVehicles.get(0);
+                String modelName = firstVehicle.getVariant().getModel().getName();
+                String variantName = firstVehicle.getVariant().getName();
+                variantInfo = String.format("%s - %s (màu %s)", modelName, variantName, color);
+            } else {
+                // Nếu không có xe nào, query variant từ DB
+                try {
+                    Vehicle anyVehicle = vehicleRepository
+                            .findByDealerIdWithFullInfo(dealerId)
+                            .stream()
+                            .filter(v -> v.getVariant() != null 
+                                      && v.getVariant().getVariantId().equals(variantId))
+                            .findFirst()
+                            .orElse(null);
+                    
+                    if (anyVehicle != null) {
+                        String modelName = anyVehicle.getVariant().getModel().getName();
+                        String variantName = anyVehicle.getVariant().getName();
+                        variantInfo = String.format("%s - %s (màu %s)", modelName, variantName, color);
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not fetch variant info", e);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch dealer/variant info", e);
+        }
+        
+        // 3. ✅ Yêu cầu: Phải thu hồi đủ số lượng, nếu không đủ thì throw exception
+        int availableCount = dealerVehicles.size();
+        
+        if (availableCount < quantity) {
+            // Không đủ xe để thu hồi - throw exception với thông tin chi tiết
+            int shortage = quantity - availableCount;
+            
+            // Đếm tổng số xe (kể cả đã bán) để thông báo rõ ràng
+            long totalVehicles = vehicleRepository.findByDealerIdWithFullInfo(dealerId)
+                    .stream()
+                    .filter(v -> v.getVariant() != null 
+                              && v.getVariant().getVariantId().equals(variantId) 
+                              && v.getColor() != null
+                              && v.getColor().equalsIgnoreCase(color))
+                    .count();
+            
+            long soldCount = totalVehicles - availableCount;
             
             String errorMessage = String.format(
                 "❌ Không đủ xe để thu hồi!\n" +
                 "🏢 Đại lý: %s\n" +
                 "🚗 Xe yêu cầu thu hồi: %s\n" +
                 "📦 Số lượng yêu cầu: %d xe\n" +
-                "📊 Số lượng trong kho đại lý: %d xe\n" +
-                "⚠️ Thiếu: %d xe",
-                dealerName, variantInfo, quantity, dealerVehicles.size(), (quantity - dealerVehicles.size())
+                "📊 Số lượng có thể thu hồi: %d xe\n" +
+                "⚠️ Thiếu: %d xe\n" +
+                "ℹ️ Tổng số xe đã phân bổ: %d xe (trong đó %d xe đã bán, không thể thu hồi)",
+                dealerName, variantInfo, quantity, availableCount, shortage, totalVehicles, soldCount
             );
             
             log.error(errorMessage);
             throw new IllegalStateException(errorMessage);
         }
 
-        // 3. Lấy kho tổng mặc định
+        // 4. Lấy kho tổng mặc định
         ManufacturerStock warehouse = manufacturerStockRepository
                 .findByStatus("ACTIVE")
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No active warehouse found"));
 
-        // 4. Chuyển xe về kho tổng
+        // 5. Chuyển xe về kho tổng (đủ số lượng yêu cầu)
         dealerVehicles.forEach(vehicle -> {
             vehicle.setInventoryStock(null);
             vehicle.setManufacturerStock(warehouse);
@@ -222,7 +263,6 @@ public class InventoryService {
         });
 
         vehicleRepository.saveAll(dealerVehicles);
-
         log.info("✅ Recalled {} vehicles from dealer {} to warehouse", dealerVehicles.size(), dealerId);
 
         // 5. Revert DealerRequest status (SHIPPED → APPROVED)
@@ -239,7 +279,9 @@ public class InventoryService {
         for (DealerRequest request : approvedRequests) {
             boolean hasMatch = request.getRequestDetails().stream()
                     .anyMatch(detail -> 
+                        detail.getVehicleVariant() != null &&
                         detail.getVehicleVariant().getVariantId().equals(variantId) &&
+                        detail.getColor() != null &&
                         detail.getColor().equalsIgnoreCase(color)
                     );
 
@@ -268,7 +310,9 @@ public class InventoryService {
         for (DealerRequest request : shippedRequests) {
             boolean hasMatch = request.getRequestDetails().stream()
                     .anyMatch(detail -> 
+                        detail.getVehicleVariant() != null &&
                         detail.getVehicleVariant().getVariantId().equals(variantId) &&
+                        detail.getColor() != null &&
                         detail.getColor().equalsIgnoreCase(color)
                     );
 
@@ -292,7 +336,9 @@ public class InventoryService {
                                                         DealerRequest request, 
                                                         Dealer dealer,
                                                         int requestedQuantity,
-                                                        int availableQuantity) {
+                                                        int availableQuantity,
+                                                        Long variantId,
+                                                        String color) {
         List<Long> vehicleIds = vehicles.stream()
                 .map(Vehicle::getVehicleId)
                 .toList();
@@ -300,8 +346,8 @@ public class InventoryService {
         // Tạo message chi tiết
         String message;
         if (vehicles.isEmpty()) {
-            message = String.format("⚠️ Không có xe trong kho để phân bổ ngay. " +
-                    "Yêu cầu: %d xe. Hãng sẽ giao sau khi có xe.", requestedQuantity);
+            message = String.format("✅ Đã ghi nhận yêu cầu phân bổ %d xe. " +
+                    "Hiện tại không có xe trong kho. Hãng sẽ giao sau khi có xe.", requestedQuantity);
         } else if (vehicles.size() < requestedQuantity) {
             int shortage = requestedQuantity - vehicles.size();
             message = String.format("✅ Đã phân bổ %d/%d xe cho %s. " +
@@ -312,13 +358,14 @@ public class InventoryService {
                     vehicles.size(), dealer.getDealerName());
         }
         
+        // ✅ Luôn trả về variantId và color từ request, kể cả khi không có xe
         return AllocationResponse.builder()
                 .message(message)
                 .quantity(vehicles.size())
                 .vehicleIds(vehicleIds)
                 .dealerId(dealer.getDealerId())
-                .variantId(vehicles.isEmpty() ? null : vehicles.get(0).getVariant().getVariantId())
-                .color(vehicles.isEmpty() ? null : vehicles.get(0).getColor())
+                .variantId(variantId) // Luôn dùng từ request
+                .color(color) // Luôn dùng từ request
                 .build();
     }
 }
