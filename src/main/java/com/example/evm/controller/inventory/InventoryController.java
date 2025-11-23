@@ -31,6 +31,7 @@ public class InventoryController {
      * 
      * Request body:
      * {
+     *   "requestId": 28,  // ✅ Thêm requestId để xác định request cụ thể
      *   "dealerId": 1,
      *   "variantId": 6,
      *   "color": "Red",
@@ -42,22 +43,29 @@ public class InventoryController {
     public ResponseEntity<ApiResponse<AllocationResponse>> allocateVehicles(
             @RequestBody Map<String, Object> request) {
         
+        Long requestId = request.get("requestId") != null ? 
+                Long.valueOf(request.get("requestId").toString()) : null;
         Long dealerId = Long.valueOf(request.get("dealerId").toString());
         Long variantId = Long.valueOf(request.get("variantId").toString());
         String color = request.get("color").toString();
         Integer quantity = Integer.valueOf(request.get("quantity").toString());
         
-        log.info("Allocating {} vehicles (variant: {}, color: {}) to dealer {}", 
-                quantity, variantId, color, dealerId);
+        log.info("Allocating {} vehicles (variant: {}, color: {}) to dealer {} for request {}", 
+                quantity, variantId, color, dealerId, requestId);
         
-        // ✅ Sửa: Luôn cho phép phân bổ, kể cả khi không có xe (hãng sẽ giao sau)
-        AllocationResponse response = inventoryService.allocateVehiclesToDealer(
-                dealerId, variantId, color, quantity);
-        
-        // Response message đã được xử lý trong service, luôn trả về success
-        // Message sẽ thông báo rõ: đã phân bổ bao nhiêu, thiếu bao nhiêu, hãng sẽ giao sau
-        return ResponseEntity.ok(new ApiResponse<>(true,
-                response.getMessage(), response));
+        try {
+            AllocationResponse response = inventoryService.allocateVehiclesToDealer(
+                    requestId, dealerId, variantId, color, quantity);
+            return ResponseEntity.ok(new ApiResponse<>(true,
+                    response.getMessage(), response));
+        } catch (IllegalStateException ex) {
+            // Trả về thông báo không đủ số lượng
+            return ResponseEntity.badRequest().body(new ApiResponse<>(
+                    false,
+                    ex.getMessage(),
+                    null
+            ));
+        }
     }
 
     /**
@@ -65,6 +73,7 @@ public class InventoryController {
      * 
      * Request body:
      * {
+     *   "requestId": 28,  // ✅ Thêm requestId để xác định request cụ thể cần thu hồi
      *   "dealerId": 1,
      *   "variantId": 6,
      *   "color": "Red",
@@ -76,16 +85,18 @@ public class InventoryController {
     public ResponseEntity<ApiResponse<String>> recallVehicles(
             @RequestBody Map<String, Object> request) {
         
+        Long requestId = request.get("requestId") != null ? 
+                Long.valueOf(request.get("requestId").toString()) : null;
         Long dealerId = Long.valueOf(request.get("dealerId").toString());
         Long variantId = Long.valueOf(request.get("variantId").toString());
         String color = request.get("color").toString();
         Integer quantity = Integer.valueOf(request.get("quantity").toString());
         
-        log.info("Recalling {} vehicles (variant: {}, color: {}) from dealer {}", 
-                quantity, variantId, color, dealerId);
+        log.info("Recalling {} vehicles (variant: {}, color: {}) from dealer {} for request {}", 
+                quantity, variantId, color, dealerId, requestId);
         
         try {
-            inventoryService.recallVehiclesFromDealer(dealerId, variantId, color, quantity);
+            inventoryService.recallVehiclesFromDealer(requestId, dealerId, variantId, color, quantity);
             
             // Message sẽ được log trong service, ở đây chỉ trả về success
             String message = String.format("✅ Đã xử lý yêu cầu thu hồi %d xe từ đại lý. " +

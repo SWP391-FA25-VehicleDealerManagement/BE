@@ -45,5 +45,10 @@ public class AllocationResponse {
      * Màu xe
      */
     private String color;
+    
+    /**
+     * Request ID (nếu có)
+     */
+    private Long requestId;
 }
 
