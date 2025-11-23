@@ -266,19 +266,19 @@ public class DealerRequestService {
                     .filter(p -> "Completed".equalsIgnoreCase(p.getStatus()))
                     .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            log.info("💰 Found {} completed payments for Order {}: Total={}", 
+            log.info(" Found {} completed payments for Order {}: Total={}", 
                     payments.stream().filter(p -> "Completed".equalsIgnoreCase(p.getStatus())).count(),
                     order.getOrderId(), amountPaid);
         } catch (Exception e) {
-            log.error("❌ Failed to calculate amountPaid from Order {}: {}", order.getOrderId(), e.getMessage());
+            log.error(" Failed to calculate amountPaid from Order {}: {}", order.getOrderId(), e.getMessage());
         }
         
         debt.setAmountDue(BigDecimal.valueOf(totalAmount));
-        debt.setAmountPaid(amountPaid); // ✅ Set ngay từ đầu
+        debt.setAmountPaid(amountPaid); // Set ngay từ đầu
         debt.setPaymentMethod("BANK_TRANSFER");
         debt.setDebtType("DEALER_DEBT"); // Dealer nợ EVM
         debt.setStatus("ACTIVE");
-        // ✅ FIX: Thêm orderId vào notes để có thể tìm được Order sau này
+        // FIX: Thêm orderId vào notes để có thể tìm được Order sau này
         debt.setNotes("Auto-generated from DealerRequest: " + request.getRequestId() + " - Order: " + order.getOrderId());
         debt.setStartDate(DateTimeUtils.nowVietnam());
         debt.setDueDate(DateTimeUtils.nowVietnam().plusMonths(12)); // 12 tháng trả góp
@@ -286,14 +286,15 @@ public class DealerRequestService {
         // Tạo Debt
         debtService.createDebt(debt);
         
-        log.info("✅ Created DEALER_DEBT from DealerRequest {}, Order {}, Amount: {}, AmountPaid: {}", 
+        log.info(" Created DEALER_DEBT from DealerRequest {}, Order {}, Amount: {}, AmountPaid: {}", 
                 request.getRequestId(), order.getOrderId(), totalAmount, amountPaid);
     }
 
     /**
      * Tạo Order từ DealerRequest (khi còn PENDING/APPROVED) để tiến hành thanh toán
-     * - Chọn trước các xe phù hợp từ kho tổng theo variant + color
+     * - Chọn các xe phù hợp từ kho tổng theo variant + color (nếu có)
      * - Mỗi xe là một dòng OrderDetail (quantity = 1)
+     * - ✅ Cho phép tạo Order ngay cả khi không có xe trong kho (chỉ tạo OrderDetail cho xe có sẵn)
      */
     @Transactional
     public Order createOrderFromRequest(Long requestId, Long userId, String paymentMethod) {
@@ -310,7 +311,7 @@ public class DealerRequestService {
         dto.setCustomerId(null); // Dealer order
         dto.setUserId(userId);
         dto.setDealerId(request.getDealer().getDealerId());
-dto.setPaymentMethod(paymentMethod);
+        dto.setPaymentMethod(paymentMethod);
 
         List<OrderDetailRequestDto> detailDtos = new java.util.ArrayList<>();
 
@@ -319,14 +320,20 @@ dto.setPaymentMethod(paymentMethod);
             List<com.example.evm.entity.vehicle.Vehicle> available = vehicleRepository
                     .findAvailableInManufacturerStock(d.getVehicleVariant().getVariantId(), d.getColor());
 
-            if (available.size() < d.getQuantity()) {
-                int shortage = d.getQuantity() - available.size();
-                throw new IllegalStateException("Not enough vehicles for variant "
-                        + d.getVehicleVariant().getName() + " (color " + d.getColor() + ") - shortage: " + shortage);
+            // ✅ Sửa: Không throw exception nếu không đủ xe, chỉ tạo OrderDetail cho những xe có sẵn
+            int availableCount = available.size();
+            int requestedQuantity = d.getQuantity();
+            
+            if (availableCount < requestedQuantity) {
+                int shortage = requestedQuantity - availableCount;
+                log.warn("⚠️ Not enough vehicles for variant {} (color {}). Requested: {}, Available: {}, Shortage: {}. " +
+                        "Creating order with available vehicles only.",
+                        d.getVehicleVariant().getName(), d.getColor(), requestedQuantity, availableCount, shortage);
             }
 
-            // Chọn đúng số lượng xe, mỗi xe 1 dòng
-            for (int i = 0; i < d.getQuantity(); i++) {
+            // Chỉ tạo OrderDetail cho những xe có sẵn (nếu có)
+            int quantityToProcess = Math.min(availableCount, requestedQuantity);
+            for (int i = 0; i < quantityToProcess; i++) {
                 com.example.evm.entity.vehicle.Vehicle v = available.get(i);
                 OrderDetailRequestDto od = new OrderDetailRequestDto(
                         v.getVehicleId(),
@@ -338,8 +345,19 @@ dto.setPaymentMethod(paymentMethod);
             }
         }
 
+        // ✅ Kiểm tra: Nếu không có OrderDetail nào (không có xe nào), vẫn tạo Order nhưng log warning
+        if (detailDtos.isEmpty()) {
+            log.warn("⚠️ No vehicles available for request {}. Creating order without order details. " +
+                    "Order will be created with totalPrice = 0 and can be updated when vehicles become available.", requestId);
+        }
+
         dto.setOrderDetails(detailDtos);
-        return orderService.createOrderFromDto(dto);
+        Order createdOrder = orderService.createOrderFromDto(dto);
+        
+        log.info("✅ Order {} created from request {}. OrderDetails: {}, TotalPrice: {}", 
+                createdOrder.getOrderId(), requestId, detailDtos.size(), createdOrder.getTotalPrice());
+        
+        return createdOrder;
     }
 
     /**
@@ -375,12 +393,19 @@ dto.setPaymentMethod(paymentMethod);
                     .limit(d.getQuantity())
                     .toList();
 
-            if (matched.size() < d.getQuantity()) {
-                int shortage = d.getQuantity() - matched.size();
-                throw new IllegalStateException("Not enough vehicles in dealer stock for variant "
-                        + d.getVehicleVariant().getName() + " (color " + d.getColor() + ") - shortage: " + shortage);
+            // ✅ Sửa: Không throw exception nếu không đủ xe, chỉ tạo OrderDetail cho những xe có sẵn
+            int matchedCount = matched.size();
+            int requestedQuantity = d.getQuantity();
+            
+            if (matchedCount < requestedQuantity) {
+                int shortage = requestedQuantity - matchedCount;
+                log.warn("⚠️ Not enough vehicles in dealer stock for variant {} (color {}). " +
+                        "Requested: {}, Available: {}, Shortage: {}. " +
+                        "Creating order with available vehicles only.",
+                        d.getVehicleVariant().getName(), d.getColor(), requestedQuantity, matchedCount, shortage);
             }
 
+            // Chỉ tạo OrderDetail cho những xe có sẵn (nếu có)
             for (com.example.evm.entity.vehicle.Vehicle v : matched) {
                 OrderDetailRequestDto od = new OrderDetailRequestDto(
                         v.getVehicleId(),
@@ -392,8 +417,19 @@ dto.setPaymentMethod(paymentMethod);
             }
         }
 
+        // ✅ Kiểm tra: Nếu không có OrderDetail nào (không có xe nào), vẫn tạo Order nhưng log warning
+        if (detailDtos.isEmpty()) {
+            log.warn("⚠️ No vehicles available in dealer stock for request {}. Creating order without order details. " +
+                    "Order will be created with totalPrice = 0 and can be updated when vehicles become available.", requestId);
+        }
+
         dto.setOrderDetails(detailDtos);
-        return orderService.createOrderFromDto(dto);
+        Order createdOrder = orderService.createOrderFromDto(dto);
+        
+        log.info("✅ Order {} created from request {} using dealer stock. OrderDetails: {}, TotalPrice: {}", 
+                createdOrder.getOrderId(), requestId, detailDtos.size(), createdOrder.getTotalPrice());
+        
+        return createdOrder;
     }
 
 
@@ -411,7 +447,7 @@ dto.setPaymentMethod(paymentMethod);
                     return inventoryStockRepository.save(newStock);
                 });
 
-        log.info("✅ Dealer {} stock prepared for delivery", request.getDealer().getDealerId());
+        log.info(" Dealer {} stock prepared for delivery", request.getDealer().getDealerId());
         
         // Note: Với schema mới (Vehicle-centric), việc cộng xe vào kho
         // sẽ được xử lý bởi InventoryService khi allocate vehicles
@@ -497,7 +533,7 @@ private DealerRequestResponse convertToResponseDto(DealerRequest request) {
         DealerRequest request = dealerRequestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
         
-        log.info("🔍 Getting order for request {} - Status: {} - Total: {} - Dealer: {}", 
+        log.info(" Getting order for request {} - Status: {} - Total: {} - Dealer: {}", 
                 requestId, request.getStatus(), request.getTotalAmount(), request.getDealer().getDealerId());
         
         // Kiểm tra request có status DELIVERED không
@@ -507,7 +543,7 @@ if (!"DELIVERED".equals(request.getStatus())) {
         
         // Tìm order theo dealer_id và total_amount tương ứng
         List<Order> orders = orderService.getOrdersByDealer(request.getDealer().getDealerId());
-        log.info("📦 Found {} orders for dealer {}", orders.size(), request.getDealer().getDealerId());
+        log.info(" Found {} orders for dealer {}", orders.size(), request.getDealer().getDealerId());
         
         // Convert Order.totalPrice (Double) to BigDecimal for comparison
         BigDecimal requestTotalAmount = request.getTotalAmount();
@@ -516,7 +552,7 @@ if (!"DELIVERED".equals(request.getStatus())) {
         for (Order order : orders) {
             BigDecimal orderTotalPrice = BigDecimal.valueOf(order.getTotalPrice());
             int comparison = orderTotalPrice.compareTo(requestTotalAmount);
-            log.info("📋 Order {} - Total: {} - Compare: {}", 
+            log.info(" Order {} - Total: {} - Compare: {}", 
                     order.getOrderId(), 
                     orderTotalPrice.toString(),
                     comparison);
@@ -527,7 +563,7 @@ if (!"DELIVERED".equals(request.getStatus())) {
                 .filter(order -> {
                     BigDecimal orderTotalPrice = BigDecimal.valueOf(order.getTotalPrice());
                     boolean matches = orderTotalPrice.compareTo(requestTotalAmount) == 0;
-                    log.info("🔍 Order {} matches: {} ({} vs {})", 
+                    log.info(" Order {} matches: {} ({} vs {})", 
                             order.getOrderId(), matches, orderTotalPrice.toString(), requestTotalAmount.toString());
                     return matches;
                 })
@@ -535,12 +571,12 @@ if (!"DELIVERED".equals(request.getStatus())) {
                 .orElse(null);
         
         if (matchingOrder == null) {
-            log.error("❌ No matching order found for request {} - Dealer: {} - Total: {}", 
+            log.error(" No matching order found for request {} - Dealer: {} - Total: {}", 
                     requestId, request.getDealer().getDealerId(), request.getTotalAmount());
             throw new RuntimeException("No order found for this request. Check logs for details.");
         }
         
-        log.info("✅ Found matching order: {}", matchingOrder.getOrderId());
+        log.info(" Found matching order: {}", matchingOrder.getOrderId());
         return matchingOrder;
     }
 }

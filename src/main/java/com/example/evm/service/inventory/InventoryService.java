@@ -60,45 +60,52 @@ public class InventoryService {
         List<Vehicle> availableVehicles = vehicleRepository
                 .findAvailableInManufacturerStock(variantId, color);
 
-        // 3. Kiểm tra số lượng và tạo message chi tiết nếu không đủ
-        if (availableVehicles.size() < quantity) {
-            // Lấy thông tin variant để tạo message chi tiết
-            String variantInfo = "Unknown variant";
-            if (!availableVehicles.isEmpty()) {
-                Vehicle firstVehicle = availableVehicles.get(0);
-                String modelName = firstVehicle.getVariant().getModel().getName();
-                String variantName = firstVehicle.getVariant().getName();
-                variantInfo = String.format("%s - %s (màu %s)", modelName, variantName, color);
-            } else {
-                // Nếu không có xe nào, query variant từ DB
-                try {
-                    Vehicle anyVehicle = vehicleRepository
-                            .findAvailableInManufacturerStock(variantId, null)
-                            .stream()
-                            .findFirst()
-                            .orElse(null);
-                    
-                    if (anyVehicle != null) {
-                        String modelName = anyVehicle.getVariant().getModel().getName();
-                        String variantName = anyVehicle.getVariant().getName();
-                        variantInfo = String.format("%s - %s (màu %s)", modelName, variantName, color);
-                    }
-                } catch (Exception e) {
-                    log.warn("Could not fetch variant info", e);
+        // 3. ✅ Sửa: Cho phép phân bổ ngay cả khi không đủ xe - chỉ phân bổ những xe có sẵn
+        int availableCount = availableVehicles.size();
+        int quantityToAllocate = Math.min(availableCount, quantity);
+        
+        // Lấy thông tin variant để tạo message
+        String variantInfo = "Unknown variant";
+        if (!availableVehicles.isEmpty()) {
+            Vehicle firstVehicle = availableVehicles.get(0);
+            String modelName = firstVehicle.getVariant().getModel().getName();
+            String variantName = firstVehicle.getVariant().getName();
+            variantInfo = String.format("%s - %s (màu %s)", modelName, variantName, color);
+        } else {
+            // Nếu không có xe nào, query variant từ DB
+            try {
+                Vehicle anyVehicle = vehicleRepository
+                        .findAvailableInManufacturerStock(variantId, null)
+                        .stream()
+                        .findFirst()
+                        .orElse(null);
+                
+                if (anyVehicle != null) {
+                    String modelName = anyVehicle.getVariant().getModel().getName();
+                    String variantName = anyVehicle.getVariant().getName();
+                    variantInfo = String.format("%s - %s (màu %s)", modelName, variantName, color);
                 }
+            } catch (Exception e) {
+                log.warn("Could not fetch variant info", e);
             }
-            
-            String errorMessage = String.format(
-                "❌ Không đủ xe để phân bổ!\n" +
-                "🚗 Xe yêu cầu: %s\n" +
-                "📦 Số lượng yêu cầu: %d xe\n" +
-                "📊 Số lượng trong kho: %d xe\n" +
-                "⚠️ Thiếu: %d xe",
-                variantInfo, quantity, availableVehicles.size(), (quantity - availableVehicles.size())
-            );
-            
-            log.error(errorMessage);
-            throw new IllegalStateException(errorMessage);
+        }
+        
+        // Log warning nếu không đủ xe, nhưng vẫn tiếp tục phân bổ
+        if (availableCount < quantity) {
+            int shortage = quantity - availableCount;
+            log.warn("⚠️ Không đủ xe để phân bổ đầy đủ!\n" +
+                    "🚗 Xe yêu cầu: {}\n" +
+                    "📦 Số lượng yêu cầu: {} xe\n" +
+                    "📊 Số lượng trong kho: {} xe\n" +
+                    "⚠️ Thiếu: {} xe\n" +
+                    "✅ Sẽ phân bổ {} xe có sẵn. Phần còn lại sẽ được giao sau.",
+                    variantInfo, quantity, availableCount, shortage, quantityToAllocate);
+        }
+        
+        // Nếu không có xe nào, vẫn cho phép nhưng log warning
+        if (availableCount == 0) {
+            log.warn("⚠️ Không có xe nào trong kho cho variant {} (màu {}). " +
+                    "Phân bổ sẽ được thực hiện khi có xe. Hãng sẽ giao sau.", variantInfo, color);
         }
 
         // 4. Lấy hoặc tạo kho dealer
@@ -113,9 +120,9 @@ public class InventoryService {
                     return inventoryStockRepository.save(newStock);
                 });
 
-        // 5. Chuyển xe sang kho dealer
+        // 5. Chuyển xe sang kho dealer (chỉ những xe có sẵn)
         List<Vehicle> allocatedVehicles = availableVehicles.stream()
-                .limit(quantity)
+                .limit(quantityToAllocate)
                 .peek(vehicle -> {
                     vehicle.setManufacturerStock(null);
                     vehicle.setInventoryStock(dealerStock);
@@ -123,15 +130,23 @@ public class InventoryService {
                 })
                 .toList();
 
-        vehicleRepository.saveAll(allocatedVehicles);
+        // Chỉ save nếu có xe để phân bổ
+        if (!allocatedVehicles.isEmpty()) {
+            vehicleRepository.saveAll(allocatedVehicles);
+            log.info("✅ Allocated {} vehicles to dealer {} (requested: {}, available: {})", 
+                    allocatedVehicles.size(), dealer.getDealerName(), quantity, availableCount);
+        } else {
+            log.info("✅ No vehicles to allocate at the moment. Allocation will be processed when vehicles become available.");
+        }
 
-        log.info("✅ Allocated {} vehicles to dealer {}", allocatedVehicles.size(), dealer.getDealerName());
+        // 6. Update DealerRequest status (APPROVED → SHIPPED) - chỉ khi có xe được phân bổ
+        DealerRequest updatedRequest = null;
+        if (!allocatedVehicles.isEmpty()) {
+            updatedRequest = updateDealerRequestStatus(dealerId, variantId, color);
+        }
 
-        // 6. Update DealerRequest status (APPROVED → SHIPPED)
-        DealerRequest updatedRequest = updateDealerRequestStatus(dealerId, variantId, color);
-
-        // 7. Build response
-        return buildAllocationResponse(allocatedVehicles, updatedRequest, dealer);
+        // 7. Build response với thông tin về số lượng yêu cầu và số lượng thiếu
+        return buildAllocationResponse(allocatedVehicles, updatedRequest, dealer, quantity, availableCount);
     }
 
     /**
@@ -275,14 +290,30 @@ public class InventoryService {
      */
     private AllocationResponse buildAllocationResponse(List<Vehicle> vehicles, 
                                                         DealerRequest request, 
-                                                        Dealer dealer) {
+                                                        Dealer dealer,
+                                                        int requestedQuantity,
+                                                        int availableQuantity) {
         List<Long> vehicleIds = vehicles.stream()
                 .map(Vehicle::getVehicleId)
                 .toList();
         
+        // Tạo message chi tiết
+        String message;
+        if (vehicles.isEmpty()) {
+            message = String.format("⚠️ Không có xe trong kho để phân bổ ngay. " +
+                    "Yêu cầu: %d xe. Hãng sẽ giao sau khi có xe.", requestedQuantity);
+        } else if (vehicles.size() < requestedQuantity) {
+            int shortage = requestedQuantity - vehicles.size();
+            message = String.format("✅ Đã phân bổ %d/%d xe cho %s. " +
+                    "Thiếu %d xe, hãng sẽ giao sau.", 
+                    vehicles.size(), requestedQuantity, dealer.getDealerName(), shortage);
+        } else {
+            message = String.format("✅ Đã phân bổ đầy đủ %d xe cho %s", 
+                    vehicles.size(), dealer.getDealerName());
+        }
+        
         return AllocationResponse.builder()
-                .message(String.format("✅ Allocated %d vehicles to %s", 
-                        vehicles.size(), dealer.getDealerName()))
+                .message(message)
                 .quantity(vehicles.size())
                 .vehicleIds(vehicleIds)
                 .dealerId(dealer.getDealerId())
