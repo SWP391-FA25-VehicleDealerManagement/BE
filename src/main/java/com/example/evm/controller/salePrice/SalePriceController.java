@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.dto.salePrice.CreateSalePriceRequest;
+import com.example.evm.dto.salePrice.SalePriceResponse;
 import com.example.evm.dto.salePrice.UpdateSalePriceRequest;
 import com.example.evm.entity.salePrice.SalePrice;
 import com.example.evm.service.salePrice.SalePriceService;
@@ -43,7 +44,7 @@ public class SalePriceController {
      */
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF','DEALER_MANAGER','DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<SalePrice>> createPrice(@Valid @RequestBody CreateSalePriceRequest request) {
+    public ResponseEntity<ApiResponse<SalePriceResponse>> createPrice(@Valid @RequestBody CreateSalePriceRequest request) {
         try {
             // Convert DTO to Entity
             SalePrice salePrice = new SalePrice();
@@ -57,10 +58,13 @@ public class SalePriceController {
             log.info("✅ Created sale price ID: {} for dealer: {}, variant: {}", 
                 createdPrice.getSalepriceId(), request.getDealerId(), request.getVariantId());
             
+            // Convert to response DTO
+            SalePriceResponse response = new SalePriceResponse(createdPrice);
+            
             return ResponseEntity.ok(new ApiResponse<>(
                     true, 
                     "Sale price created successfully", 
-                    createdPrice
+                    response
             ));
         } catch (Exception e) {
             log.error("❌ Error creating sale price", e);
@@ -78,9 +82,9 @@ public class SalePriceController {
      */
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER', 'DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<List<SalePrice>>> getAllPrices() {
+    public ResponseEntity<ApiResponse<List<SalePriceResponse>>> getAllPrices() {
         try {
-            List<SalePrice> prices = salePriceService.getAllPrices();
+            List<SalePriceResponse> prices = salePriceService.getAllPrices();
             return ResponseEntity.ok(new ApiResponse<>(
                     true, 
                     "All sale prices retrieved successfully", 
@@ -102,9 +106,9 @@ public class SalePriceController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER', 'DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<SalePrice>> getPriceById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<SalePriceResponse>> getPriceById(@PathVariable Long id) {
         try {
-            SalePrice price = salePriceService.getPriceById(id);
+            SalePriceResponse price = salePriceService.getPriceById(id);
             return ResponseEntity.ok(new ApiResponse<>(
                     true, 
                     "Sale price retrieved successfully", 
@@ -122,9 +126,9 @@ public class SalePriceController {
      */
     @GetMapping("/dealer/{dealerId}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER', 'DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<List<SalePrice>>> getPricesByDealer(@PathVariable Long dealerId) {
+    public ResponseEntity<ApiResponse<List<SalePriceResponse>>> getPricesByDealer(@PathVariable Long dealerId) {
         try {
-            List<SalePrice> prices = salePriceService.getPricesByDealer(dealerId);
+            List<SalePriceResponse> prices = salePriceService.getPricesByDealer(dealerId);
             return ResponseEntity.ok(new ApiResponse<>(
                     true, 
                     "Sale prices for dealer retrieved successfully", 
@@ -146,9 +150,9 @@ public class SalePriceController {
      */
     @GetMapping("/variant/{variantId}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER', 'DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<List<SalePrice>>> getPricesByVariant(@PathVariable Long variantId) {
+    public ResponseEntity<ApiResponse<List<SalePriceResponse>>> getPricesByVariant(@PathVariable Long variantId) {
         try {
-            List<SalePrice> prices = salePriceService.getPricesByVariant(variantId);
+            List<SalePriceResponse> prices = salePriceService.getPricesByVariant(variantId);
             return ResponseEntity.ok(new ApiResponse<>(
                     true, 
                     "Sale prices for variant retrieved successfully", 
@@ -170,11 +174,11 @@ public class SalePriceController {
      */
     @GetMapping("/dealer/{dealerId}/variant/{variantId}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER', 'DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<List<SalePrice>>> getPricesByDealerAndVariant(
+    public ResponseEntity<ApiResponse<List<SalePriceResponse>>> getPricesByDealerAndVariant(
             @PathVariable Long dealerId,
             @PathVariable Long variantId) {
         try {
-            List<SalePrice> prices = salePriceService.getPricesByDealerAndVariant(dealerId, variantId);
+            List<SalePriceResponse> prices = salePriceService.getPricesByDealerAndVariant(dealerId, variantId);
             return ResponseEntity.ok(new ApiResponse<>(
                     true, 
                     "Sale prices retrieved successfully", 
@@ -196,9 +200,9 @@ public class SalePriceController {
      */
     @GetMapping("/variant/{variantId}/active")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER', 'DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<List<SalePrice>>> getActivePricesByVariant(@PathVariable Long variantId) {
+    public ResponseEntity<ApiResponse<List<SalePriceResponse>>> getActivePricesByVariant(@PathVariable Long variantId) {
         try {
-            List<SalePrice> prices = salePriceService.getActivePricesByVariant(variantId);
+            List<SalePriceResponse> prices = salePriceService.getActivePricesByVariant(variantId);
             return ResponseEntity.ok(new ApiResponse<>(
                     true, 
                     "Active sale prices for variant retrieved successfully", 
@@ -220,11 +224,11 @@ public class SalePriceController {
      */
     @GetMapping("/dealer/{dealerId}/variant/{variantId}/latest")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER', 'DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<SalePrice>> getLatestPrice(
+    public ResponseEntity<ApiResponse<SalePriceResponse>> getLatestPrice(
             @PathVariable Long dealerId,
             @PathVariable Long variantId) {
         try {
-            SalePrice price = salePriceService.getLatestPriceByDealerAndVariant(dealerId, variantId);
+            SalePriceResponse price = salePriceService.getLatestPriceByDealerAndVariant(dealerId, variantId);
             return ResponseEntity.ok(new ApiResponse<>(
                     true, 
                     "Latest sale price retrieved successfully", 
@@ -242,11 +246,11 @@ public class SalePriceController {
      */
     @GetMapping("/range")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF','DEALER_MANAGER','DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<List<SalePrice>>> getPricesByRange(
+    public ResponseEntity<ApiResponse<List<SalePriceResponse>>> getPricesByRange(
             @RequestParam BigDecimal minPrice,
             @RequestParam BigDecimal maxPrice) {
         try {
-            List<SalePrice> prices = salePriceService.getPricesByRange(minPrice, maxPrice);
+            List<SalePriceResponse> prices = salePriceService.getPricesByRange(minPrice, maxPrice);
             return ResponseEntity.ok(new ApiResponse<>(
                     true, 
                     "Sale prices in range retrieved successfully", 
@@ -268,7 +272,7 @@ public class SalePriceController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF','DEALER_MANAGER','DEALER_STAFF')")
-    public ResponseEntity<ApiResponse<SalePrice>> updatePrice(
+    public ResponseEntity<ApiResponse<SalePriceResponse>> updatePrice(
             @PathVariable Long id,
             @Valid @RequestBody UpdateSalePriceRequest request) {
         try {
@@ -281,10 +285,13 @@ public class SalePriceController {
             SalePrice updatedPrice = salePriceService.updatePrice(id, priceDetails);
             log.info("✅ Updated sale price ID: {}", id);
             
+            // Convert to response DTO
+            SalePriceResponse response = new SalePriceResponse(updatedPrice);
+            
             return ResponseEntity.ok(new ApiResponse<>(
                 true, 
                 "Sale price updated successfully", 
-                updatedPrice
+                response
             ));
         } catch (Exception e) {
             log.error("❌ Error updating sale price {}", id, e);

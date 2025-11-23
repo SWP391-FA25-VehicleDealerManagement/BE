@@ -19,6 +19,10 @@ import com.example.evm.entity.salePrice.SalePrice;
 @Repository
 public interface SalePriceRepository extends JpaRepository<SalePrice, Long> {
     
+    // Lấy tất cả giá bán - với variant và model
+    @Query("SELECT sp FROM SalePrice sp LEFT JOIN FETCH sp.variant v LEFT JOIN FETCH v.model")
+    List<SalePrice> findAllWithVariantAndModel();
+    
     // Tìm theo dealer - với variant và model
     @Query("SELECT sp FROM SalePrice sp LEFT JOIN FETCH sp.variant v LEFT JOIN FETCH v.model WHERE sp.dealerId = :dealerId")
     List<SalePrice> findByDealerId(@Param("dealerId") Long dealerId);
