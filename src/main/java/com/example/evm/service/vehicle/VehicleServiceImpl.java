@@ -24,7 +24,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -63,8 +62,8 @@ public class VehicleServiceImpl implements VehicleService {
     @Override
     @Transactional
     public VehicleFullResponse createVehicle(VehicleRequest request, MultipartFile file) {
-        log.info("Creating new vehicle - variantId: {}, color: {}, isTestDrive: {}",
-            request.getVariantId(), request.getColor(), request.getTestDrive());
+        log.info("Creating new vehicle - VIN: {}, variantId: {}, color: {}, isTestDrive: {}",
+            request.getVinNumber(), request.getVariantId(), request.getColor(), request.getTestDrive());
         
         // 1. Lấy kho tổng mặc định
         ManufacturerStock defaultWarehouse = manufacturerStockRepository
@@ -73,13 +72,20 @@ public class VehicleServiceImpl implements VehicleService {
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("No active warehouse found"));
 
-        // 2. Kiểm tra variant tồn tại
+        // 2. Kiểm tra VIN không trùng
+        if (vehicleRepository.existsByVinNumber(request.getVinNumber())) {
+            throw new IllegalArgumentException(
+                "Số VIN " + request.getVinNumber() + " đã tồn tại."
+            );
+        }   
+
+        // 3. Kiểm tra variant tồn tại
         VehicleVariant variant = variantRepository.findById(request.getVariantId())
             .orElseThrow(() -> new ResourceNotFoundException("Variant not found with id: " + request.getVariantId()));
 
-        // 3. Tạo Vehicle
+        // 4. Tạo Vehicle
         Vehicle vehicle = new Vehicle();
-        vehicle.setVinNumber(generateVIN(variant));
+        vehicle.setVinNumber(request.getVinNumber());
         vehicle.setVariant(variant);
         vehicle.setColor(request.getColor());
         vehicle.setManufactureDate(LocalDate.now());
@@ -95,7 +101,7 @@ public class VehicleServiceImpl implements VehicleService {
             vehicle.setStatus("IN_MANUFACTURER_STOCK");
         }
 
-        // 4. ✅ Lưu file ảnh nếu có
+        // 5. ✅ Lưu file ảnh nếu có
         if (file != null && !file.isEmpty()) {
             String filename = fileStorageService.saveToSubFolder(file, "vehicles");
             vehicle.setImageUrl("/api/vehicles/images/" + filename);
@@ -105,25 +111,34 @@ public class VehicleServiceImpl implements VehicleService {
 
         log.info("✅ Created vehicle {} in warehouse {}", saved.getVinNumber(), defaultWarehouse.getWarehouseName());
 
-        // 5. Reload với full info
+        // 6. Reload với full info
         return getVehicleById(saved.getVehicleId());
     }
 
     @Override
     @Transactional
-    public VehicleFullResponse updateVehicle(Long id, String color, MultipartFile file) {
+    public VehicleFullResponse updateVehicle(Long id, String vinNumber, String color, MultipartFile file) {
         
         // 1. Tìm xe (Vehicle) hiện có
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
 
-        // 2. Cập nhật Color (nếu có)
+        // 2. Cập nhật VIN nếu có và kiểm tra trùng
+        if (vinNumber != null && !vinNumber.isBlank() && !vinNumber.equals(vehicle.getVinNumber())) {
+            if (vehicleRepository.existsByVinNumber(vinNumber)) {
+                throw new IllegalArgumentException("Số VIN " + vinNumber + " đã tồn tại.");
+            }
+            vehicle.setVinNumber(vinNumber);
+            log.info("Updated VIN for Vehicle ID: {}", id);
+        }
+
+        // 3. Cập nhật Color (nếu có)
         if (color != null && !color.isBlank()) {
             vehicle.setColor(color);
             log.info("Updated Color for Vehicle ID: {}", id);
         }
 
-        // 3. Cập nhật Ảnh (nếu có file mới)
+        // 4. Cập nhật Ảnh (nếu có file mới)
         if (file != null && !file.isEmpty()) {
             
             String filename = fileStorageService.saveToSubFolder(file, "vehicles");
@@ -131,7 +146,7 @@ public class VehicleServiceImpl implements VehicleService {
             log.info("Updated Image for Vehicle ID: {}", id);
         }
 
-        // 4. Lưu và trả về
+        // 5. Lưu và trả về
         Vehicle updatedVehicle = vehicleRepository.save(vehicle);
         return getVehicleById(updatedVehicle.getVehicleId());
     }
@@ -367,28 +382,5 @@ public class VehicleServiceImpl implements VehicleService {
 
         return builder.build();
     }
-
-    /**
-     * Tạo VIN number tự động
-     * Format: VIN + Model Code (5 chars) + Random (8 chars)
-     */
-    private String generateVIN(VehicleVariant variant) {
-    // Lấy tên model, bỏ khoảng trắng, giới hạn 5 ký tự
-    String modelName = (variant.getModel() != null && variant.getModel().getName() != null)
-            ? variant.getModel().getName().replaceAll("\\s+", "").toUpperCase()
-            : "MODEL";
-
-    String modelCode = modelName.substring(0, Math.min(5, modelName.length()));
-
-    // Tạo phần random 8 ký tự
-    String randomPart = UUID.randomUUID()
-            .toString()
-            .replaceAll("-", "")
-            .substring(0, 8)
-            .toUpperCase();
-
-    return "VIN" + modelCode + randomPart;
-    }
-
 }
 

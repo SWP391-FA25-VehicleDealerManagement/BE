@@ -20,6 +20,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -41,6 +42,7 @@ import java.util.List;
  * - GET /api/vehicles/dealer/{dealerId}/vehicles - Chi tiết xe dealer
  */
 @Slf4j
+@Validated
 @RestController
 @RequestMapping("/api/vehicles")
 @RequiredArgsConstructor
@@ -63,15 +65,17 @@ public class VehicleController {
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<VehicleFullResponse>> createVehicle(
+            @RequestParam("vinNumber") @NotBlank String vinNumber,
             @RequestParam("variantId") @NotNull Long variantId,
             @RequestParam("color") @NotBlank String color,
             @Parameter(in = ParameterIn.DEFAULT, description = "Tick nếu là xe lái thử")
             @RequestParam(value = "isTestDrive", required = false) Boolean isTestDrive,
             @RequestPart(value = "file", required = true) MultipartFile file) {
 
-        log.info("Creating vehicle - variantId: {}, color: {}", variantId, color);
+        log.info("Creating vehicle - VIN number: {}, variantId: {}, color: {}", vinNumber, variantId, color);
 
         VehicleRequest requestDto = new VehicleRequest();
+        requestDto.setVinNumber(vinNumber);
         requestDto.setVariantId(variantId);
         requestDto.setColor(color);
         requestDto.setTestDrive(isTestDrive);
@@ -80,12 +84,15 @@ public class VehicleController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle created successfully", response));
     }
     
-    // CẬP NHẬT ẢNH VÀ MÀU XE
+    // CẬP NHẬT SỐ VIN, ẢNH VÀ MÀU XE
     @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<VehicleFullResponse>> updateVehicleVisuals(
             @Parameter(description = "ID của xe cần cập nhật")
             @PathVariable Long id,
+
+            @Parameter(in = ParameterIn.DEFAULT, description = "Số VIN mới (tùy chọn)")
+            @RequestParam(value = "vinNumber", required = false) String vinNumber,
             
             @Parameter(in = ParameterIn.DEFAULT, description = "Màu sắc mới (tùy chọn)")
             @RequestParam(value = "color", required = false) String color,
@@ -93,7 +100,7 @@ public class VehicleController {
             @Parameter(description = "Ảnh thực tế mới (tùy chọn)")
             @RequestPart(value = "file", required = false) MultipartFile file
     ) {
-        VehicleFullResponse updated = vehicleService.updateVehicle(id, color, file);
+        VehicleFullResponse updated = vehicleService.updateVehicle(id, vinNumber, color, file);
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle updated successfully", updated));
     }
 

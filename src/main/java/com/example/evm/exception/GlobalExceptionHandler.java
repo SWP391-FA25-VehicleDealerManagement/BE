@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 
 import com.example.evm.dto.auth.ApiResponse;
-import com.example.evm.exception.ForeignKeyConstraintException;
 
 import lombok.extern.slf4j.Slf4j;
 
