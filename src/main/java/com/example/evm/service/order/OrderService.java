@@ -21,8 +21,8 @@ import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.promotion.PromotionRepository;
 import com.example.evm.repository.payment.PaymentRepository;
 import com.example.evm.repository.debt.DebtRepository;
-import com.example.evm.entity.payment.Payment;
 import com.example.evm.entity.debt.Debt;
+import com.example.evm.service.debt.DebtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,9 +47,20 @@ public class OrderService {
     private final PromotionRepository promotionRepository;
     private final PaymentRepository paymentRepository;
     private final DebtRepository debtRepository;
+    private final DebtService debtService;
 
     public List<Order> getAllOrders() {
         List<Order> orders = orderRepository.findAll();
+        enrichOrdersWithAmountPaid(orders);
+        return orders;
+    }
+
+    public List<Order> getOrdersWithoutContract(Long dealerId) {
+        List<Order> orders = orderRepository.findOrdersWithoutContractByDealer(dealerId);
+        // ✅ Eager load orderDetails để trả về orderDetailId
+        orders.forEach(order -> {
+            order.getOrderDetails().size(); // Force load orderDetails
+        });
         enrichOrdersWithAmountPaid(orders);
         return orders;
     }
@@ -83,6 +94,15 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
         calculateAmountPaidForOrder(order);
         return order;
+    }
+
+    public Double getTotalSalesByDealer(Long dealerId) {
+        Double totalSales = orderRepository.getTotalSalesByDealer(dealerId);
+        return totalSales != null ? totalSales : 0.0;
+    }
+
+    public Long countOrdersByDealerAndStatus(Long dealerId, String status) {
+        return orderRepository.countByDealerAndStatus(dealerId, status);
     }
 
     /**
@@ -121,17 +141,12 @@ public class OrderService {
         // (Có thể Payment Pending chưa tạo Debt, hoặc Debt.amountPaid chưa được cập nhật)
         if (amountPaid == 0.0 || amountPaid == null) {
             try {
-                Payment payment = paymentRepository.findByOrderId(order.getOrderId()).orElse(null);
-                if (payment != null && payment.getAmount() != null) {
-                    // ✅ Tính từ Payment: Completed hoặc Pending đều tính (Pending đang chờ callback)
-                    if ("Completed".equalsIgnoreCase(payment.getStatus()) || 
-                        "Pending".equalsIgnoreCase(payment.getStatus())) {
-                        amountPaid = payment.getAmount().doubleValue();
-                        log.debug("✅ Found Payment for Order {}: status = {}, type = {}, amountPaid = {}", 
-                                order.getOrderId(), payment.getStatus(), payment.getPaymentType(), amountPaid);
-                    }
+                BigDecimal completedAmount = paymentRepository.sumCompletedAmountByOrderId(order.getOrderId());
+                if (completedAmount != null && completedAmount.compareTo(BigDecimal.ZERO) > 0) {
+                    amountPaid = completedAmount.doubleValue();
+                    log.debug("✅ Sum completed payments for Order {} = {}", order.getOrderId(), completedAmount);
                 } else {
-                    log.debug("⚠️ No Payment found for Order {}", order.getOrderId());
+                    log.debug("⚠️ No completed Payment found for Order {}", order.getOrderId());
                 }
             } catch (Exception e) {
                 log.warn("⚠️ Error checking Payment for Order {}: {}", order.getOrderId(), e.getMessage());
@@ -141,6 +156,11 @@ public class OrderService {
         // 3. Đảm bảo amountPaid không null
         if (amountPaid == null) {
             amountPaid = 0.0;
+        }
+
+        if (order.getTotalPrice() != null && amountPaid > order.getTotalPrice()) {
+            log.warn("⚠️ Amount paid {} exceeds order total {} for order {}, capping to total.", amountPaid, order.getTotalPrice(), order.getOrderId());
+            amountPaid = order.getTotalPrice();
         }
         
         order.setAmountPaid(amountPaid);
@@ -194,6 +214,11 @@ public class OrderService {
         for (OrderDetailRequestDto detailDto : dto.getOrderDetails()) {
             Vehicle vehicle = vehicleRepository.findById(detailDto.getVehicleId())
                     .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + detailDto.getVehicleId()));
+
+            // 🚫 NGHIỆP VỤ MỚI: Xe lái thử không thể bán
+            if ("TEST_DRIVE".equalsIgnoreCase(vehicle.getStatus())) {
+                throw new IllegalStateException("🚫 Xe lái thử (VIN: " + vehicle.getVinNumber() + ") không thể được đặt hàng hoặc bán.");
+            }        
             
             OrderDetail detail = new OrderDetail();
             detail.setVehicle(vehicle);
@@ -290,11 +315,25 @@ public class OrderService {
         return savedOrder;
     }
 
-public Order updateOrderStatus(Long id, String status) {
+   @Transactional
+   public Order updateOrderStatus(Long id, String status) {
     Order order = getOrderById(id);
     order.setStatus(status);
-    
-    // ✅ Thêm logic: Khi SHIPPED, cập nhật vehicle
+
+    try {
+        List<com.example.evm.entity.payment.Payment> payments = paymentRepository
+            .findAllByOrderId(id);
+
+        if (!payments.isEmpty()) {
+            String latestPaymentMethod = payments.get(0).getPaymentMethod();
+            order.setPaymentMethod(latestPaymentMethod);
+            log.info("Updated order {} paymentMethod to: {}", id, latestPaymentMethod);
+        }
+    } catch (Exception e) {
+        log.warn("Could not update paymentMethod for order {}: {}", id, e.getMessage());
+    }
+
+    // Thêm logic: Khi SHIPPED, cập nhật vehicle
     if ("SHIPPED".equals(status)) {
         List<OrderDetail> orderDetails = getOrderDetails(id);
         for (OrderDetail detail : orderDetails) {
@@ -308,20 +347,42 @@ public Order updateOrderStatus(Long id, String status) {
         }
     }
     
+    // ✅ FIX: Tạo CUSTOMER_DEBT SAU KHI Order được đánh dấu "Completed"
+    if ("Completed".equals(status) && order.getCustomer() != null) {
+        log.info("✅ Order {} marked as Completed - Creating CUSTOMER_DEBT for customer {}", 
+                id, order.getCustomer().getCustomerId());
+        
+        try {
+            // Lấy payment mới nhất của order này để tạo debt
+            List<com.example.evm.entity.payment.Payment> payments = paymentRepository.findAllByOrderId(id);
+            log.info("🔍 Found {} payments for Order {}", payments.size(), id);
+            
+            if (!payments.isEmpty()) {
+                // Lấy payment đầu tiên (hoặc payment có type = INSTALLMENT)
+                com.example.evm.entity.payment.Payment payment = payments.stream()
+                        .filter(p -> "INSTALLMENT".equals(p.getPaymentType()))
+                        .findFirst()
+                        .orElse(payments.get(0));
+                
+                log.info("🔍 Using Payment {} (type={}, amount={}) to create debt", 
+                        payment.getPaymentId(), payment.getPaymentType(), payment.getAmount());
+                
+                debtService.autoCreateDebtFromPayment(payment.getPaymentId());
+                log.info("✅ CUSTOMER_DEBT auto-created from Payment {} for Order {}", 
+                        payment.getPaymentId(), id);
+            } else {
+                log.warn("⚠️ No payment found for Order {} - Cannot create CUSTOMER_DEBT", id);
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to create CUSTOMER_DEBT for Order {}: {}", id, e.getMessage(), e);
+        }
+    }
+
     Order updatedOrder = orderRepository.save(order);
     log.info("Order {} status updated to: {}", id, status);
-    
+
     return updatedOrder;
 }
-
-    public Double getTotalSalesByDealer(Long dealerId) {
-        Double totalSales = orderRepository.getTotalSalesByDealer(dealerId);
-        return totalSales != null ? totalSales : 0.0;
-    }
-
-    public Long countOrdersByDealerAndStatus(Long dealerId, String status) {
-        return orderRepository.countByDealerAndStatus(dealerId, status);
-    }
 
     @Transactional
     public void deleteOrder(Long id) {
@@ -334,5 +395,4 @@ public Order updateOrderStatus(Long id, String status) {
         orderRepository.delete(order);
         log.info("Order deleted: {}", id);
     }
-
 }

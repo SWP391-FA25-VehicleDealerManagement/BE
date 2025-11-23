@@ -101,6 +101,13 @@ public class Order {
         return dealer != null ? dealer.getDealerId() : null;
     }
 
+    // ✅ Expose orderDetailId để trả về trong API (mỗi order có 1 detail)
+    public Long getOrderDetailId() {
+        return orderDetails != null && !orderDetails.isEmpty()
+            ? orderDetails.get(0).getOrderDetailId()
+            : null;
+    }
+
     // Override getter methods để thêm @JsonIgnore  
     @JsonIgnore
     public Customer getCustomer() {
@@ -121,4 +128,5 @@ public class Order {
     public List<OrderDetail> getOrderDetails() {
         return orderDetails;
     }
+    
 }

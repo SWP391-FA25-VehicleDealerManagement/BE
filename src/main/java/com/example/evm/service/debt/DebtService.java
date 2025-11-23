@@ -14,10 +14,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.evm.dto.debt.CreateDebtPaymentRequest;
+import com.example.evm.dto.debt.DebtResponse;
 import com.example.evm.entity.debt.Debt;
 import com.example.evm.entity.debt.DebtPayment;
 import com.example.evm.entity.debt.DebtSchedule;
 import com.example.evm.exception.ResourceNotFoundException;
+import com.example.evm.mapper.DebtMapper;
 import com.example.evm.repository.debt.DebtRepository;
 import com.example.evm.repository.debt.DebtScheduleRepository;
 import com.example.evm.repository.debt.DebtPaymentRepository;
@@ -53,6 +55,7 @@ public class DebtService {
     private final UserRepository userRepository;
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final DebtMapper debtMapper;
 
     // ================== CÁC HÀM LẤY DỮ LIỆU CƠ BẢN ==================
 
@@ -62,27 +65,58 @@ public class DebtService {
     }
 
     // 🆕 Lấy danh sách NỢ CỦA DEALER (dealer nợ hãng) - EVM xem
+    @Transactional
     public List<Debt> getDealerDebts() {
-        return debtRepository.findByDebtType("DEALER_DEBT");
+        List<Debt> debts = debtRepository.findByDebtType("DEALER_DEBT");
+        // ✅ Tính lại amountPaid cho mỗi debt và PERSIST vào DB
+        debts.forEach(debt -> {
+            recalculateAmountPaid(debt);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debtRepository.save(debt);
+        });
+        log.info("✅ Retrieved and recalculated {} dealer debts", debts.size());
+        return debts;
     }
 
     // 🆕 Lấy danh sách NỢ CỦA DEALER theo dealerId (dealer nợ hãng) - EVM xem
+    @Transactional
     public List<Debt> getDealerDebtsByDealerId(Long dealerId) {
-        return debtRepository.findByDebtTypeAndDealerDealerId("DEALER_DEBT", dealerId);
+        List<Debt> debts = debtRepository.findByDebtTypeAndDealerDealerId("DEALER_DEBT", dealerId);
+        // ✅ Tính lại amountPaid cho mỗi debt và PERSIST vào DB
+        debts.forEach(debt -> {
+            recalculateAmountPaid(debt);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debtRepository.save(debt);
+        });
+        log.info("✅ Retrieved and recalculated {} debts for dealer {}", debts.size(), dealerId);
+        return debts;
     }
 
     // 🆕 Lấy danh sách NỢ CỦA CUSTOMER (customer nợ dealer) - Dealer xem
+    @Transactional
     public List<Debt> getCustomerDebts(Long dealerId) {
-        return debtRepository.findByDebtTypeAndDealerDealerId("CUSTOMER_DEBT", dealerId);
+        List<Debt> debts = debtRepository.findByDebtTypeAndDealerDealerId("CUSTOMER_DEBT", dealerId);
+        // ✅ Tính lại amountPaid cho mỗi debt và PERSIST vào DB
+        debts.forEach(debt -> {
+            recalculateAmountPaid(debt);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debtRepository.save(debt);
+        });
+        log.info("✅ Retrieved and recalculated {} customer debts for dealer {}", debts.size(), dealerId);
+        return debts;
     }
 
     // Lấy danh sách nợ theo dealer (deprecated - dùng getDealerDebtsByDealerId hoặc getCustomerDebts)
     @Deprecated
-    // ✅ Tự động tính lại amountPaid cho tất cả debts
+    @Transactional
     public List<Debt> getDebtsByDealer(Long dealerId) {
         List<Debt> debts = debtRepository.findByDealerDealerId(dealerId);
-        // Tính lại amountPaid cho mỗi debt
-        debts.forEach(this::recalculateAmountPaid);
+        // ✅ Tính lại amountPaid cho mỗi debt và PERSIST vào DB
+        debts.forEach(debt -> {
+            recalculateAmountPaid(debt);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debtRepository.save(debt);
+        });
         return debts;
     }
 
@@ -107,39 +141,111 @@ public class DebtService {
     }
 
     // Lấy chi tiết nợ theo ID, ném exception nếu không tồn tại
-    // ✅ Tự động tính lại amountPaid từ Payment ban đầu + DebtPayments CONFIRMED
     public Debt getDebtById(Long id) {
         Debt debt = debtRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Debt not found with id: " + id));
-        
-        // ✅ Tính lại amountPaid để đảm bảo bao gồm số tiền ban đầu từ Payment
+        // ✅ Recalculate and persist amountPaid so API always returns correct value
         recalculateAmountPaid(debt);
-        
+        // Calculate and persist updated timestamp; remainingAmount is derived from getters
+        BigDecimal amountPaid = debt.getAmountPaid() != null ? debt.getAmountPaid() : BigDecimal.ZERO;
+        BigDecimal amountDue = debt.getAmountDue() != null ? debt.getAmountDue() : BigDecimal.ZERO;
+        debt.setUpdatedDate(LocalDateTime.now());
+        debtRepository.save(debt);
         return debt;
     }
     
     /**
-     * ✅ Tính lại amountPaid từ Payment ban đầu + DebtPayments CONFIRMED (không lưu vào DB)
-     * Method này chỉ tính toán trong memory, không persist
+     * ✅ Tính lại amountPaid từ:
+     * - Nếu có DebtSchedule: Tổng paidAmount từ tất cả schedules
+     * - Nếu không có schedule: Tổng payment từ Order tương ứng + DebtPayments CONFIRMED
+     * 
+     * ✅ FIX: Tự động lấy payment từ Order có cùng ID trong notes
      */
     private void recalculateAmountPaid(Debt debt) {
-        // 1. Lấy số tiền ban đầu từ Payment (Order)
+        BigDecimal totalPaid;
+        
+        // ✅ FIX: Luôn tính số tiền ban đầu từ Order payment trước
         BigDecimal initialPaymentAmount = getInitialPaymentAmountFromOrder(debt);
         
-        // 2. Tính tổng DebtPayments CONFIRMED
+        // Case 1: Nếu có DebtSchedule, tính từ schedules + số tiền ban đầu
+        List<DebtSchedule> schedules = debtScheduleRepository.findByDebtOrderByPeriodNo(debt.getDebtId());
+        if (!schedules.isEmpty()) {
+            BigDecimal totalFromSchedules = schedules.stream()
+                    .map(s -> s.getPaidAmount() != null ? s.getPaidAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            if (totalFromSchedules.compareTo(BigDecimal.ZERO) > 0) {
+                // ✅ Cộng thêm số tiền ban đầu từ Order
+                BigDecimal totalWithInitial = initialPaymentAmount.add(totalFromSchedules);
+                
+                // ✅ FIX: Auto-fix nếu chênh lệch < 1000đ (làm tròn)
+                BigDecimal remainingAmount = debt.getAmountDue().subtract(totalWithInitial);
+                if (remainingAmount.abs().compareTo(new BigDecimal("1000")) < 0 && remainingAmount.compareTo(BigDecimal.ZERO) != 0) {
+                    log.info("🔧 Auto-fixing rounding difference for Debt {} (from schedules): {} -> {} (diff: {}đ)", 
+                            debt.getDebtId(), totalWithInitial, debt.getAmountDue(), remainingAmount);
+                    totalWithInitial = debt.getAmountDue(); // Đặt bằng chính xác amountDue
+                }
+                
+                log.info("💰 Recalculated amountPaid for Debt {} from schedules: InitialPayment={}, SchedulesPaid={}, Total={}", 
+                        debt.getDebtId(), initialPaymentAmount, totalFromSchedules, totalWithInitial);
+                debt.setAmountPaid(totalWithInitial);
+                return;
+            } else {
+                log.info("ℹ️ Debt {} has schedules but no paidAmount yet. Using only initial payment: {}", 
+                        debt.getDebtId(), initialPaymentAmount);
+                debt.setAmountPaid(initialPaymentAmount);
+                return;
+            }
+        }
+        
+        // Case 2: Không có schedule, tính từ Payment của Order tương ứng + DebtPayments
+        BigDecimal paymentFromOrder = BigDecimal.ZERO;
+        
+        try {
+            // ✅ FIX: Extract orderId từ notes và lấy tất cả payment của order đó
+            String notes = debt.getNotes();
+            log.info("🔍 Debt {} notes: {}", debt.getDebtId(), notes);
+            
+            if (notes != null && notes.contains("Order:")) {
+                String orderIdStr = notes.substring(notes.indexOf("Order:") + 6).trim();
+                orderIdStr = orderIdStr.split("\\s")[0].trim();
+                Long orderId = Long.parseLong(orderIdStr);
+                
+                log.info("🔍 Extracted orderId {} from Debt {}", orderId, debt.getDebtId());
+                
+                // Lấy tất cả payment cho order này
+                List<Payment> payments = paymentRepository.findAllByOrderId(orderId);
+                log.info("🔍 Found {} total payments for Order {}", payments.size(), orderId);
+                
+                paymentFromOrder = payments.stream()
+                        .filter(p -> "Completed".equalsIgnoreCase(p.getStatus()) || "COMPLETED".equalsIgnoreCase(p.getStatus()))
+                        .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                
+                long completedCount = payments.stream()
+                        .filter(p -> "Completed".equalsIgnoreCase(p.getStatus()) || "COMPLETED".equalsIgnoreCase(p.getStatus()))
+                        .count();
+                
+                log.info("💰 Found {} completed payments for Order {}: Total={}", 
+                        completedCount, orderId, paymentFromOrder);
+            } else {
+                log.warn("⚠️ Debt {} notes does not contain 'Order:'", debt.getDebtId());
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to extract payment from Order for Debt {}: {}", debt.getDebtId(), e.getMessage());
+        }
+        
+        // Tính tổng DebtPayments CONFIRMED
         BigDecimal totalPaidFromDebtPayments = debtPaymentRepository.findByDebtDebtIdAndStatus(debt.getDebtId(), "CONFIRMED")
                 .stream()
                 .map(DebtPayment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
-        // 3. amountPaid = số tiền ban đầu + tổng DebtPayments CONFIRMED
-        BigDecimal totalPaid = initialPaymentAmount.add(totalPaidFromDebtPayments);
-        
-        // 4. Set vào debt object (không lưu vào DB - chỉ trong memory)
+        // Tổng = Payment từ Order + DebtPayments
+        totalPaid = paymentFromOrder.add(totalPaidFromDebtPayments);
         debt.setAmountPaid(totalPaid);
         
-        log.info("💰 Recalculated amountPaid for Debt {}: Initial={}, DebtPayments={}, Total={}", 
-                debt.getDebtId(), initialPaymentAmount, totalPaidFromDebtPayments, totalPaid);
+        log.info("💰 Recalculated amountPaid for Debt {}: OrderPayments={}, DebtPayments={}, Total={}", 
+                debt.getDebtId(), paymentFromOrder, totalPaidFromDebtPayments, totalPaid);
     }
 
     // Lấy danh sách các kỳ thanh toán (schedule) theo debtId
@@ -242,28 +348,23 @@ public class DebtService {
         int numberOfPeriods = 12;
         BigDecimal totalAmount = debt.getAmountDue();
         
-        // ✅ Lấy số tiền đã thanh toán từ Payment (Order) - không dùng debt.getAmountPaid() vì có thể chưa được set
-        BigDecimal initialPaymentAmount = getInitialPaymentAmountFromOrder(debt);
-        
-        // ✅ Tính số tiền còn nợ = Tổng tiền - Số tiền đã thanh toán từ Order
-        BigDecimal remainingDebt = totalAmount.subtract(initialPaymentAmount);
+        // ✅ FIX: Lấy số tiền còn nợ để chia làm 12 kỳ
+        // Không quan tâm đã trả bao nhiêu - tất cả kỳ đều PENDING ban đầu
+        BigDecimal remainingDebt = debt.getRemainingAmount();
         
         // ✅ Chỉ chia cho số kỳ nếu remainingDebt > 0
         if (remainingDebt.compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn(" Remaining debt is {} (total={}, initialPayment={}) - Cannot generate schedule", 
-                    remainingDebt, totalAmount, initialPaymentAmount);
+            log.warn(" Remaining debt is {} (total={}) - Cannot generate schedule", 
+                    remainingDebt, totalAmount);
             return;
         }
         
         BigDecimal installment = remainingDebt.divide(BigDecimal.valueOf(numberOfPeriods), 2, RoundingMode.HALF_UP);
     
         BigDecimal remainingBalance = remainingDebt;
-    
-        // ✅ Nếu đã có initialPayment (từ Order), cập nhật kỳ đầu tiên
-        boolean hasInitialPayment = initialPaymentAmount.compareTo(BigDecimal.ZERO) > 0;
         
-        log.info("📊 Generating debt schedule for Debt {}: Total={}, InitialPayment={}, Remaining={}, Installment={}/period", 
-                debt.getDebtId(), totalAmount, initialPaymentAmount, remainingDebt, installment);
+        log.info("📊 Generating {} debt schedules for Debt {}: AmountDue={}, AmountPaid={}, Remaining={}, Installment={}/period", 
+                numberOfPeriods, debt.getDebtId(), totalAmount, debt.getAmountPaid(), remainingDebt, installment);
     
         // Tạo từng kỳ trả nợ
         for (int i = 1; i <= numberOfPeriods; i++) {
@@ -288,23 +389,19 @@ public class DebtService {
             schedule.setEndBalance(endBalance);
             schedule.setDueDate(LocalDate.now().plusMonths(i));
             
-            // ✅ Kỳ đầu tiên: Nếu đã thanh toán từ Order, đánh dấu là PARTIAL hoặc PAID
-            if (i == 1 && hasInitialPayment) {
-                if (initialPaymentAmount.compareTo(installment) >= 0) {
-                    schedule.setPaidAmount(installment);
-                    schedule.setStatus("PAID");
-                    schedule.setPaymentDate(LocalDate.now());
-                } else {
-                    schedule.setPaidAmount(initialPaymentAmount);
-                    schedule.setStatus("PARTIAL");
-                }
-            } else {
-                schedule.setStatus("PENDING");
-            }
+            // ✅ FIX: TẤT CẢ các kỳ đều PENDING ban đầu (không tự động đánh dấu PAID)
+            schedule.setPaidAmount(BigDecimal.ZERO);
+            schedule.setStatus("PENDING");
+            schedule.setPaymentDate(null);
     
             debt.addDebtSchedule(schedule);
             remainingBalance = endBalance;
+            
+            log.debug("📅 Created schedule period {}/{}: principal={}, installment={}, endBalance={}", 
+                    i, numberOfPeriods, principal, installment, endBalance);
         }
+        
+        log.info("✅ Generated {} debt schedules for Debt {}", debt.getDebtSchedules().size(), debt.getDebtId());
     }
 
     /**
@@ -954,33 +1051,32 @@ public class DebtService {
             }
             
             // Tìm Payment từ orderId
-            Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
-            if (payment == null) {
+            List<Payment> payments = paymentRepository.findAllByOrderId(orderId);
+            if (payments == null || payments.isEmpty()) {
                 log.warn("⚠️ No Payment found for Order {} (Debt {})", orderId, debt.getDebtId());
+                return BigDecimal.ZERO;
+            }
+            
+            // ✅ FIX: Lấy tất cả INSTALLMENT payments (bỏ filter status vì có thể là COMPLETED, Completed, Pending, etc.)
+            Payment payment = payments.stream()
+                    .filter(p -> "INSTALLMENT".equalsIgnoreCase(p.getPaymentType()))
+                    .sorted(Comparator.comparing(Payment::getPaymentDate, Comparator.nullsLast(LocalDateTime::compareTo)).reversed())
+                    .findFirst()
+                    .orElse(null);
+            
+            if (payment == null) {
+                log.warn("⚠️ No suitable INSTALLMENT payment found for Order {} (Debt {})", orderId, debt.getDebtId());
                 return BigDecimal.ZERO;
             }
             
             log.info("💳 Found Payment {} for Order {}: type={}, status={}, amount={}", 
                     payment.getPaymentId(), orderId, payment.getPaymentType(), payment.getStatus(), payment.getAmount());
             
-            // Lấy nếu paymentType = INSTALLMENT (kể cả Pending hoặc Completed)
-            if ("INSTALLMENT".equalsIgnoreCase(payment.getPaymentType())) {
-                if ("Completed".equalsIgnoreCase(payment.getStatus()) || 
-                    "Pending".equalsIgnoreCase(payment.getStatus())) {
-                    BigDecimal amount = payment.getAmount() != null ? payment.getAmount() : BigDecimal.ZERO;
-                    log.info("✅ Found initial payment from Order {}: {} (status: {}) for Debt {}", 
-                            orderId, amount, payment.getStatus(), debt.getDebtId());
-                    return amount;
-                } else {
-                    log.warn("⚠️ Payment {} status is '{}' (not Completed/Pending) - skipping for Debt {}", 
-                            payment.getPaymentId(), payment.getStatus(), debt.getDebtId());
-                }
-            } else {
-                log.warn("⚠️ Payment {} type is '{}' (not INSTALLMENT) - skipping for Debt {}", 
-                        payment.getPaymentId(), payment.getPaymentType(), debt.getDebtId());
-            }
-            
-            return BigDecimal.ZERO;
+            // ✅ FIX: Lấy amount từ INSTALLMENT payment (bất kể status)
+            BigDecimal amount = payment.getAmount() != null ? payment.getAmount() : BigDecimal.ZERO;
+            log.info("✅ Found initial payment from Order {}: {} (status: {}) for Debt {}", 
+                    orderId, amount, payment.getStatus(), debt.getDebtId());
+            return amount;
         } catch (NumberFormatException e) {
             log.error("❌ Failed to parse ID from Debt {} notes: {}", debt.getDebtId(), debt.getNotes(), e);
             return BigDecimal.ZERO;
@@ -1032,11 +1128,20 @@ public class DebtService {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + paymentId));
         
+        log.info("🔍 [createDebtFromPayment] Payment {}: amount={}, status={}, type={}, orderId={}", 
+                paymentId, payment.getAmount(), payment.getStatus(), 
+                payment.getPaymentType(), payment.getOrderId());
+        
         // 2. Lấy Order từ Payment (Order được tạo bởi Dealer cho customer)
         Order order = payment.getOrder();
         if (order == null) {
             throw new IllegalArgumentException("Payment must be linked to an Order");
         }
+        
+        log.info("🔍 [createDebtFromPayment] Order {}: totalPrice={}, customer={}, dealer={}", 
+                order.getOrderId(), order.getTotalPrice(), 
+                order.getCustomer() != null ? order.getCustomer().getCustomerId() : "null",
+                order.getDealer() != null ? order.getDealer().getDealerId() : "null");
         
         // 3. Validate: Chỉ tạo debt cho INSTALLMENT payment
         if (!"INSTALLMENT".equals(payment.getPaymentType())) {
@@ -1070,17 +1175,56 @@ public class DebtService {
         }
         
         if (debt == null) {
-            // 7. Tạo CUSTOMER_DEBT mới (customer nợ dealer)
+            // 7. Tính toán số tiền
+            BigDecimal orderTotal = order.getTotalPrice() != null ? 
+                    BigDecimal.valueOf(order.getTotalPrice()) : payment.getAmount();
+            
+            // ✅ FIX: Tính tổng TẤT CẢ payments của order này (không chỉ payment hiện tại)
+            List<com.example.evm.entity.payment.Payment> allPayments = paymentRepository.findAllByOrderId(order.getOrderId());
+            
+            // Debug: Log tất cả payments
+            log.info("🔍 [createDebtFromPayment] Found {} payments for Order {}:", allPayments.size(), order.getOrderId());
+            for (com.example.evm.entity.payment.Payment p : allPayments) {
+                log.info("   - Payment {}: amount={}, status='{}', type={}", 
+                        p.getPaymentId(), p.getAmount(), p.getStatus(), p.getPaymentType());
+            }
+            
+            BigDecimal totalPaidAmount = allPayments.stream()
+                    .filter(p -> "Completed".equalsIgnoreCase(p.getStatus()) || "COMPLETED".equalsIgnoreCase(p.getStatus()))
+                    .map(com.example.evm.entity.payment.Payment::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            long completedCount = allPayments.stream()
+                    .filter(p -> "Completed".equalsIgnoreCase(p.getStatus()) || "COMPLETED".equalsIgnoreCase(p.getStatus()))
+                    .count();
+            
+            BigDecimal remainingDebt = orderTotal.subtract(totalPaidAmount);
+            
+            log.info("🔍 [createDebtFromPayment] Calculating debt: orderTotal={}, totalPaid={} (from {}/{} completed payments), remaining={}", 
+                    orderTotal, totalPaidAmount, completedCount, allPayments.size(), remainingDebt);
+            
+            // ✅ FIX: Chỉ tạo CUSTOMER_DEBT khi còn nợ (không thanh toán full)
+            if (remainingDebt.compareTo(BigDecimal.ZERO) <= 0) {
+                log.info("✅ Order {} paid in FULL by customer ({}đ) - NO CUSTOMER_DEBT CREATED", 
+                        order.getOrderId(), totalPaidAmount);
+                // ❌ KHÔNG tạo debt - khách đã thanh toán đủ
+                return null;
+            }
+            
+            log.info("✅ Creating NEW CUSTOMER_DEBT for Order {} - orderTotal={}, totalPaid={}, remainingDebt={}", 
+                    order.getOrderId(), orderTotal, totalPaidAmount, remainingDebt);
+            
+            // 8. Tạo CUSTOMER_DEBT mới (customer nợ dealer)
             debt = new Debt();
             debt.setDebtType("CUSTOMER_DEBT");
             debt.setCustomer(order.getCustomer()); // Customer nợ
             debt.setDealer(order.getDealer()); // Dealer được trả
             
-            // ✅ FIX: amountDue = Order.totalPrice (toàn bộ số tiền), amountPaid = payment.amount (20% đã trả)
-            BigDecimal orderTotal = order.getTotalPrice() != null ? 
-                    BigDecimal.valueOf(order.getTotalPrice()) : payment.getAmount();
             debt.setAmountDue(orderTotal);
-            debt.setAmountPaid(payment.getAmount()); // ✅ Đã thanh toán 20%
+            debt.setAmountPaid(totalPaidAmount); // ✅ Tổng số tiền đã thanh toán
+            
+            log.info("🔍 [createDebtFromPayment] BEFORE save - debt.amountDue={}, debt.amountPaid={}", 
+                    debt.getAmountDue(), debt.getAmountPaid());
             
             debt.setPaymentMethod(payment.getPaymentMethod());
             debt.setStatus("ACTIVE");
@@ -1090,45 +1234,59 @@ public class DebtService {
             debt.setDueDate(LocalDateTime.now().plusMonths(12)); // 12 tháng trả góp
             debt.setCreatedDate(LocalDateTime.now());
             
-            // 8. Tự động tạo lịch trả nợ 12 tháng
-            generateDebtSchedule(debt);
-            
-            // 9. Lưu Debt
+            // 9. Lưu Debt TRƯỚC để amountPaid được persist
             debt = debtRepository.save(debt);
             
-            log.info("✅ CUSTOMER_DEBT created: Customer {} nợ Dealer {} - Total: {} - Paid: {} (20%) - Order: {} - Payment: {}", 
-                    order.getCustomer().getCustomerName(), order.getDealer().getDealerName(), 
-                    orderTotal, payment.getAmount(), order.getOrderId(), paymentId);
+            log.info("🔍 [createDebtFromPayment] AFTER save debt - debtId={}, amountPaid={}", 
+                    debt.getDebtId(), debt.getAmountPaid());
+            
+            // 10. Tạo lịch trả nợ 12 tháng (SAU KHI save)
+            generateDebtSchedule(debt);
+            
+            log.info("🔍 [createDebtFromPayment] AFTER generateDebtSchedule - schedules={}", 
+                    debt.getDebtSchedules().size());
+            
+            // 11. Lưu lại Debt với schedules
+            debt = debtRepository.save(debt);
+            
+            log.info("✅ CUSTOMER_DEBT created: debtId={}, Customer {} nợ Dealer {} - Total: {} - Paid: {} - Remaining: {} - Schedules: {} - Order: {}", 
+                    debt.getDebtId(), order.getCustomer().getCustomerName(), order.getDealer().getDealerName(), 
+                    orderTotal, totalPaidAmount, remainingDebt, debt.getDebtSchedules().size(), 
+                    order.getOrderId());
         } else {
             // 10. Cập nhật debt đã tồn tại
-            // Nếu Payment Completed: Đảm bảo amountPaid >= payment.amount
-            // Nếu Payment Pending: Chỉ cập nhật nếu amountPaid < payment.amount
-            BigDecimal currentPaid = debt.getAmountPaid() != null ? debt.getAmountPaid() : BigDecimal.ZERO;
-            BigDecimal paymentAmount = payment.getAmount();
+            log.info("🔄 Debt {} already exists for Order {} - Updating amountPaid", debt.getDebtId(), order.getOrderId());
             
-            boolean shouldUpdate = false;
-            if ("Completed".equalsIgnoreCase(payment.getStatus())) {
-                // Payment Completed: Đảm bảo amountPaid >= payment.amount
-                if (currentPaid.compareTo(paymentAmount) < 0) {
-                    debt.setAmountPaid(paymentAmount); // Cập nhật = payment.amount (108 triệu)
-                    shouldUpdate = true;
-                    log.info("✅ CUSTOMER_DEBT updated (Payment Completed): amountPaid = {} (from Payment {}) - Order: {}", 
-                            paymentAmount, payment.getPaymentId(), order.getOrderId());
-                }
-            } else {
-                // Payment Pending: Cộng thêm nếu chưa có
-                if (currentPaid.compareTo(paymentAmount) < 0) {
-                    debt.setAmountPaid(paymentAmount);
-                    shouldUpdate = true;
-                    log.info("✅ CUSTOMER_DEBT updated (Payment Pending): amountPaid = {} - Order: {}", 
-                            paymentAmount, order.getOrderId());
-                }
+            // ✅ FIX: Tính lại tổng TẤT CẢ payments của order (giống như khi tạo mới)
+            List<com.example.evm.entity.payment.Payment> allPayments = paymentRepository.findAllByOrderId(order.getOrderId());
+            
+            // Debug: Log tất cả payments
+            log.info("🔍 [updateDebt] Found {} payments for Order {}:", allPayments.size(), order.getOrderId());
+            for (com.example.evm.entity.payment.Payment p : allPayments) {
+                log.info("   - Payment {}: amount={}, status='{}', type={}", 
+                        p.getPaymentId(), p.getAmount(), p.getStatus(), p.getPaymentType());
             }
             
-            if (shouldUpdate) {
-                debt.setUpdatedDate(LocalDateTime.now());
-                debt = debtRepository.save(debt);
-            }
+            BigDecimal totalPaidAmount = allPayments.stream()
+                    .filter(p -> "Completed".equalsIgnoreCase(p.getStatus()) || "COMPLETED".equalsIgnoreCase(p.getStatus()))
+                    .map(com.example.evm.entity.payment.Payment::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            long completedCount = allPayments.stream()
+                    .filter(p -> "Completed".equalsIgnoreCase(p.getStatus()) || "COMPLETED".equalsIgnoreCase(p.getStatus()))
+                    .count();
+            
+            BigDecimal oldPaid = debt.getAmountPaid() != null ? debt.getAmountPaid() : BigDecimal.ZERO;
+            
+            log.info("🔧 Updating Debt {}: oldPaid={}, newPaid={} (from {}/{} completed payments)", 
+                    debt.getDebtId(), oldPaid, totalPaidAmount, completedCount, allPayments.size());
+            
+            debt.setAmountPaid(totalPaidAmount);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debt = debtRepository.save(debt);
+            
+            log.info("✅ CUSTOMER_DEBT updated: debtId={}, amountPaid={}, remaining={} - Order: {}", 
+                    debt.getDebtId(), totalPaidAmount, debt.getRemainingAmount(), order.getOrderId());
         }
         
         // 11. Auto-fix rounding nếu cần
@@ -1199,7 +1357,7 @@ public class DebtService {
      * Cập nhật paidAmount của schedule và tổng amountPaid của Debt
      */
     @Transactional
-    public DebtSchedule payDebtScheduleDirectly(Long scheduleId, BigDecimal amount) {
+    public DebtSchedule payDebtScheduleDirectly(Long scheduleId, BigDecimal amount, String paymentMethod, String notes) {
         // 1. Lấy DebtSchedule
         DebtSchedule schedule = debtScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new ResourceNotFoundException("DebtSchedule not found with id: " + scheduleId));
@@ -1229,16 +1387,12 @@ public class DebtService {
             throw new IllegalArgumentException("DebtSchedule is not linked to a Debt");
         }
 
-        // Tính lại tổng số tiền đã thanh toán cho Debt từ tất cả các schedule đã thanh toán
-        BigDecimal totalPaidFromSchedules = debtScheduleRepository.findByDebtOrderByPeriodNo(debt.getDebtId())
-                .stream()
-                .map(s -> s.getPaidAmount() != null ? s.getPaidAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        debt.setAmountPaid(totalPaidFromSchedules);
+        // ✅ FIX: Tính lại amountPaid bằng cách gọi recalculateAmountPaid
+        // Hàm này sẽ tự động tính cả: số tiền ban đầu từ Order + tổng paidAmount từ schedules + DebtPayments
+        recalculateAmountPaid(debt);
 
         // 5. Cập nhật status của Debt với auto-fix rounding
-        updateDebtStatusWithRounding(debt, totalPaidFromSchedules);
+        updateDebtStatusWithRounding(debt, debt.getAmountPaid());
         debt.setUpdatedDate(LocalDateTime.now());
         debtRepository.save(debt);
 
@@ -1248,18 +1402,84 @@ public class DebtService {
         payment.setDebtSchedule(schedule);
         payment.setAmount(amount);
         payment.setPaymentDate(LocalDateTime.now());
-        payment.setPaymentMethod("DIRECT");
+        payment.setPaymentMethod(paymentMethod != null ? paymentMethod : "DIRECT"); // Dùng giá trị từ request hoặc mặc định
         payment.setReferenceNumber(String.format("DIR-%d-%s",
                 debt.getDebtId(),
                 LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))));
-        payment.setNotes("Direct pay via API /debts/schedules/{id}/direct-pay");
+        payment.setNotes(notes != null ? notes : "Direct pay via API /debts/schedules/{id}/direct-pay"); // Dùng giá trị từ request hoặc mặc định
         payment.setCreatedBy("system");
         payment.setStatus("CONFIRMED");
         payment.setConfirmedBy("system");
         payment.setConfirmedDate(LocalDateTime.now());
         debtPaymentRepository.save(payment);
 
-        log.info("✅ Direct payment for DebtSchedule {} processed. Amount: {}", scheduleId, amount);
+        log.info("✅ Direct payment for DebtSchedule {} processed. Amount: {}, Method: {}, Notes: {}", scheduleId, amount, paymentMethod, notes);
         return schedule;
+    }
+    
+    // ================== ✅ METHODS TRẢ VỀ DTO (DebtResponse) ==================
+    
+    /**
+     * ✅ Lấy danh sách NỢ CỦA DEALER với đầy đủ thông tin (DTO)
+     */
+    @Transactional
+    public List<DebtResponse> getDealerDebtsWithFullInfo() {
+        List<Debt> debts = debtRepository.findByDebtType("DEALER_DEBT");
+        log.info("✅ Retrieved {} dealer debts with full info", debts.size());
+        return debtMapper.toResponseList(debts);
+    }
+    
+    /**
+     * ✅ Lấy danh sách NỢ CỦA DEALER theo dealerId với đầy đủ thông tin (DTO)
+     */
+    @Transactional
+    public List<DebtResponse> getDealerDebtsByDealerIdWithFullInfo(Long dealerId) {
+        List<Debt> debts = debtRepository.findByDebtTypeAndDealerDealerId("DEALER_DEBT", dealerId);
+        log.info("✅ Retrieved {} debts for dealer {} with full info", debts.size(), dealerId);
+        return debtMapper.toResponseList(debts);
+    }
+    
+    /**
+     * ✅ Lấy danh sách NỢ CỦA CUSTOMER với đầy đủ thông tin (DTO)
+     */
+    @Transactional
+    public List<DebtResponse> getCustomerDebtsWithFullInfo(Long dealerId) {
+        List<Debt> debts = debtRepository.findByDebtTypeAndDealerDealerId("CUSTOMER_DEBT", dealerId);
+        // Tính lại amountPaid cho mỗi debt
+        for (Debt debt : debts) {
+            recalculateAmountPaid(debt);
+            debt.setUpdatedDate(LocalDateTime.now());
+            debtRepository.save(debt);
+            debtRepository.flush();
+        }
+        log.info("✅ Retrieved and recalculated {} customer debts with full info", debts.size());
+        return debtMapper.toResponseList(debts);
+    }
+    
+    /**
+     * ✅ Lấy chi tiết một khoản nợ với đầy đủ thông tin (DTO)
+     */
+    @Transactional
+    public DebtResponse getDebtByIdWithFullInfo(Long id) {
+        Debt debt = debtRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Debt not found with id: " + id));
+        // ✅ Ensure amountPaid is up-to-date on read
+        recalculateAmountPaid(debt);
+        BigDecimal amountPaid = debt.getAmountPaid() != null ? debt.getAmountPaid() : BigDecimal.ZERO;
+        BigDecimal amountDue = debt.getAmountDue() != null ? debt.getAmountDue() : BigDecimal.ZERO;
+        debt.setUpdatedDate(LocalDateTime.now());
+        debtRepository.save(debt);
+        log.info("✅ Retrieved debt {} with full info (recalculated amountPaid={})", id, debt.getAmountPaid());
+        return debtMapper.toResponse(debt);
+    }
+    
+    /**
+     * ✅ Lấy tất cả debts với đầy đủ thông tin (DTO)
+     */
+    @Transactional
+    public List<DebtResponse> getAllDebtsWithFullInfo() {
+        List<Debt> debts = debtRepository.findAll();
+        log.info("✅ Retrieved {} debts with full info", debts.size());
+        return debtMapper.toResponseList(debts);
     }
 }

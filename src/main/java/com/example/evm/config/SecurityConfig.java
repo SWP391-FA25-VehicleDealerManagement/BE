@@ -67,8 +67,6 @@ public class SecurityConfig {
                 
                 // ✅ /api/auth/me cần JWT
                 .requestMatchers("/api/auth/me").authenticated()
-                 
-                .requestMatchers("/api/payments/vnpay_return").permitAll()
 
                 // ✅ Các request khác phải có JWT
                 .anyRequest().authenticated()
@@ -119,9 +117,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(java.util.List.of(
+        config.setAllowedOriginPatterns(java.util.List.of(
             "http://localhost:5173",
-            "http://127.0.0.1:5173"
+            "http://127.0.0.1:5173",
+            "https://evm-tau.vercel.app",
+            "https://*.vercel.app"
         ));
         config.setAllowedMethods(java.util.List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
         config.setAllowedHeaders(java.util.List.of("*"));

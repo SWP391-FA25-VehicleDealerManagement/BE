@@ -115,6 +115,7 @@ public class VehicleVariantController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle details updated successfully", updatedDetails));
     }
 
+    // ❌ XÓA HẲN một biến thể xe
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteVariant(

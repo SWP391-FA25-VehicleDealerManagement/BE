@@ -15,7 +15,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+
 import com.example.evm.dto.auth.ApiResponse;
+import com.example.evm.exception.ForeignKeyConstraintException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -142,4 +144,13 @@ public class GlobalExceptionHandler {
         body.setData(null);
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+    // ----- 409 – foreign key constraint violation -------------------------------
+    @ExceptionHandler(ForeignKeyConstraintException.class)
+    public ResponseEntity<ApiResponse<Void>> handleForeignKeyConstraint(ForeignKeyConstraintException ex) {
+        log.warn("Foreign key constraint violation: {}", ex.getMessage());
+        ApiResponse<Void> body = new ApiResponse<>(false, ex.getMessage(), null);
+        return new ResponseEntity<>(body, HttpStatus.CONFLICT);
+    }
+
 }

@@ -3,6 +3,7 @@ package com.example.evm.controller.promotion;
 import com.example.evm.dto.auth.ApiResponse;
 import com.example.evm.entity.promotion.Promotion;
 import com.example.evm.service.promotion.PromotionService;
+import io.swagger.v3.oas.annotations.Hidden;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Slf4j
+@Hidden
 @RestController
 @RequestMapping("/api/promotions")
 @RequiredArgsConstructor
@@ -24,7 +26,7 @@ public class PromotionController {
     public ResponseEntity<ApiResponse<List<Promotion>>> getAllPromotions() {
         List<Promotion> promotions = promotionService.getAllPromotions();
         return ResponseEntity.ok(new ApiResponse<>(true, "Promotions retrieved successfully", promotions));
-    }
+    }   
 
     @GetMapping("/dealer/{dealerId}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")

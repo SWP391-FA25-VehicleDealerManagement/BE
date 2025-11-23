@@ -12,10 +12,15 @@ public interface VehicleService { // Đặt tên Interface
 
     List<VehicleFullResponse> getAllVehicles();
     VehicleFullResponse createVehicle(VehicleRequest request, MultipartFile file);
+    VehicleFullResponse updateVehicle(Long id, String color, MultipartFile file);
+    void setVehicleAsTestDrive(Long vehicleId);
+    void returnVehicleFromTestDrive(Long vehicleId);
     VehicleFullResponse getVehicleById(Long id);
     List<VehicleFullResponse> getAllManufacturerVehicles();
     List<StockSummaryResponse> getManufacturerStockSummary();
     List<DealerVehicleResponse> getDealerVehicles(Long dealerId);
     List<StockSummaryResponse> getDealerStockSummary(Long dealerId);
+    List<VehicleFullResponse> getTestDriveVehicles();
+    List<VehicleFullResponse> getTestDriveVehiclesByDealer(Long dealerId);
     void deleteVehicle(Long vehicleId);
 }

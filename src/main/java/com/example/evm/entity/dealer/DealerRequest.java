@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.example.evm.entity.user.User;
+import com.example.evm.util.DateTimeUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
@@ -81,7 +82,7 @@ public class DealerRequest {
     @PrePersist
     protected void onCreate() {
         if (requestDate == null) {
-            requestDate = LocalDateTime.now();
+            requestDate = DateTimeUtils.nowVietnam();
         }
     }
 

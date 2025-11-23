@@ -14,6 +14,7 @@ import com.example.evm.repository.vehicle.VehicleRepository;
 import com.example.evm.repository.vehicle.VehicleVariantRepository;
 import com.example.evm.repository.salePrice.SalePriceRepository;
 import com.example.evm.service.storage.FileStorageService;
+import com.example.evm.exception.ForeignKeyConstraintException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,12 +63,13 @@ public class VehicleServiceImpl implements VehicleService {
     @Override
     @Transactional
     public VehicleFullResponse createVehicle(VehicleRequest request, MultipartFile file) {
-        log.info("Creating new vehicle - variantId: {}, color: {}", request.getVariantId(), request.getColor());
+        log.info("Creating new vehicle - variantId: {}, color: {}, isTestDrive: {}",
+            request.getVariantId(), request.getColor(), request.getTestDrive());
         
         // 1. Lấy kho tổng mặc định
         ManufacturerStock defaultWarehouse = manufacturerStockRepository
             .findByStatus("ACTIVE")
-            .stream()
+            .stream()   
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("No active warehouse found"));
 
@@ -84,11 +86,18 @@ public class VehicleServiceImpl implements VehicleService {
         vehicle.setWarrantyExpiryDate(LocalDate.now().plusYears(5)); // 5 năm bảo hành
         vehicle.setManufacturerStock(defaultWarehouse);
         vehicle.setInventoryStock(null);
-        vehicle.setStatus("IN_MANUFACTURER_STOCK");
+
+        // ✅ Nếu được chọn là xe lái thử
+        if (Boolean.TRUE.equals(request.getTestDrive())) {
+            vehicle.setStatus("TEST_DRIVE");
+            log.info("🚗 Vehicle marked as TEST DRIVE - VIN: {}", vehicle.getVinNumber());
+        } else {
+            vehicle.setStatus("IN_MANUFACTURER_STOCK");
+        }
 
         // 4. ✅ Lưu file ảnh nếu có
         if (file != null && !file.isEmpty()) {
-            String filename = fileStorageService.save(file);
+            String filename = fileStorageService.saveToSubFolder(file, "vehicles");
             vehicle.setImageUrl("/api/vehicles/images/" + filename);
         }
 
@@ -96,8 +105,35 @@ public class VehicleServiceImpl implements VehicleService {
 
         log.info("✅ Created vehicle {} in warehouse {}", saved.getVinNumber(), defaultWarehouse.getWarehouseName());
 
-        // 4. Reload với full info
+        // 5. Reload với full info
         return getVehicleById(saved.getVehicleId());
+    }
+
+    @Override
+    @Transactional
+    public VehicleFullResponse updateVehicle(Long id, String color, MultipartFile file) {
+        
+        // 1. Tìm xe (Vehicle) hiện có
+        Vehicle vehicle = vehicleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
+
+        // 2. Cập nhật Color (nếu có)
+        if (color != null && !color.isBlank()) {
+            vehicle.setColor(color);
+            log.info("Updated Color for Vehicle ID: {}", id);
+        }
+
+        // 3. Cập nhật Ảnh (nếu có file mới)
+        if (file != null && !file.isEmpty()) {
+            
+            String filename = fileStorageService.saveToSubFolder(file, "vehicles");
+            vehicle.setImageUrl("/api/vehicles/images/" + filename);
+            log.info("Updated Image for Vehicle ID: {}", id);
+        }
+
+        // 4. Lưu và trả về
+        Vehicle updatedVehicle = vehicleRepository.save(vehicle);
+        return getVehicleById(updatedVehicle.getVehicleId());
     }
 
     /**
@@ -191,6 +227,32 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     /**
+     * Lấy danh sách xe có status = TEST_DRIVE
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<VehicleFullResponse> getTestDriveVehicles() {
+        List<Vehicle> vehicles = vehicleRepository.findByStatusTestDriveWithFullInfo();
+        
+        return vehicles.stream()
+            .map(this::buildFullResponse)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Lấy danh sách xe có status = TEST_DRIVE theo dealer
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<VehicleFullResponse> getTestDriveVehiclesByDealer(Long dealerId) {
+        List<Vehicle> vehicles = vehicleRepository.findByStatusTestDriveAndDealerIdWithFullInfo(dealerId);
+        
+        return vehicles.stream()
+            .map(this::buildFullResponse)
+            .collect(Collectors.toList());
+    }
+
+    /**
      * Lấy tổng hợp kho dealer (GROUP BY variant + color)
      */
     @Override
@@ -211,6 +273,41 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     @Transactional
+    public void setVehicleAsTestDrive(Long vehicleId) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + vehicleId));
+
+        if ("SOLD".equalsIgnoreCase(vehicle.getStatus())) {
+            throw new IllegalStateException("Cannot mark a sold vehicle as test drive.");
+        }
+
+        vehicle.setStatus("TEST_DRIVE");
+        vehicleRepository.save(vehicle);
+
+        log.info("🚗 Vehicle {} marked as TEST_DRIVE", vehicle.getVehicleId());
+    }
+
+    @Override
+    @Transactional
+    public void returnVehicleFromTestDrive(Long vehicleId) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy xe với ID: " + vehicleId));
+
+        // Kiểm tra trạng thái hiện tại
+        if (!"TEST_DRIVE".equalsIgnoreCase(vehicle.getStatus())) {
+            throw new IllegalStateException("Xe này không ở trạng thái TEST_DRIVE, không thể chuyển về kho.");
+        }
+
+        // Cập nhật trạng thái
+        vehicle.setStatus("IN_DEALER_STOCK");
+        vehicleRepository.save(vehicle);
+
+        log.info("✅ Vehicle {} đã được chuyển từ TEST_DRIVE về IN_DEALER_STOCK", vehicle.getVehicleId());
+    }
+
+
+    @Override
+    @Transactional
     public void deleteVehicle(Long vehicleId) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with ID: " + vehicleId));
@@ -218,13 +315,15 @@ public class VehicleServiceImpl implements VehicleService {
         // 1️⃣ Kiểm tra liên kết với OrderDetail
         boolean hasOrder = orderDetailRepository.existsByVehicle_VehicleId(vehicleId);
         if (hasOrder) {
-            throw new IllegalStateException("Cannot delete vehicle because it is linked to existing orders.");
+            throw new ForeignKeyConstraintException("Xe này đang liên kết với đơn hàng, không thể xóa.");
         }
 
         // 4️⃣ Xóa
         vehicleRepository.delete(vehicle);
         log.info("✅ Vehicle ID {} deleted successfully.", vehicleId);
     }
+
+    
 
 
     // ===== HELPER METHODS =====
@@ -290,5 +389,6 @@ public class VehicleServiceImpl implements VehicleService {
 
     return "VIN" + modelCode + randomPart;
     }
+
 }
 
