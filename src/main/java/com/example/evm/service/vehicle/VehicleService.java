@@ -12,7 +12,7 @@ public interface VehicleService { // Đặt tên Interface
 
     List<VehicleFullResponse> getAllVehicles();
     VehicleFullResponse createVehicle(VehicleRequest request, MultipartFile file);
-    VehicleFullResponse updateVehicle(Long id, String color, MultipartFile file);
+    VehicleFullResponse updateVehicle(Long id, String vinNumber, String color, MultipartFile file);
     void setVehicleAsTestDrive(Long vehicleId);
     void returnVehicleFromTestDrive(Long vehicleId);
     VehicleFullResponse getVehicleById(Long id);

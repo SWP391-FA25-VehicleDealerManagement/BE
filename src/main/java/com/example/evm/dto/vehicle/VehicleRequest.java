@@ -15,6 +15,9 @@ import lombok.Data;
 @Data
 public class VehicleRequest {
     
+    @NotNull(message = "VIN Number is required")
+    private String vinNumber;
+
     @NotNull(message = "Variant ID is required")
     private Long variantId;
     
