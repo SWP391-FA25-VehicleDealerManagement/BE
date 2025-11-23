@@ -22,6 +22,7 @@ public class CreateDealerAccountResponse {
     private Long userId;
     private String username;
     private String role;
+ 
     
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime userCreatedDate;

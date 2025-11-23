@@ -65,6 +65,7 @@ public class DealerAccountService {
             User user = new User();
             user.setUserName(request.getUsername());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.setEmail(request.getEmail());
             user.setRole("DEALER_MANAGER"); // ✅ Không có prefix ROLE_
             user.setDealer(dealer);
             user.setCreatedDate(LocalDateTime.now());

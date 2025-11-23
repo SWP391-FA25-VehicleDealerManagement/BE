@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RequestDetailDto {
-    @NotNull(message = "Variant ID is required")
+    // ✅ Variant ID là optional - có thể tạo request không cần variant
     private Long variantId;
     
     @NotNull(message = "Color is required")

@@ -6,6 +6,7 @@ import com.example.evm.entity.customer.Customer;
 import com.example.evm.entity.dealer.Dealer;
 import com.example.evm.entity.vehicle.Vehicle;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 
@@ -44,14 +45,17 @@ public class TestDrive {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id")
+    @JsonIgnore  // ✅ Tránh lazy loading issues và circular reference
     private Dealer dealer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
+    @JsonIgnore  // ✅ Tránh lazy loading issues và circular reference
     private Customer customer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id")
+    @JsonIgnore  // ✅ Tránh lazy loading issues và circular reference
     private Vehicle vehicle;
 
     @Column(name = "scheduled_date")
