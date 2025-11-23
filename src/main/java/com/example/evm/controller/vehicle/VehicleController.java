@@ -84,7 +84,7 @@ public class VehicleController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle created successfully", response));
     }
     
-    // CẬP NHẬT ẢNH VÀ MÀU XE
+    // CẬP NHẬT SỐ VIN, ẢNH VÀ MÀU XE
     @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<VehicleFullResponse>> updateVehicleVisuals(
