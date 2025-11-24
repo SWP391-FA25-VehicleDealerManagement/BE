@@ -23,6 +23,10 @@ public interface SalePriceRepository extends JpaRepository<SalePrice, Long> {
     @Query("SELECT sp FROM SalePrice sp LEFT JOIN FETCH sp.variant v LEFT JOIN FETCH v.model")
     List<SalePrice> findAllWithVariantAndModel();
     
+    // Tìm theo ID - với variant và model
+    @Query("SELECT sp FROM SalePrice sp LEFT JOIN FETCH sp.variant v LEFT JOIN FETCH v.model WHERE sp.salepriceId = :id")
+    Optional<SalePrice> findByIdWithVariantAndModel(@Param("id") Long id);
+    
     // Tìm theo dealer - với variant và model
     @Query("SELECT sp FROM SalePrice sp LEFT JOIN FETCH sp.variant v LEFT JOIN FETCH v.model WHERE sp.dealerId = :dealerId")
     List<SalePrice> findByDealerId(@Param("dealerId") Long dealerId);

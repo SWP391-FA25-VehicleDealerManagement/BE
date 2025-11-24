@@ -52,7 +52,10 @@ public class SalePriceService {
         
         SalePrice savedPrice = salePriceRepository.save(salePrice);
         log.info("✅ Created sale price with ID: {}", savedPrice.getSalepriceId());
-        return savedPrice;
+        
+        // Fetch lại với variant và model để đảm bảo có đầy đủ thông tin
+        return salePriceRepository.findByIdWithVariantAndModel(savedPrice.getSalepriceId())
+                .orElse(savedPrice);
     }
 
     /**
@@ -84,9 +87,7 @@ public class SalePriceService {
      */
     private SalePrice getPriceEntityById(Long id) {
         // Fetch với variant và model để đảm bảo có đầy đủ thông tin
-        return salePriceRepository.findAllWithVariantAndModel().stream()
-                .filter(p -> p.getSalepriceId().equals(id))
-                .findFirst()
+        return salePriceRepository.findByIdWithVariantAndModel(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Sale price not found with ID: " + id));
     }
 
