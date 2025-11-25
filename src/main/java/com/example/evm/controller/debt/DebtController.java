@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -294,9 +295,13 @@ public class DebtController {
             @PathVariable Long scheduleId,
             @RequestParam BigDecimal amount,
             @RequestParam(required = false, defaultValue = "DIRECT") String paymentMethod,
-            @RequestParam(required = false) String notes) {
+            @RequestParam(required = false) String notes,
+            Authentication authentication) {
         try {
-            DebtSchedule schedule = debtService.payDebtScheduleDirectly(scheduleId, amount, paymentMethod, notes);
+            String createdBy = authentication != null && authentication.getName() != null 
+                    ? authentication.getName() 
+                    : "system";
+            DebtSchedule schedule = debtService.payDebtScheduleDirectly(scheduleId, amount, paymentMethod, notes, createdBy);
             return ResponseEntity.ok(new ApiResponse<>(true, "Debt schedule paid successfully", schedule));
         } catch (Exception e) {
             log.error("Error paying debt schedule {}", scheduleId, e);

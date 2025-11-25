@@ -1357,7 +1357,7 @@ public class DebtService {
      * Cập nhật paidAmount của schedule và tổng amountPaid của Debt
      */
     @Transactional
-    public DebtSchedule payDebtScheduleDirectly(Long scheduleId, BigDecimal amount, String paymentMethod, String notes) {
+    public DebtSchedule payDebtScheduleDirectly(Long scheduleId, BigDecimal amount, String paymentMethod, String notes, String createdBy) {
         // 1. Lấy DebtSchedule
         DebtSchedule schedule = debtScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new ResourceNotFoundException("DebtSchedule not found with id: " + scheduleId));
@@ -1407,9 +1407,9 @@ public class DebtService {
                 debt.getDebtId(),
                 LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))));
         payment.setNotes(notes != null ? notes : "Direct pay via API /debts/schedules/{id}/direct-pay"); // Dùng giá trị từ request hoặc mặc định
-        payment.setCreatedBy("system");
+        payment.setCreatedBy(createdBy != null ? createdBy : "system");
         payment.setStatus("CONFIRMED");
-        payment.setConfirmedBy("system");
+        payment.setConfirmedBy(createdBy != null ? createdBy : "system");
         payment.setConfirmedDate(LocalDateTime.now());
         debtPaymentRepository.save(payment);
 
