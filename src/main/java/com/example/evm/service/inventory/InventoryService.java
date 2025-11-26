@@ -136,7 +136,24 @@ public class InventoryService {
             messageBuilder.append(itemResponse.getMessage()).append("\n");
         }
 
-        // 5. Update DealerRequest status
+        // 5. Lưu vehicleIds vào notes của DealerRequest để recall đúng xe
+        DealerRequest request = dealerRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
+        
+        String vehicleIdsStr = allVehicleIds.stream()
+                .map(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(","));
+        
+        String existingNotes = request.getNotes() != null ? request.getNotes() : "";
+        String newNotes = existingNotes.isEmpty() 
+                ? "ALLOCATED_VEHICLES:" + vehicleIdsStr
+                : existingNotes + " | ALLOCATED_VEHICLES:" + vehicleIdsStr;
+        request.setNotes(newNotes);
+        dealerRequestRepository.save(request);
+        
+        log.info("✅ Saved {} vehicle IDs to request {} notes: {}", allVehicleIds.size(), requestId, vehicleIdsStr);
+
+        // 6. Update DealerRequest status
         updateDealerRequestStatus(requestId, dealerId, null, null);
 
         // 6. Build tổng hợp response
@@ -239,7 +256,7 @@ public class InventoryService {
 
     /**
      * Thu hồi xe từ dealer về kho tổng
-     * BE tự tìm lại những xe đã allocate dựa trên requestId
+     * ✅ FIX: Recall đúng những xe đã được allocate từ request này (dựa trên vehicleIds lưu trong notes)
      * 
      * @param requestId ID request cần thu hồi
      * @param dealerId  ID dealer
@@ -248,7 +265,7 @@ public class InventoryService {
     public void recallVehiclesFromDealer(Long requestId, Long dealerId) {
         log.info("Recalling vehicles from dealer {} for request ID: {}", dealerId, requestId);
 
-        // 1. Tìm request để lấy thông tin variant và color
+        // 1. Tìm request để lấy vehicleIds đã allocate
         DealerRequest request = dealerRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
 
@@ -256,36 +273,78 @@ public class InventoryService {
             throw new IllegalStateException("Chỉ có thể thu hồi xe từ request đang ở trạng thái SHIPPED");
         }
 
-        // 2. Tìm tất cả xe của dealer theo các variant trong request
-        List<Vehicle> dealerVehicles = request.getRequestDetails().stream()
-                .flatMap(detail -> {
-                    Long variantId = detail.getVehicleVariant().getVariantId();
-                    String color = detail.getColor();
-                    
-                    // Tìm xe theo variant và color, chỉ lấy xe còn trong kho dealer
-                    return vehicleRepository.findByDealerIdWithFullInfo(dealerId).stream()
-                            .filter(v -> v.getVariant() != null
-                                    && v.getVariant().getVariantId().equals(variantId)
-                                    && v.getColor() != null
-                                    && v.getColor().equalsIgnoreCase(color)
-                                    && v.getInventoryStock() != null
-                                    && !"SOLD".equalsIgnoreCase(v.getStatus()))
-                            .limit(detail.getQuantity()); // Chỉ lấy đúng số lượng đã yêu cầu
-                })
-                .toList();
+        // 2. Parse vehicleIds từ notes
+        List<Long> allocatedVehicleIds = new ArrayList<>();
+        String notes = request.getNotes();
+        if (notes != null && notes.contains("ALLOCATED_VEHICLES:")) {
+            try {
+                String vehicleIdsPart = notes.substring(notes.indexOf("ALLOCATED_VEHICLES:") + "ALLOCATED_VEHICLES:".length());
+                // Lấy phần đầu tiên (trước dấu | nếu có)
+                if (vehicleIdsPart.contains(" | ")) {
+                    vehicleIdsPart = vehicleIdsPart.substring(0, vehicleIdsPart.indexOf(" | "));
+                }
+                String[] vehicleIdStrs = vehicleIdsPart.trim().split(",");
+                for (String idStr : vehicleIdStrs) {
+                    try {
+                        allocatedVehicleIds.add(Long.parseLong(idStr.trim()));
+                    } catch (NumberFormatException e) {
+                        log.warn("Invalid vehicle ID in notes: {}", idStr);
+                    }
+                }
+                log.info("✅ Found {} allocated vehicle IDs from request notes: {}", allocatedVehicleIds.size(), allocatedVehicleIds);
+            } catch (Exception e) {
+                log.warn("⚠️ Failed to parse vehicle IDs from notes: {}", e.getMessage());
+            }
+        }
+
+        // 3. Tìm xe theo vehicleIds đã allocate (nếu có), nếu không thì fallback về logic cũ
+        List<Vehicle> dealerVehicles;
+        
+        if (!allocatedVehicleIds.isEmpty()) {
+            // ✅ FIX: Tìm đúng những xe đã được allocate từ request này
+            dealerVehicles = allocatedVehicleIds.stream()
+                    .map(vehicleId -> vehicleRepository.findById(vehicleId).orElse(null))
+                    .filter(vehicle -> vehicle != null
+                            && vehicle.getInventoryStock() != null
+                            && vehicle.getInventoryStock().getDealer() != null
+                            && vehicle.getInventoryStock().getDealer().getDealerId().equals(dealerId)
+                            && !"SOLD".equalsIgnoreCase(vehicle.getStatus()))
+                    .collect(java.util.stream.Collectors.toList());
+            
+            log.info("✅ Found {} vehicles to recall from allocated vehicle IDs", dealerVehicles.size());
+        } else {
+            // Fallback: Tìm xe theo variant và color (logic cũ)
+            log.warn("⚠️ No allocated vehicle IDs found in notes, falling back to variant/color matching");
+            dealerVehicles = request.getRequestDetails().stream()
+                    .flatMap(detail -> {
+                        Long variantId = detail.getVehicleVariant().getVariantId();
+                        String color = detail.getColor();
+                        
+                        // Tìm xe theo variant và color, chỉ lấy xe còn trong kho dealer
+                        return vehicleRepository.findByDealerIdWithFullInfo(dealerId).stream()
+                                .filter(v -> v.getVariant() != null
+                                        && v.getVariant().getVariantId().equals(variantId)
+                                        && v.getColor() != null
+                                        && v.getColor().equalsIgnoreCase(color)
+                                        && v.getInventoryStock() != null
+                                        && !"SOLD".equalsIgnoreCase(v.getStatus()))
+                                .limit(detail.getQuantity()); // Chỉ lấy đúng số lượng đã yêu cầu
+                    })
+                    .toList();
+        }
 
         if (dealerVehicles.isEmpty()) {
             throw new IllegalStateException("Không tìm thấy xe nào để thu hồi. Có thể xe đã được bán hoặc đã thu hồi trước đó.");
         }
 
-        // 3. Lấy kho tổng mặc định
+        // 4. Lấy kho tổng mặc định
         ManufacturerStock warehouse = manufacturerStockRepository
                 .findByStatus("ACTIVE")
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No active warehouse found"));
 
-        // 4. Chuyển xe về kho tổng
+        // 5. Chuyển xe về kho tổng
         dealerVehicles.forEach(vehicle -> {
             vehicle.setInventoryStock(null);
             vehicle.setManufacturerStock(warehouse);
@@ -293,9 +352,23 @@ public class InventoryService {
         });
 
         vehicleRepository.saveAll(dealerVehicles);
-        log.info("✅ Recalled {} vehicles from dealer {} to warehouse", dealerVehicles.size(), dealerId);
+        log.info("✅ Recalled {} vehicles (IDs: {}) from dealer {} to warehouse", 
+                dealerVehicles.size(), 
+                dealerVehicles.stream().map(Vehicle::getVehicleId).collect(java.util.stream.Collectors.toList()),
+                dealerId);
 
-        // 5. Revert DealerRequest status (SHIPPED → APPROVED)
+        // 6. Xóa vehicleIds khỏi notes sau khi recall thành công
+        if (notes != null && notes.contains("ALLOCATED_VEHICLES:")) {
+            String updatedNotes = notes.replaceAll("\\|?\\s*ALLOCATED_VEHICLES:[^|]*", "").trim();
+            if (updatedNotes.isEmpty()) {
+                updatedNotes = null;
+            }
+            request.setNotes(updatedNotes);
+            dealerRequestRepository.save(request);
+            log.info("✅ Removed allocated vehicle IDs from request notes");
+        }
+
+        // 7. Revert DealerRequest status (SHIPPED → APPROVED)
         if (requestId != null) {
             revertDealerRequestStatus(requestId, dealerId, null, null);
         }
