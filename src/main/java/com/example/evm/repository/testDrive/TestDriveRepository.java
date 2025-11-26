@@ -109,4 +109,5 @@ public interface TestDriveRepository extends JpaRepository<TestDrive, Long> {
                      "LEFT JOIN FETCH var.model " +
                      "WHERE t.status = :status")
        List<TestDrive> findByStatusWithDetails(@Param("status") String status);
+
 }
