@@ -45,17 +45,17 @@ public class TestDrive {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id")
-    @JsonIgnore  // ✅ Tránh lazy loading issues và circular reference
+    @JsonIgnore  // Tránh lazy loading issues và circular reference
     private Dealer dealer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
-    @JsonIgnore  // ✅ Tránh lazy loading issues và circular reference
+    @JsonIgnore  // Tránh lazy loading issues và circular reference
     private Customer customer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id")
-    @JsonIgnore  // ✅ Tránh lazy loading issues và circular reference
+    @JsonIgnore  // Tránh lazy loading issues và circular reference
     private Vehicle vehicle;
 
     @Column(name = "scheduled_date")

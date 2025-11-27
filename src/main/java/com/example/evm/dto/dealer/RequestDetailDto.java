@@ -11,11 +11,11 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RequestDetailDto {
-    // ✅ Variant ID là optional - có thể tạo request không cần variant
+    // Variant ID là optional - có thể tạo request không cần variant
     private Long variantId;
     
     @NotNull(message = "Color is required")
-    private String color;  // ✅ Thêm trường màu sắc
+    private String color;  // Thêm trường màu sắc
     
     @NotNull(message = "Quantity is required")
     private Integer quantity;

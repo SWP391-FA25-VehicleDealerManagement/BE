@@ -27,7 +27,7 @@ public class Debt {
     private Long debtId;
 
     @Column(name = "debt_type", nullable = false, length = 20)
-    private String debtType; // 🆕 DEALER_DEBT (dealer nợ hãng), CUSTOMER_DEBT (customer nợ dealer)
+    private String debtType; //  DEALER_DEBT (dealer nợ hãng), CUSTOMER_DEBT (customer nợ dealer)
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)

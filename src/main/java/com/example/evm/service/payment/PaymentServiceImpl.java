@@ -84,34 +84,34 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setStatus("Completed");
         Payment savedPayment = paymentRepository.save(payment);
         
-        // ✅ TỰ ĐỘNG cập nhật DEALER_DEBT khi dealer nhận tiền từ khách
-        log.info("🔍 Payment created for Order {}: dealer={}, customer={}, amount={}", 
+        //  TỰ ĐỘNG cập nhật DEALER_DEBT khi dealer nhận tiền từ khách
+        log.info(" Payment created for Order {}: dealer={}, customer={}, amount={}", 
                 order != null ? order.getOrderId() : "null",
                 order != null && order.getDealer() != null ? order.getDealer().getDealerId() : "null",
                 order != null && order.getCustomer() != null ? order.getCustomer().getCustomerId() : "null",
                 paymentInfo.getAmount());
         
-        // ✅ FIX: Tạo DEALER_DEBT SAU KHI thanh toán cho TẤT CẢ order của dealer
+        //  FIX: Tạo DEALER_DEBT SAU KHI thanh toán cho TẤT CẢ order của dealer
         if (order != null && order.getDealer() != null) {
-            log.info("✅ Creating/Updating DEALER_DEBT for dealer {} - Order {} after payment (customer={})", 
+            log.info(" Creating/Updating DEALER_DEBT for dealer {} - Order {} after payment (customer={})", 
                     order.getDealer().getDealerId(), order.getOrderId(), 
                     order.getCustomer() != null ? order.getCustomer().getCustomerId() : "null");
             createOrUpdateDealerDebt(order, paymentInfo.getAmount());
         }
         
-        // ❌ BỎ: KHÔNG tạo CUSTOMER_DEBT ngay khi thanh toán
+        //  BỎ: KHÔNG tạo CUSTOMER_DEBT ngay khi thanh toán
         // CUSTOMER_DEBT sẽ được tạo SAU KHI Order status = "Completed"
         
         return savedPayment;
     }
     
     /**
-     * ✅ Tạo hoặc cập nhật DEALER_DEBT sau khi thanh toán
+     *  Tạo hoặc cập nhật DEALER_DEBT sau khi thanh toán
      * Logic: Thanh toán xong → Tạo debt với amountDue = total - amountPaid
      */
     private void createOrUpdateDealerDebt(Order order, BigDecimal paymentAmount) {
         try {
-            log.info("🔍 Looking for existing DEALER_DEBT with Order {}", order.getOrderId());
+            log.info(" Looking for existing DEALER_DEBT with Order {}", order.getOrderId());
             
             // Tìm xem đã có DEALER_DEBT cho order này chưa
             List<Debt> activeDebts = debtRepository.findByDebtTypeAndDealerDealerIdAndStatus(
@@ -127,7 +127,7 @@ public class PaymentServiceImpl implements PaymentService {
             
             if (dealerDebt != null) {
                 // Đã có debt → Cập nhật amountPaid
-                log.info("✅ Found existing DEALER_DEBT {}, updating amountPaid", dealerDebt.getDebtId());
+                log.info(" Found existing DEALER_DEBT {}, updating amountPaid", dealerDebt.getDebtId());
                 BigDecimal currentPaid = dealerDebt.getAmountPaid() != null ? dealerDebt.getAmountPaid() : BigDecimal.ZERO;
                 BigDecimal newPaid = currentPaid.add(paymentAmount);
                 dealerDebt.setAmountPaid(newPaid);
@@ -138,20 +138,20 @@ public class PaymentServiceImpl implements PaymentService {
                 }
                 
                 debtRepository.save(dealerDebt);
-                log.info("✅ Updated DEALER_DEBT {}: amountPaid = {}", dealerDebt.getDebtId(), newPaid);
+                log.info(" Updated DEALER_DEBT {}: amountPaid = {}", dealerDebt.getDebtId(), newPaid);
             } else {
                 // Chưa có debt → Kiểm tra xem có còn nợ không trước khi tạo
                 BigDecimal orderTotal = BigDecimal.valueOf(order.getTotalPrice() != null ? order.getTotalPrice() : 0);
                 BigDecimal remainingDebt = orderTotal.subtract(paymentAmount);
                 
-                // ✅ FIX: Chỉ tạo debt khi còn nợ (không thanh toán full)
+                //  FIX: Chỉ tạo debt khi còn nợ (không thanh toán full)
                 if (remainingDebt.compareTo(BigDecimal.ZERO) <= 0) {
-                    log.info("✅ Order {} paid in FULL ({}đ) - NO DEBT CREATED", 
+                    log.info(" Order {} paid in FULL ({}đ) - NO DEBT CREATED", 
                             order.getOrderId(), paymentAmount);
                     return;
                 }
                 
-                log.info("✅ Creating NEW DEALER_DEBT for Order {} - Paid: {}, Remaining: {}", 
+                log.info(" Creating NEW DEALER_DEBT for Order {} - Paid: {}, Remaining: {}", 
                         order.getOrderId(), paymentAmount, remainingDebt);
                 
                 Debt newDebt = new Debt();
@@ -160,7 +160,7 @@ public class PaymentServiceImpl implements PaymentService {
                 newDebt.setCustomer(null);
                 newDebt.setDebtType("DEALER_DEBT");
                 newDebt.setAmountDue(orderTotal);
-                newDebt.setAmountPaid(paymentAmount); // ✅ Set ngay số tiền đã trả
+                newDebt.setAmountPaid(paymentAmount); //  Set ngay số tiền đã trả
                 newDebt.setPaymentMethod("BANK_TRANSFER");
                 newDebt.setStatus("ACTIVE");
                 newDebt.setNotes("Auto-generated after payment - Order: " + order.getOrderId());
@@ -168,15 +168,15 @@ public class PaymentServiceImpl implements PaymentService {
                 newDebt.setDueDate(LocalDateTime.now().plusMonths(12));
                 newDebt.setCreatedDate(LocalDateTime.now());
                 
-                // ✅ Gọi debtService.createDebt() để tự động tạo schedule
+                //  Gọi debtService.createDebt() để tự động tạo schedule
                 Debt savedDebt = debtService.createDebt(newDebt);
                 
-                log.info("✅ Created DEALER_DEBT {}: amountDue={}, amountPaid={}, remaining={}, schedules={}", 
+                log.info(" Created DEALER_DEBT {}: amountDue={}, amountPaid={}, remaining={}, schedules={}", 
                         savedDebt.getDebtId(), orderTotal, paymentAmount, remainingDebt, 
                         savedDebt.getDebtSchedules().size());
             }
         } catch (Exception e) {
-            log.error("❌ Failed to create/update DEALER_DEBT for order {}: {}", order.getOrderId(), e.getMessage(), e);
+            log.error(" Failed to create/update DEALER_DEBT for order {}: {}", order.getOrderId(), e.getMessage(), e);
         }
     }
     

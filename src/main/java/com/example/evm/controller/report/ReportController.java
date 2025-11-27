@@ -54,7 +54,7 @@ public class ReportController {
 
     // --- Báo cáo doanh số của 1 nhân viên
     @GetMapping("/staff-sales-report")
-    @Operation(summary = "📊 Báo cáo doanh thu của 1 nhân viên cụ thể")
+    @Operation(summary = " Báo cáo doanh thu của 1 nhân viên cụ thể")
     @PreAuthorize("hasAnyAuthority('DEALER_MANAGER', 'DEALER_STAFF')")
         public ResponseEntity<ApiResponse<Map<String, Object>>> getStaffSalesReport(
             @RequestParam Long userId,
@@ -69,7 +69,7 @@ public class ReportController {
     // --- Báo cáo doanh thu của tất cả đại lý
     @GetMapping("/dealers/summary")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
-    @Operation(summary = "📊 Báo cáo tổng hợp doanh thu của tất cả đại lý (chỉ hãng xem)")
+    @Operation(summary = " Báo cáo tổng hợp doanh thu của tất cả đại lý (chỉ hãng xem)")
     public ResponseEntity<ApiResponse<List<DealerSalesSummaryResponse>>> getAllDealersSalesSummary(
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) Integer month) {
@@ -87,7 +87,7 @@ public class ReportController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Báo cáo tồn kho lấy thành công", reportData));
     }
 
-    // 📦 Báo cáo tồn kho hãng sản xuất
+    //  Báo cáo tồn kho hãng sản xuất
     @GetMapping("/inventory/manufacturer")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<List<ManufacturerInventoryReportDto>>> getManufacturerInventoryReport() {

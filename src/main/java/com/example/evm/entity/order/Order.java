@@ -55,7 +55,7 @@ public class Order {
     @Column(name = "status", length = 50)
     private String status = "PENDING"; // PENDING, CONFIRMED, DELIVERED, CANCELLED
 
-    // ✅ Trường tạm để tính số tiền đã thanh toán (không lưu vào DB)
+    // Trường tạm để tính số tiền đã thanh toán (không lưu vào DB)
     @Transient
     private Double amountPaid = 0.0;
 
@@ -101,7 +101,7 @@ public class Order {
         return dealer != null ? dealer.getDealerId() : null;
     }
 
-    // ✅ Expose orderDetailId để trả về trong API (mỗi order có 1 detail)
+    // Expose orderDetailId để trả về trong API (mỗi order có 1 detail)
     public Long getOrderDetailId() {
         return orderDetails != null && !orderDetails.isEmpty()
             ? orderDetails.get(0).getOrderDetailId()

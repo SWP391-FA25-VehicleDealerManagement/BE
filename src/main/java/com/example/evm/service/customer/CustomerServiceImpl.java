@@ -35,7 +35,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional
     public Customer createCustomer(Customer customer) {
-        // ✅ Backend tự tạo ID
+        //  Backend tự tạo ID
         customer.setCustomerId(null);
         
         // Validate dealer exists

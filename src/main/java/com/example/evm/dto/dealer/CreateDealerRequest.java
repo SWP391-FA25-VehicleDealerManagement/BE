@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * Request DTO để tạo dealer mới
- * ✅ KHÔNG bao gồm dealerId - để database tự động tạo
+ *  KHÔNG bao gồm dealerId - để database tự động tạo
  */
 @Data
 @NoArgsConstructor

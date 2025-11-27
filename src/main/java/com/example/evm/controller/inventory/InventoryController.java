@@ -72,7 +72,7 @@ public class InventoryController {
                         inventoryService.recallVehiclesFromDealer(requestId, request.getDealerId());
 
                         return ResponseEntity.ok(new ApiResponse<>(true, 
-                                "✅ Đã thu hồi xe về kho tổng thành công", null));
+                                "Đã thu hồi xe về kho tổng thành công", null));
                 } catch (Exception ex) {
                         return ResponseEntity.badRequest().body(new ApiResponse<>(false, ex.getMessage(), null));
                 }

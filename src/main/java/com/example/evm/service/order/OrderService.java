@@ -57,7 +57,7 @@ public class OrderService {
 
     public List<Order> getOrdersWithoutContract(Long dealerId) {
         List<Order> orders = orderRepository.findOrdersWithoutContractByDealer(dealerId);
-        // ✅ Eager load orderDetails để trả về orderDetailId
+        //  Eager load orderDetails để trả về orderDetailId
         orders.forEach(order -> {
             order.getOrderDetails().size(); // Force load orderDetails
         });
@@ -106,7 +106,7 @@ public class OrderService {
     }
 
     /**
-     * ✅ Tính số tiền đã thanh toán cho một Order
+     *  Tính số tiền đã thanh toán cho một Order
      * Logic: Ưu tiên từ Debt (cho INSTALLMENT), sau đó từ Payment
      */
     private void calculateAmountPaidForOrder(Order order) {
@@ -124,16 +124,16 @@ public class OrderService {
                 String orderIdStr = "Order: " + order.getOrderId();
                 for (Debt debt : debts) {
                     if (debt.getNotes() != null && debt.getNotes().contains(orderIdStr)) {
-                        // ✅ Nếu Debt có amountPaid > 0, dùng nó (đã bao gồm số tiền ban đầu + DebtPayments)
+                        //  Nếu Debt có amountPaid > 0, dùng nó (đã bao gồm số tiền ban đầu + DebtPayments)
                         if (debt.getAmountPaid() != null && debt.getAmountPaid().compareTo(BigDecimal.ZERO) > 0) {
                             amountPaid = debt.getAmountPaid().doubleValue();
-                            log.debug("✅ Found Debt for Order {}: amountPaid = {}", order.getOrderId(), amountPaid);
+                            log.debug(" Found Debt for Order {}: amountPaid = {}", order.getOrderId(), amountPaid);
                         }
                         break;
                     }
                 }
             } catch (Exception e) {
-                log.warn("⚠️ Error checking Debt for Order {}: {}", order.getOrderId(), e.getMessage());
+                log.warn(" Error checking Debt for Order {}: {}", order.getOrderId(), e.getMessage());
             }
         }
         
@@ -144,12 +144,12 @@ public class OrderService {
                 BigDecimal completedAmount = paymentRepository.sumCompletedAmountByOrderId(order.getOrderId());
                 if (completedAmount != null && completedAmount.compareTo(BigDecimal.ZERO) > 0) {
                     amountPaid = completedAmount.doubleValue();
-                    log.debug("✅ Sum completed payments for Order {} = {}", order.getOrderId(), completedAmount);
+                    log.debug(" Sum completed payments for Order {} = {}", order.getOrderId(), completedAmount);
                 } else {
-                    log.debug("⚠️ No completed Payment found for Order {}", order.getOrderId());
+                    log.debug(" No completed Payment found for Order {}", order.getOrderId());
                 }
             } catch (Exception e) {
-                log.warn("⚠️ Error checking Payment for Order {}: {}", order.getOrderId(), e.getMessage());
+                log.warn(" Error checking Payment for Order {}: {}", order.getOrderId(), e.getMessage());
             }
         }
         
@@ -159,16 +159,16 @@ public class OrderService {
         }
 
         if (order.getTotalPrice() != null && amountPaid > order.getTotalPrice()) {
-            log.warn("⚠️ Amount paid {} exceeds order total {} for order {}, capping to total.", amountPaid, order.getTotalPrice(), order.getOrderId());
+            log.warn(" Amount paid {} exceeds order total {} for order {}, capping to total.", amountPaid, order.getTotalPrice(), order.getOrderId());
             amountPaid = order.getTotalPrice();
         }
         
         order.setAmountPaid(amountPaid);
-        log.debug("💰 Order {} final amountPaid = {}", order.getOrderId(), amountPaid);
+        log.debug(" Order {} final amountPaid = {}", order.getOrderId(), amountPaid);
     }
 
     /**
-     * ✅ Tính số tiền đã thanh toán cho danh sách Orders
+     *  Tính số tiền đã thanh toán cho danh sách Orders
      */
     private void enrichOrdersWithAmountPaid(List<Order> orders) {
         for (Order order : orders) {
@@ -181,7 +181,7 @@ public class OrderService {
     }
 
     /**
-     * ✅ Tạo Order từ DTO - chỉ cần truyền IDs, backend sẽ mock hết thông tin
+     *  Tạo Order từ DTO - chỉ cần truyền IDs, backend sẽ mock hết thông tin
      */
     @Transactional
     public Order createOrderFromDto(OrderRequestDto dto) {
@@ -255,12 +255,12 @@ public class OrderService {
     }
 
     /**
-     * ⚠️ API cũ - Deprecated, dùng createOrderFromDto thay thế
+     *  API cũ - Deprecated, dùng createOrderFromDto thay thế
      */
     @Transactional
     @Deprecated
     public Order createOrder(Order order) {
-        // ✅ Backend tự tạo IDs - Force null
+        //  Backend tự tạo IDs - Force null
         order.setOrderId(null);
         
         // Validate entities
@@ -281,7 +281,7 @@ public class OrderService {
         // Process order details and calculate total
         double totalPrice = 0.0;
         for (OrderDetail detail : order.getOrderDetails()) {
-            // ✅ Backend tự tạo detail IDs - Force null
+            //  Backend tự tạo detail IDs - Force null
             detail.setOrderDetailId(null);
             
             Vehicle vehicle = vehicleRepository.findById(detail.getVehicle().getVehicleId())
@@ -347,15 +347,15 @@ public class OrderService {
         }
     }
     
-    // ✅ FIX: Tạo CUSTOMER_DEBT SAU KHI Order được đánh dấu "Completed"
+    //  FIX: Tạo CUSTOMER_DEBT SAU KHI Order được đánh dấu "Completed"
     if ("Completed".equals(status) && order.getCustomer() != null) {
-        log.info("✅ Order {} marked as Completed - Creating CUSTOMER_DEBT for customer {}", 
+        log.info(" Order {} marked as Completed - Creating CUSTOMER_DEBT for customer {}", 
                 id, order.getCustomer().getCustomerId());
         
         try {
             // Lấy payment mới nhất của order này để tạo debt
             List<com.example.evm.entity.payment.Payment> payments = paymentRepository.findAllByOrderId(id);
-            log.info("🔍 Found {} payments for Order {}", payments.size(), id);
+            log.info(" Found {} payments for Order {}", payments.size(), id);
             
             if (!payments.isEmpty()) {
                 // Lấy payment đầu tiên (hoặc payment có type = INSTALLMENT)
@@ -364,17 +364,17 @@ public class OrderService {
                         .findFirst()
                         .orElse(payments.get(0));
                 
-                log.info("🔍 Using Payment {} (type={}, amount={}) to create debt", 
+                log.info(" Using Payment {} (type={}, amount={}) to create debt", 
                         payment.getPaymentId(), payment.getPaymentType(), payment.getAmount());
                 
                 debtService.autoCreateDebtFromPayment(payment.getPaymentId());
-                log.info("✅ CUSTOMER_DEBT auto-created from Payment {} for Order {}", 
+                log.info(" CUSTOMER_DEBT auto-created from Payment {} for Order {}", 
                         payment.getPaymentId(), id);
             } else {
-                log.warn("⚠️ No payment found for Order {} - Cannot create CUSTOMER_DEBT", id);
+                log.warn(" No payment found for Order {} - Cannot create CUSTOMER_DEBT", id);
             }
         } catch (Exception e) {
-            log.error("❌ Failed to create CUSTOMER_DEBT for Order {}: {}", id, e.getMessage(), e);
+            log.error(" Failed to create CUSTOMER_DEBT for Order {}: {}", id, e.getMessage(), e);
         }
     }
 

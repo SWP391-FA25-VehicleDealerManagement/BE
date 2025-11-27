@@ -80,7 +80,7 @@ public class DealerRequestService {
 
         // Add details
         for (RequestDetailDto detailDto : dto.getRequestDetails()) {
-            // ✅ Variant ID là optional - chỉ tìm variant nếu được cung cấp
+            // Variant ID là optional - chỉ tìm variant nếu được cung cấp
             VehicleVariant variant = null;
             if (detailDto.getVariantId() != null) {
                 variant = variantRepository.findById(detailDto.getVariantId())
@@ -89,7 +89,7 @@ public class DealerRequestService {
 
             DealerRequestDetail detail = new DealerRequestDetail();
             detail.setDealerRequest(request);
-            detail.setVehicleVariant(variant);  // ✅ Có thể là null
+            detail.setVehicleVariant(variant);  // Có thể là null
             detail.setColor(detailDto.getColor());
             detail.setQuantity(detailDto.getQuantity());
             detail.setUnitPrice(detailDto.getUnitPrice());
@@ -100,12 +100,12 @@ public class DealerRequestService {
 
         // Calculate total
         BigDecimal totalAmount = request.calculateTotalAmount();
-        log.info("🔍 Calculated total amount: {} for request with {} details", 
+        log.info("Calculated total amount: {} for request with {} details", 
                 totalAmount, request.getRequestDetails().size());
         
         // Debug: Log each detail
         for (DealerRequestDetail detail : request.getRequestDetails()) {
-            log.info("📋 Detail - Variant: {}, Quantity: {}, UnitPrice: {}, LineTotal: {}", 
+            log.info("Detail - Variant: {}, Quantity: {}, UnitPrice: {}, LineTotal: {}", 
                     detail.getVehicleVariant() != null ? detail.getVehicleVariant().getName() : "NULL",
                     detail.getQuantity(),
                     detail.getUnitPrice(),
@@ -185,17 +185,17 @@ public class DealerRequestService {
             // Add vehicles to dealer stock
             addStockToDealerOnDelivery(request);
             
-            // ✅ TỰ ĐỘNG tạo Order khi giao hàng (KHÔNG tạo Debt - chờ thanh toán)
+            // TỰ ĐỘNG tạo Order khi giao hàng (KHÔNG tạo Debt - chờ thanh toán)
             try {
                 // Luôn tạo Order từ kho dealer khi xác nhận đã nhận
                 Order createdOrder = createOrderFromRequestUsingDealerStock(
                         request.getRequestId(),
                         request.getCreatedBy().getUserId(),
                         "BANK_TRANSFER");
-                log.info("✅ Created Order {} from DealerRequest {} upon DELIVERED (Debt will be created after payment)", 
+                log.info("Created Order {} from DealerRequest {} upon DELIVERED (Debt will be created after payment)", 
                         createdOrder.getOrderId(), request.getRequestId());
 
-                // ❌ BỎ: Không tạo Debt ngay - chờ thanh toán xong
+                // BỎ: Không tạo Debt ngay - chờ thanh toán xong
                 // createDebtFromExistingOrder(request);
             } catch (Exception e) {
                 log.error("Failed to create Order for request {}: {}", id, e.getMessage());
@@ -210,7 +210,7 @@ public class DealerRequestService {
     }
 
     /**
-     * ✅ Tạo Debt từ Order có sẵn khi DealerRequest giao hàng
+     * Tạo Debt từ Order có sẵn khi DealerRequest giao hàng
      * Order phải được tạo trước bởi Dealer
      */
     @Transactional
@@ -223,10 +223,10 @@ public class DealerRequestService {
             throw new IllegalArgumentException("Order must be created before processing DealerRequest. Please create Order first.");
         }
         
-        log.info("✅ Found Order: {} for DealerRequest: {}", order.getOrderId(), request.getRequestId());
+        log.info("Found Order: {} for DealerRequest: {}", order.getOrderId(), request.getRequestId());
 // 2. Tạo Debt từ Order (nếu payment_type = INSTALLMENT)
         createDebtFromOrder(order, request);
-        log.info("✅ Created Debt for Order: {}", order.getOrderId());
+        log.info("Created Debt for Order: {}", order.getOrderId());
     }
 
     /**
@@ -261,7 +261,7 @@ public class DealerRequestService {
                 .mapToDouble(detail -> detail.getPrice() * detail.getQuantity())
                 .sum();
         
-        // ✅ FIX: Tính ngay amountPaid từ payment của order này
+        // FIX: Tính ngay amountPaid từ payment của order này
         BigDecimal amountPaid = BigDecimal.ZERO;
         try {
             List<Payment> payments = paymentRepository.findAllByOrderId(order.getOrderId());
@@ -297,7 +297,7 @@ public class DealerRequestService {
      * Tạo Order từ DealerRequest (khi còn PENDING/APPROVED) để tiến hành thanh toán
      * - Chọn các xe phù hợp từ kho tổng theo variant + color (nếu có)
      * - Mỗi xe là một dòng OrderDetail (quantity = 1)
-     * - ✅ Cho phép tạo Order ngay cả khi không có xe trong kho (chỉ tạo OrderDetail cho xe có sẵn)
+     * - Cho phép tạo Order ngay cả khi không có xe trong kho (chỉ tạo OrderDetail cho xe có sẵn)
      */
     @Transactional
     public Order createOrderFromRequest(Long requestId, Long userId, String paymentMethod) {
@@ -319,9 +319,9 @@ public class DealerRequestService {
         List<OrderDetailRequestDto> detailDtos = new java.util.ArrayList<>();
 
         for (DealerRequestDetail d : request.getRequestDetails()) {
-            // ✅ Bỏ qua details không có variantId - không thể tìm xe
+            // Bỏ qua details không có variantId - không thể tìm xe
             if (d.getVehicleVariant() == null) {
-                log.warn("⚠️ Skipping detail {} - no variantId specified. Cannot create order without variant.", d.getDetailId());
+                log.warn("Skipping detail {} - no variantId specified. Cannot create order without variant.", d.getDetailId());
                 continue;
             }
             
@@ -329,13 +329,13 @@ public class DealerRequestService {
             List<com.example.evm.entity.vehicle.Vehicle> available = vehicleRepository
                     .findAvailableInManufacturerStock(d.getVehicleVariant().getVariantId(), d.getColor());
 
-            // ✅ Sửa: Không throw exception nếu không đủ xe, chỉ tạo OrderDetail cho những xe có sẵn
+            // Sửa: Không throw exception nếu không đủ xe, chỉ tạo OrderDetail cho những xe có sẵn
             int availableCount = available.size();
             int requestedQuantity = d.getQuantity();
             
             if (availableCount < requestedQuantity) {
                 int shortage = requestedQuantity - availableCount;
-                log.warn("⚠️ Not enough vehicles for variant {} (color {}). Requested: {}, Available: {}, Shortage: {}. " +
+                log.warn("Not enough vehicles for variant {} (color {}). Requested: {}, Available: {}, Shortage: {}. " +
                         "Creating order with available vehicles only.",
                         d.getVehicleVariant().getName(), d.getColor(), requestedQuantity, availableCount, shortage);
             }
@@ -354,16 +354,16 @@ public class DealerRequestService {
             }
         }
 
-        // ✅ Kiểm tra: Nếu không có OrderDetail nào (không có xe nào), vẫn tạo Order nhưng log warning
+        // Kiểm tra: Nếu không có OrderDetail nào (không có xe nào), vẫn tạo Order nhưng log warning
         if (detailDtos.isEmpty()) {
-            log.warn("⚠️ No vehicles available for request {}. Creating order without order details. " +
+            log.warn("No vehicles available for request {}. Creating order without order details. " +
                     "Order will be created with totalPrice = 0 and can be updated when vehicles become available.", requestId);
         }
 
         dto.setOrderDetails(detailDtos);
         Order createdOrder = orderService.createOrderFromDto(dto);
         
-        log.info("✅ Order {} created from request {}. OrderDetails: {}, TotalPrice: {}", 
+        log.info("Order {} created from request {}. OrderDetails: {}, TotalPrice: {}", 
                 createdOrder.getOrderId(), requestId, detailDtos.size(), createdOrder.getTotalPrice());
         
         return createdOrder;
@@ -393,9 +393,9 @@ public class DealerRequestService {
                 .findByDealerIdWithFullInfo(dealerId);
 
         for (DealerRequestDetail d : request.getRequestDetails()) {
-            // ✅ Bỏ qua details không có variantId - không thể match xe
+            //  Bỏ qua details không có variantId - không thể match xe
             if (d.getVehicleVariant() == null) {
-                log.warn("⚠️ Skipping detail {} - no variantId specified. Cannot match vehicles without variant.", d.getDetailId());
+                log.warn(" Skipping detail {} - no variantId specified. Cannot match vehicles without variant.", d.getDetailId());
                 continue;
             }
             
@@ -408,13 +408,13 @@ public class DealerRequestService {
                     .limit(d.getQuantity())
                     .toList();
 
-            // ✅ Sửa: Không throw exception nếu không đủ xe, chỉ tạo OrderDetail cho những xe có sẵn
+            // Sửa: Không throw exception nếu không đủ xe, chỉ tạo OrderDetail cho những xe có sẵn
             int matchedCount = matched.size();
             int requestedQuantity = d.getQuantity();
             
             if (matchedCount < requestedQuantity) {
                 int shortage = requestedQuantity - matchedCount;
-                log.warn("⚠️ Not enough vehicles in dealer stock for variant {} (color {}). " +
+                log.warn("Not enough vehicles in dealer stock for variant {} (color {}). " +
                         "Requested: {}, Available: {}, Shortage: {}. " +
                         "Creating order with available vehicles only.",
                         d.getVehicleVariant().getName(), d.getColor(), requestedQuantity, matchedCount, shortage);
@@ -432,16 +432,16 @@ public class DealerRequestService {
             }
         }
 
-        // ✅ Kiểm tra: Nếu không có OrderDetail nào (không có xe nào), vẫn tạo Order nhưng log warning
+        // Kiểm tra: Nếu không có OrderDetail nào (không có xe nào), vẫn tạo Order nhưng log warning
         if (detailDtos.isEmpty()) {
-            log.warn("⚠️ No vehicles available in dealer stock for request {}. Creating order without order details. " +
+            log.warn("No vehicles available in dealer stock for request {}. Creating order without order details. " +
                     "Order will be created with totalPrice = 0 and can be updated when vehicles become available.", requestId);
         }
 
         dto.setOrderDetails(detailDtos);
         Order createdOrder = orderService.createOrderFromDto(dto);
         
-        log.info("✅ Order {} created from request {} using dealer stock. OrderDetails: {}, TotalPrice: {}", 
+        log.info("Order {} created from request {} using dealer stock. OrderDetails: {}, TotalPrice: {}", 
                 createdOrder.getOrderId(), requestId, detailDtos.size(), createdOrder.getTotalPrice());
         
         return createdOrder;
@@ -529,7 +529,7 @@ private DealerRequestResponse convertToResponseDto(DealerRequest request) {
                 .map(detail -> {
                     RequestDetailResponse detailResponse = new RequestDetailResponse();
                     detailResponse.setDetailId(detail.getDetailId());
-                    // ✅ Xử lý trường hợp variant có thể null
+                    // Xử lý trường hợp variant có thể null
                     if (detail.getVehicleVariant() != null) {
                         detailResponse.setVariantId(detail.getVehicleVariant().getVariantId());
                         detailResponse.setVariantName(detail.getVehicleVariant().getName());

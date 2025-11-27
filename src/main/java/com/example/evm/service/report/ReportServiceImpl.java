@@ -37,13 +37,13 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public List<SalesByStaffDto> getSalesByStaff(Long dealerId, Integer year, Integer month) {
-        log.info("📈 Generating staff sales report for dealer {}", dealerId);
+        log.info(" Generating staff sales report for dealer {}", dealerId);
         return orderRepository.getSalesByStaff(dealerId, year, month);
     }
 
     @Override
     public List<DealerInventoryReportDto> getInventoryReport() {
-        log.info("📦 Generating dealer inventory report...");
+        log.info(" Generating dealer inventory report...");
         return vehicleRepository.getDealerInventoryReport();
     }
 
@@ -56,13 +56,13 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public List<DealerTurnoverReportDto> getTurnoverReport() {
-        log.info("📉 Generating dealer turnover rate report...");
+        log.info(" Generating dealer turnover rate report...");
         return orderRepository.getDealerTurnoverReport();
     }
 
     @Override
     public Map<String, Object> getStaffSalesReport(Long userId, Integer year, Integer month) {
-        log.info("📊 Generating sales report for staff ID {}", userId);
+        log.info(" Generating sales report for staff ID {}", userId);
 
         List<StaffSalesReportDto> results = orderRepository.getStaffSalesReport(userId, year, month);
 

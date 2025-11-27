@@ -36,9 +36,9 @@ public class AccountController {
 
     /**
      * API tạo tài khoản DEALER_MANAGER cho dealer
-     * ✅ ADMIN và EVM_STAFF có thể gọi
-     * ✅ 1 dealer chỉ có thể có 1 DEALER_MANAGER
-     * ✅ Response bao gồm createdBy, createdDate, userCreatedDate
+     *  ADMIN và EVM_STAFF có thể gọi
+     *  1 dealer chỉ có thể có 1 DEALER_MANAGER
+     *  Response bao gồm createdBy, createdDate, userCreatedDate
      */
     @PostMapping("create-dealer-account")
     @PreAuthorize("hasAnyAuthority('EVM_STAFF')")

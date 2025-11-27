@@ -52,7 +52,7 @@ public class VehicleContractServiceImpl implements VehicleContractService {
     @Override
     @Transactional
     public VehicleContractResponse createContract(VehicleContractRequest request) {
-        // 1️⃣ Kiểm tra OrderDetail
+        //  Kiểm tra OrderDetail
 
         OrderDetail orderDetail = orderDetailRepository.findById(request.getOrderDetailId())
                 .orElseThrow(() -> new ResourceNotFoundException("OrderDetail not found with ID: " + request.getOrderDetailId()));
@@ -77,12 +77,12 @@ public class VehicleContractServiceImpl implements VehicleContractService {
 
         Long dealerId = order.getDealer().getDealerId();
 
-        // 2️⃣ Lấy giá bán từ SalePrice
+        //  Lấy giá bán từ SalePrice
         BigDecimal salePrice = salePriceRepository.findLatestPriceByDealerAndVariant(dealerId, vehicle.getVariant().getVariantId())
                 .map(sp -> sp.getPrice())
                 .orElse(BigDecimal.ZERO);
 
-        // 3️⃣ Tạo hợp đồng
+        //  Tạo hợp đồng
         VehicleContract contract = new VehicleContract();
         contract.setContractNumber("HD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         contract.setOrder(order);
@@ -93,12 +93,12 @@ public class VehicleContractServiceImpl implements VehicleContractService {
         contract.setSalePrice(salePrice);
         contract.setPaymentMethod(order.getPaymentMethod());
         contract.setNotes(request.getNotes());
-        contract.setStatus("DRAFT"); // ✅ trạng thái mặc định khi tạo
+        contract.setStatus("DRAFT"); //  trạng thái mặc định khi tạo
 
         VehicleContract saved = vehicleContractRepository.save(contract);
-        log.info("✅ Created contract {} for order {}", saved.getContractNumber(), order.getOrderId());
+        log.info(" Created contract {} for order {}", saved.getContractNumber(), order.getOrderId());
 
-        // 4️⃣ Sinh file Word hợp đồng
+        //  Sinh file Word hợp đồng
         String fileUrl = generateContractWord(saved);
         saved.setFileUrl(fileUrl);
         vehicleContractRepository.save(saved);
@@ -122,7 +122,7 @@ public class VehicleContractServiceImpl implements VehicleContractService {
 
         contract.setStatus("SIGNED"); // Cập nhật trạng thái
         VehicleContract signedContract = vehicleContractRepository.save(contract);
-        log.info("✅ Contract {} has been SIGNED.", signedContract.getContractNumber());
+        log.info(" Contract {} has been SIGNED.", signedContract.getContractNumber());
 
         return mapToResponse(signedContract);
     }
@@ -143,12 +143,12 @@ public class VehicleContractServiceImpl implements VehicleContractService {
     */
     public VehicleContract getContractEntityById(Long id) {
         return vehicleContractRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("❌ Contract not found with ID: " + id));
+                .orElseThrow(() -> new RuntimeException(" Contract not found with ID: " + id));
     }
 
 
     /**
-     * 🔍 Lấy hợp đồng theo ID
+     *  Lấy hợp đồng theo ID
      */
     @Override
     public VehicleContractResponse getContractById(Long id) {
@@ -185,7 +185,7 @@ public class VehicleContractServiceImpl implements VehicleContractService {
         }
         // --- HẾT VALIDATION ---
 
-        log.warn("🔥 Deleting DRAFT contract ID: {}, Number: {}", id, contract.getContractNumber());
+        log.warn(" Deleting DRAFT contract ID: {}, Number: {}", id, contract.getContractNumber());
 
         // 1. Xóa file Word liên quan
         if (contract.getFileUrl() != null && !contract.getFileUrl().isBlank()) {
@@ -336,11 +336,11 @@ public class VehicleContractServiceImpl implements VehicleContractService {
             }
         }
 
-        log.info("📝 Contract file generated successfully: {}", filePath.toAbsolutePath());
+        log.info(" Contract file generated successfully: {}", filePath.toAbsolutePath());
         return "/api/contracts/files/" + filename;
 
     } catch (Exception e) {
-        log.error("❌ Error generating contract file: {}", e.getMessage(), e);
+        log.error(" Error generating contract file: {}", e.getMessage(), e);
         throw new RuntimeException("Error generating contract file", e);
     }
 }

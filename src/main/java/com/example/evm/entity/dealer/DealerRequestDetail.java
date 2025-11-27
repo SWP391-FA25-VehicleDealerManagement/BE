@@ -28,28 +28,28 @@ public class DealerRequestDetail {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "request_id", nullable = false)
-    @JsonIgnore  // ✅ Tránh circular reference
+    @JsonIgnore  // Tránh circular reference
     private DealerRequest dealerRequest;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "variant_id", nullable = true)  // ✅ Cho phép NULL - variantId là optional
-    @JsonIgnore  // ✅ Tránh lazy loading issues, dùng DTO để trả về
+    @JoinColumn(name = "variant_id", nullable = true)  // Cho phép NULL - variantId là optional
+    @JsonIgnore  // Tránh lazy loading issues, dùng DTO để trả về
     private VehicleVariant vehicleVariant;
 
     @Column(name = "color", length = 50)
-    private String color;  // ✅ Thêm trường màu sắc
+    private String color;  // Thêm trường màu sắc
 
     @Column(name = "quantity")
-    private Integer quantity;  // ✅ Đổi lại thành Integer (không phải LongLong)
+    private Integer quantity;  // Đổi lại thành Integer (không phải LongLong)
 
-    // ✅ Đổi từ Double sang BigDecimal
+    // Đổi từ Double sang BigDecimal
     @Column(name = "unit_price", precision = 18, scale = 2)
     private BigDecimal unitPrice;
 
     @Column(name = "notes", length = 255)
     private String notes;
 
-    // ✅ Helper method - cập nhật return type
+    // Helper method - cập nhật return type
     public BigDecimal getLineTotal() {
         if (unitPrice == null || quantity == null) {
             return BigDecimal.ZERO;

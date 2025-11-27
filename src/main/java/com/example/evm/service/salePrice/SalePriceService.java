@@ -37,7 +37,7 @@ public class SalePriceService {
      */
     @Transactional
     public SalePrice createPrice(SalePrice salePrice) {
-        // ✅ Để DB tự động tạo ID
+        // Để DB tự động tạo ID
         salePrice.setSalepriceId(null);
         
         // Validate dealer exists
@@ -51,7 +51,7 @@ public class SalePriceService {
         }
         
         SalePrice savedPrice = salePriceRepository.save(salePrice);
-        log.info("✅ Created sale price with ID: {}", savedPrice.getSalepriceId());
+        log.info("Created sale price with ID: {}", savedPrice.getSalepriceId());
         
         // Fetch lại với variant và model để đảm bảo có đầy đủ thông tin
         return salePriceRepository.findByIdWithVariantAndModel(savedPrice.getSalepriceId())
@@ -168,7 +168,7 @@ public class SalePriceService {
         }
         
         salePriceRepository.save(existingPrice);
-        log.info("✅ Updated sale price ID: {}", id);
+        log.info("Updated sale price ID: {}", id);
         
         // Fetch lại với variant và model để đảm bảo có đầy đủ thông tin
         return getPriceEntityById(id);
@@ -184,6 +184,6 @@ public class SalePriceService {
         }
         
         salePriceRepository.deleteById(id);
-        log.info("🗑️ Deleted sale price ID: {}", id);
+        log.info("Deleted sale price ID: {}", id);
     }
 }

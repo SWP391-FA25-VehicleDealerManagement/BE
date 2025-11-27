@@ -102,13 +102,13 @@ public class VehicleVariantServiceImpl implements VehicleVariantService {
                 response.setBasePrice(latestPrice.getBasePrice());
                 response.setDealerPrice(latestPrice.getPrice());
                 
-                log.debug("✅ Found dealer price for variant {}, dealer {}: base={}, selling={}", 
+                log.debug(" Found dealer price for variant {}, dealer {}: base={}, selling={}", 
                     variantId, dealerId, latestPrice.getBasePrice(), latestPrice.getPrice());
             } else {
-                log.debug("⚠️ No price found for variant {}, dealer {}", variantId, dealerId);
+                log.debug(" No price found for variant {}, dealer {}", variantId, dealerId);
             }
         } catch (Exception e) {
-            log.warn("❌ Error fetching dealer price for variant {}, dealer {}: {}", 
+            log.warn(" Error fetching dealer price for variant {}, dealer {}: {}", 
                 variantId, dealerId, e.getMessage());
         }
     }

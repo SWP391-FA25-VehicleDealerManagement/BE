@@ -14,7 +14,7 @@ import com.example.evm.entity.salePrice.SalePrice;
 
 /**
  * Repository for SalePrice entity
- * ✅ Chỉ chứa các query dựa trên schema thực tế: dealer_id, variant_id, price, effectivedate
+ *  Chỉ chứa các query dựa trên schema thực tế: dealer_id, variant_id, price, effectivedate
  */
 @Repository
 public interface SalePriceRepository extends JpaRepository<SalePrice, Long> {

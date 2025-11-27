@@ -85,16 +85,16 @@ public class VehicleContractController {
      */
     @GetMapping("/files/{id}")
     public ResponseEntity<Resource> getContractFile(@PathVariable Long id) {
-        // ✅ gọi đúng tên hàm trong service
+        //  gọi đúng tên hàm trong service
         VehicleContract contract = vehicleContractService.getContractEntityById(id); 
 
-        // ✅ tạo tên file
+        //  tạo tên file
         String filename = "Contract_" + contract.getContractId() + ".docx";
 
-        // ✅ tải file từ thư mục uploads/contracts
+        //  tải file từ thư mục uploads/contracts
         Resource file = fileStorageService.load("contracts", filename);
 
-        // ✅ trả về với content-type Word đúng chuẩn
+        //  trả về với content-type Word đúng chuẩn
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(
                         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))

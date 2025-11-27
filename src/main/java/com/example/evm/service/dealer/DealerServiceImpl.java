@@ -45,13 +45,13 @@ public class DealerServiceImpl implements DealerService {
     @Override
     @Transactional
     public Dealer createDealer(Dealer dealer) {
-        // ✅ Để database tự động tạo ID (IDENTITY strategy)
+        //  Để database tự động tạo ID (IDENTITY strategy)
         dealer.setDealerId(null);  // Đảm bảo ID = null để DB tự generate
         dealer.setStatus("ACTIVE");
         dealer.setCreatedDate(LocalDateTime.now());
         
         Dealer savedDealer = dealerRepository.save(dealer);
-        log.info("✅ Created dealer with ID: {}", savedDealer.getDealerId());
+        log.info(" Created dealer with ID: {}", savedDealer.getDealerId());
         return savedDealer;
     }
 

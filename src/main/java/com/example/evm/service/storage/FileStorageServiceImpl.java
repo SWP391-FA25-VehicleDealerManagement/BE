@@ -34,7 +34,7 @@ public class FileStorageServiceImpl implements FileStorageService {
         try {
             Files.createDirectories(rootLocation);
         } catch (IOException e) {
-            throw new RuntimeException("❌ Could not initialize storage directory!", e);
+            throw new RuntimeException(" Could not initialize storage directory!", e);
         }
     }
 
@@ -51,7 +51,7 @@ public class FileStorageServiceImpl implements FileStorageService {
      */
     public String saveToSubFolder(MultipartFile file, String subFolder) {
         if (file.isEmpty()) {
-            throw new RuntimeException("❌ Failed to store empty file.");
+            throw new RuntimeException(" Failed to store empty file.");
         }
 
         String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
@@ -69,7 +69,7 @@ public class FileStorageServiceImpl implements FileStorageService {
 
             return uniqueFilename;
         } catch (IOException e) {
-            throw new RuntimeException("❌ Failed to store file.", e);
+            throw new RuntimeException(" Failed to store file.", e);
         }
     }
 
@@ -86,10 +86,10 @@ public class FileStorageServiceImpl implements FileStorageService {
             if (resource.exists() && resource.isReadable()) {
                 return resource;
             } else {
-                throw new RuntimeException("⚠️ Could not read the file: " + filename);
+                throw new RuntimeException(" Could not read the file: " + filename);
             }
         } catch (MalformedURLException e) {
-            throw new RuntimeException("❌ Error while reading file: " + e.getMessage());
+            throw new RuntimeException(" Error while reading file: " + e.getMessage());
         }
     }
 

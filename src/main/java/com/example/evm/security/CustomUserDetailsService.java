@@ -36,7 +36,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         // Chuẩn hóa role: viết hoa và thay thế khoảng trắng
         String normalizedRole = user.getRole().toUpperCase().replace("ROLE_", "").replace(" ", "_");
         
-        // ✅ KHÔNG thêm ROLE_ prefix vì controller dùng hasAnyAuthority()
+        //  KHÔNG thêm ROLE_ prefix vì controller dùng hasAnyAuthority()
         List<GrantedAuthority> authorities = List.of(
             new SimpleGrantedAuthority(normalizedRole)
         );

@@ -19,14 +19,14 @@ import com.example.evm.entity.debt.Debt;
 public interface DebtRepository extends JpaRepository<Debt, Long> {
 
     /**
-     * 🆕 Lấy tất cả các khoản nợ theo loại (DEALER_DEBT hoặc CUSTOMER_DEBT).
+     *  Lấy tất cả các khoản nợ theo loại (DEALER_DEBT hoặc CUSTOMER_DEBT).
      * @param debtType Loại nợ: DEALER_DEBT hoặc CUSTOMER_DEBT.
      * @return Danh sách các khoản nợ thuộc loại đó.
      */
     List<Debt> findByDebtType(String debtType);
 
     /**
-     * 🆕 Lấy danh sách nợ theo loại và dealer cụ thể.
+     *  Lấy danh sách nợ theo loại và dealer cụ thể.
      * @param debtType Loại nợ.
      * @param dealerId ID của đại lý.
      * @return Danh sách các khoản nợ.
@@ -34,35 +34,35 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     List<Debt> findByDebtTypeAndDealerDealerId(String debtType, Long dealerId);
 
     /**
-     * 🔍 Lấy tất cả các khoản nợ của một đại lý (dealer) cụ thể.
+     *  Lấy tất cả các khoản nợ của một đại lý (dealer) cụ thể.
      * @param dealerId ID của đại lý.
      * @return Danh sách các khoản nợ thuộc về đại lý đó.
      */
     List<Debt> findByDealerDealerId(Long dealerId);
 
     /**
-     * 🔍 Lấy tất cả các khoản nợ của một khách hàng cụ thể.
+     *  Lấy tất cả các khoản nợ của một khách hàng cụ thể.
      * @param customerId ID của khách hàng.
      * @return Danh sách nợ của khách hàng đó.
      */
     List<Debt> findByCustomerCustomerId(Long customerId);
 
     /**
-     * 🔍 Lấy tất cả các khoản nợ được tạo bởi một người dùng cụ thể.
+     *  Lấy tất cả các khoản nợ được tạo bởi một người dùng cụ thể.
      * @param userId ID của người dùng (user).
      * @return Danh sách các khoản nợ do người đó tạo.
      */
     List<Debt> findByUserUserId(Long userId);
 
     /**
-     * 🔍 Lấy danh sách nợ theo trạng thái (status) nhất định.
+     *  Lấy danh sách nợ theo trạng thái (status) nhất định.
      * @param status Trạng thái nợ (ví dụ: ACTIVE, PAID, OVERDUE).
      * @return Danh sách các khoản nợ có cùng trạng thái.
      */
     List<Debt> findByStatus(String status);
 
     /**
-     * 🔍 Lấy các khoản nợ của một đại lý theo trạng thái.
+     *  Lấy các khoản nợ của một đại lý theo trạng thái.
      * @param dealerId ID của đại lý.
      * @param status Trạng thái nợ.
      * @return Danh sách nợ theo đại lý và trạng thái.
@@ -70,7 +70,7 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     List<Debt> findByDealerDealerIdAndStatus(Long dealerId, String status);
     
     /**
-     * 🔍 Lấy các khoản nợ theo loại, dealer và trạng thái.
+     *  Lấy các khoản nợ theo loại, dealer và trạng thái.
      * @param debtType Loại nợ (DEALER_DEBT hoặc CUSTOMER_DEBT).
      * @param dealerId ID của đại lý.
      * @param status Trạng thái nợ.
@@ -79,7 +79,7 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     List<Debt> findByDebtTypeAndDealerDealerIdAndStatus(String debtType, Long dealerId, String status);
 
     /**
-     * 🔍 Lấy các khoản nợ của một khách hàng theo trạng thái.
+     *  Lấy các khoản nợ của một khách hàng theo trạng thái.
      * @param customerId ID của khách hàng.
      * @param status Trạng thái nợ.
      * @return Danh sách nợ theo khách hàng và trạng thái.
@@ -87,7 +87,7 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     List<Debt> findByCustomerCustomerIdAndStatus(Long customerId, String status);
 
     /**
-     * 🔍 Lấy các khoản nợ của một khách hàng với một dealer cụ thể theo trạng thái.
+     *  Lấy các khoản nợ của một khách hàng với một dealer cụ thể theo trạng thái.
      * @param customerId ID của khách hàng.
      * @param dealerId ID của đại lý.
      * @param status Trạng thái nợ.
@@ -96,7 +96,7 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     List<Debt> findByCustomerCustomerIdAndDealerDealerIdAndStatus(Long customerId, Long dealerId, String status);
 
     /**
-     * ⚠️ Lấy danh sách nợ quá hạn của một đại lý.
+     *  Lấy danh sách nợ quá hạn của một đại lý.
      * Điều kiện: dueDate <= ngày hiện tại và status = 'ACTIVE'.
      * @param dealerId ID của đại lý.
      * @param dueDate Ngày hạn (thường là LocalDateTime.now()).
@@ -106,7 +106,7 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     List<Debt> findOverdueDebtsByDealer(@Param("dealerId") Long dealerId, @Param("dueDate") LocalDateTime dueDate);
 
     /**
-     * ⚠️ Lấy toàn bộ các khoản nợ quá hạn trong hệ thống (không chỉ riêng đại lý nào).
+     *  Lấy toàn bộ các khoản nợ quá hạn trong hệ thống (không chỉ riêng đại lý nào).
      * Điều kiện: dueDate <= ngày hiện tại và status = 'ACTIVE'.
      * @param dueDate Ngày hạn.
      * @return Danh sách tất cả nợ quá hạn.
@@ -115,7 +115,7 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     List<Debt> findAllOverdueDebts(@Param("dueDate") LocalDateTime dueDate);
 
     /**
-     * 💰 Tính tổng số tiền còn nợ của một đại lý.
+     *  Tính tổng số tiền còn nợ của một đại lý.
      * Công thức: SUM(amountDue - amountPaid)
      * Chỉ tính các khoản nợ có trạng thái ACTIVE hoặc OVERDUE.
      * @param dealerId ID của đại lý.
@@ -125,7 +125,7 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     Double getTotalOutstandingByDealer(@Param("dealerId") Long dealerId);
 
     /**
-     * 💰 Tính tổng số tiền còn nợ của một khách hàng.
+     *  Tính tổng số tiền còn nợ của một khách hàng.
      * @param customerId ID của khách hàng.
      * @return Tổng số tiền còn nợ (Double).
      */
@@ -142,7 +142,7 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     Long countByDealerAndStatus(@Param("dealerId") Long dealerId, @Param("status") String status);
 
     /**
-     * 📊 Lấy thống kê số lượng nợ của đại lý theo từng trạng thái.
+     *  Lấy thống kê số lượng nợ của đại lý theo từng trạng thái.
      * Kết quả trả về: List<Object[]> — trong đó:
      *  - Object[0]: trạng thái nợ (status)
      *  - Object[1]: số lượng nợ tương ứng
@@ -153,7 +153,7 @@ public interface DebtRepository extends JpaRepository<Debt, Long> {
     List<Object[]> getDebtStatsByDealer(@Param("dealerId") Long dealerId);
 
     /**
-     * 📅 Lấy các khoản nợ của một đại lý trong một khoảng thời gian.
+     *  Lấy các khoản nợ của một đại lý trong một khoảng thời gian.
      * @param dealerId ID của đại lý.
      * @param startDate Ngày bắt đầu.
      * @param endDate Ngày kết thúc.

@@ -29,11 +29,11 @@ import jakarta.servlet.http.HttpServletResponse;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    // ✅ Inject CustomUserDetailsService, không phải UserProfileService
+    //  Inject CustomUserDetailsService, không phải UserProfileService
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    // ✅ Các endpoint Swagger cần cho phép public
+    //  Các endpoint Swagger cần cho phép public
     private static final String[] SWAGGER_WHITELIST = {
         "/swagger-ui.html",
         "/swagger-ui/**",
@@ -58,17 +58,17 @@ public class SecurityConfig {
                 // Cho phép preflight request
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // ✅ Cho phép swagger-ui và docs không cần JWT
+                //  Cho phép swagger-ui và docs không cần JWT
                 .requestMatchers(SWAGGER_WHITELIST).permitAll()
 
-                // ✅ Cho phép auth endpoints không cần JWT (trừ /me)
+                //  Cho phép auth endpoints không cần JWT (trừ /me)
                 .requestMatchers("/api/auth/login", "/api/auth/logout")
                     .permitAll()
                 
-                // ✅ /api/auth/me cần JWT
+                //  /api/auth/me cần JWT
                 .requestMatchers("/api/auth/me").authenticated()
 
-                // ✅ Các request khác phải có JWT
+                //  Các request khác phải có JWT
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -103,7 +103,7 @@ public class SecurityConfig {
     @Bean
     public DaoAuthenticationProvider daoAuthenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        // ✅ Sử dụng customUserDetailsService
+        //  Sử dụng customUserDetailsService
         provider.setUserDetailsService(customUserDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;

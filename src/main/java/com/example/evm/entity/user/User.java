@@ -42,7 +42,7 @@ public class User {
 
     @Column(nullable = false, length = 255)
     @NotBlank @Size(min = 6)
-    @JsonIgnore  // ✅ KHÔNG bao giờ trả về password trong JSON
+    @JsonIgnore  // KHÔNG bao giờ trả về password trong JSON
     private String password;      // BCrypt hash
 
     @Column(length = 50)

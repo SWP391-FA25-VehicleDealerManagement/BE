@@ -17,17 +17,17 @@ public class JacksonConfig {
     public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
         ObjectMapper mapper = builder.build();
         
-        // ✅ Java 8 Time support
+        //  Java 8 Time support
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         
-        // ✅ Ignore unknown properties khi deserialize
+        //  Ignore unknown properties khi deserialize
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         
-        // ✅ Fail on empty beans - tránh lỗi khi serialize empty objects
+        //  Fail on empty beans - tránh lỗi khi serialize empty objects
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         
-        // ✅ Write dates in ISO-8601 format (already disabled above)
+        //  Write dates in ISO-8601 format (already disabled above)
         
         return mapper;
     }

@@ -34,8 +34,8 @@ public class DealerAccountService {
 
     /**
      * Tạo tài khoản DEALER_MANAGER cho dealer
-     * ✅ Chỉ được tạo 1 DEALER_MANAGER cho mỗi dealer
-     * ✅ ADMIN và EVM_STAFF có thể tạo
+     *  Chỉ được tạo 1 DEALER_MANAGER cho mỗi dealer
+     *  ADMIN và EVM_STAFF có thể tạo
      */
     @Transactional
     public CreateDealerAccountResponse createDealerAccount(CreateDealerAccountRequest request) {
@@ -46,7 +46,7 @@ public class DealerAccountService {
             Dealer dealer = dealerRepository.findById(request.getDealerId())
                     .orElseThrow(() -> new IllegalArgumentException("Dealer not found with ID: " + request.getDealerId()));
 
-            // ✅ 2. Kiểm tra dealer đã có DEALER_MANAGER chưa
+            //  2. Kiểm tra dealer đã có DEALER_MANAGER chưa
             long managerCount = userRepository.countByDealerIdAndRole(request.getDealerId(), "DEALER_MANAGER");
             if (managerCount > 0) {
                 response.setSuccess(false);
@@ -66,12 +66,12 @@ public class DealerAccountService {
             user.setUserName(request.getUsername());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setEmail(request.getEmail());
-            user.setRole("DEALER_MANAGER"); // ✅ Không có prefix ROLE_
+            user.setRole("DEALER_MANAGER"); //  Không có prefix ROLE_
             user.setDealer(dealer);
             user.setCreatedDate(LocalDateTime.now());
 
             User savedUser = userRepository.save(user);
-            log.info("✅ Created DEALER_MANAGER account - username: {}, dealerId: {}", 
+            log.info(" Created DEALER_MANAGER account - username: {}, dealerId: {}", 
                     savedUser.getUserName(), dealer.getDealerId());
 
             // 5. Tạo DealerInfo (bao gồm createdBy và createdDate)
@@ -80,8 +80,8 @@ public class DealerAccountService {
             dealerInfo.setDealerName(dealer.getDealerName());
             dealerInfo.setPhone(dealer.getPhone());
             dealerInfo.setAddress(dealer.getAddress());
-            dealerInfo.setCreatedBy(dealer.getCreatedBy()); // ✅ Có createdBy
-            dealerInfo.setCreatedDate(dealer.getCreatedDate()); // ✅ Có createdDate
+            dealerInfo.setCreatedBy(dealer.getCreatedBy()); //  Có createdBy
+            dealerInfo.setCreatedDate(dealer.getCreatedDate()); //  Có createdDate
 
             // 6. Tạo response
             response.setSuccess(true);
@@ -89,7 +89,7 @@ public class DealerAccountService {
             response.setUserId(savedUser.getUserId());
             response.setUsername(savedUser.getUserName());
             response.setRole(savedUser.getRole());
-            response.setUserCreatedDate(savedUser.getCreatedDate()); // ✅ Có userCreatedDate
+            response.setUserCreatedDate(savedUser.getCreatedDate()); //  Có userCreatedDate
             response.setDealerInfo(dealerInfo);
 
             return response;

@@ -11,10 +11,10 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class RequestDetailResponse {
     private Long detailId;
-    private Long variantId;  // ✅ Thêm variant_id
+    private Long variantId;  //  Thêm variant_id
     private String variantName;
     private String modelName;
-    private String color;  // ✅ Thêm màu sắc
+    private String color;  //  Thêm màu sắc
     private Integer quantity;
     private BigDecimal unitPrice;
     private BigDecimal lineTotal;

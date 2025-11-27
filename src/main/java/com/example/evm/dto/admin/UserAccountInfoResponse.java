@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * Response DTO cho API lấy thông tin user account
- * ✅ KHÔNG bao gồm password
+ *  KHÔNG bao gồm password
  */
 @Data
 @NoArgsConstructor

@@ -63,7 +63,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // Chuẩn hóa role
                     String normalizedRole = role.toUpperCase().replace(" ", "_");
                     
-                    // ✅ KHÔNG thêm ROLE_ prefix vì controller dùng hasAnyAuthority()
+                    //  KHÔNG thêm ROLE_ prefix vì controller dùng hasAnyAuthority()
                     List<GrantedAuthority> authorities = List.of(
                         new SimpleGrantedAuthority(normalizedRole)
                     );

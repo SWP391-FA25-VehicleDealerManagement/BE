@@ -9,17 +9,17 @@ import java.util.List;
 public interface VehicleContractService {
 
     /**
-     * 📝 Tạo hợp đồng mua bán xe mới giữa khách hàng và đại lý.
+     *  Tạo hợp đồng mua bán xe mới giữa khách hàng và đại lý.
      */
     VehicleContractResponse createContract(VehicleContractRequest request);
 
     /**
-     * 📋 Lấy danh sách tất cả hợp đồng mua bán xe.
+     *  Lấy danh sách tất cả hợp đồng mua bán xe.
      */
     List<VehicleContractResponse> getAllContracts();
 
     /**
-     * 🔍 Lấy chi tiết 1 hợp đồng mua bán xe theo ID.
+     *  Lấy chi tiết 1 hợp đồng mua bán xe theo ID.
      */
     VehicleContractResponse getContractById(Long id);
 

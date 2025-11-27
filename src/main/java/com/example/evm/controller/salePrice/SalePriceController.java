@@ -28,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Controller để quản lý giá bán của dealer cho từng variant
- * ✅ Chỉ chứa các API dựa trên schema thực tế
+ * Chỉ chứa các API dựa trên schema thực tế
  */
 @Slf4j
 @RestController
@@ -55,7 +55,7 @@ public class SalePriceController {
             salePrice.setEffectiveDate(request.getEffectiveDate());
             
             SalePrice createdPrice = salePriceService.createPrice(salePrice);
-            log.info("✅ Created sale price ID: {} for dealer: {}, variant: {}", 
+            log.info("Created sale price ID: {} for dealer: {}, variant: {}", 
                 createdPrice.getSalepriceId(), request.getDealerId(), request.getVariantId());
             
             // Convert to response DTO
@@ -67,7 +67,7 @@ public class SalePriceController {
                     response
             ));
         } catch (Exception e) {
-            log.error("❌ Error creating sale price", e);
+            log.error("Error creating sale price", e);
             return ResponseEntity.badRequest().body(new ApiResponse<>(
                     false, 
                     "Failed to create sale price: " + e.getMessage(), 
@@ -91,7 +91,7 @@ public class SalePriceController {
                     prices
             ));
         } catch (Exception e) {
-            log.error("❌ Error retrieving all sale prices", e);
+            log.error("Error retrieving all sale prices", e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(
                     false, 
                     "Failed to retrieve sale prices", 
@@ -115,7 +115,7 @@ public class SalePriceController {
                     price
             ));
         } catch (Exception e) {
-            log.error("❌ Error retrieving sale price with id: {}", id, e);
+            log.error("Error retrieving sale price with id: {}", id, e);
             return ResponseEntity.notFound().build();
         }
     }
@@ -135,7 +135,7 @@ public class SalePriceController {
                     prices
             ));
         } catch (Exception e) {
-            log.error("❌ Error retrieving sale prices for dealer: {}", dealerId, e);
+            log.error("Error retrieving sale prices for dealer: {}", dealerId, e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(
                     false, 
                     "Failed to retrieve sale prices for dealer", 
@@ -159,7 +159,7 @@ public class SalePriceController {
                     prices
             ));
         } catch (Exception e) {
-            log.error("❌ Error retrieving sale prices for variant: {}", variantId, e);
+            log.error("Error retrieving sale prices for variant: {}", variantId, e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(
                     false, 
                     "Failed to retrieve sale prices for variant", 
@@ -185,7 +185,7 @@ public class SalePriceController {
                     prices
             ));
         } catch (Exception e) {
-            log.error("❌ Error retrieving sale prices for dealer: {} and variant: {}", dealerId, variantId, e);
+            log.error("Error retrieving sale prices for dealer: {} and variant: {}", dealerId, variantId, e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(
                     false, 
                     "Failed to retrieve sale prices", 
@@ -209,7 +209,7 @@ public class SalePriceController {
                     prices
             ));
         } catch (Exception e) {
-            log.error("❌ Error retrieving active sale prices for variant: {}", variantId, e);
+            log.error("Error retrieving active sale prices for variant: {}", variantId, e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(
                     false, 
                     "Failed to retrieve active sale prices for variant", 
@@ -235,7 +235,7 @@ public class SalePriceController {
                     price
             ));
         } catch (Exception e) {
-            log.error("❌ Error retrieving latest sale price for dealer: {} and variant: {}", dealerId, variantId, e);
+            log.error("Error retrieving latest sale price for dealer: {} and variant: {}", dealerId, variantId, e);
             return ResponseEntity.notFound().build();
         }
     }
@@ -257,7 +257,7 @@ public class SalePriceController {
                     prices
             ));
         } catch (Exception e) {
-            log.error("❌ Error retrieving sale prices in range", e);
+            log.error("Error retrieving sale prices in range", e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(
                     false, 
                     "Failed to retrieve sale prices in range", 
@@ -283,7 +283,7 @@ public class SalePriceController {
             priceDetails.setEffectiveDate(request.getEffectiveDate());
             
             SalePrice updatedPrice = salePriceService.updatePrice(id, priceDetails);
-            log.info("✅ Updated sale price ID: {}", id);
+            log.info("Updated sale price ID: {}", id);
             
             // Convert to response DTO
             SalePriceResponse response = new SalePriceResponse(updatedPrice);
@@ -294,7 +294,7 @@ public class SalePriceController {
                 response
             ));
         } catch (Exception e) {
-            log.error("❌ Error updating sale price {}", id, e);
+            log.error("Error updating sale price {}", id, e);
             return ResponseEntity.badRequest().body(new ApiResponse<>(
                 false, 
                 "Failed to update sale price: " + e.getMessage(), 
@@ -312,7 +312,7 @@ public class SalePriceController {
     public ResponseEntity<ApiResponse<Void>> deletePrice(@PathVariable Long id) {
         try {
             salePriceService.deletePrice(id);
-            log.info("🗑️ Deleted sale price ID: {}", id);
+            log.info("Deleted sale price ID: {}", id);
             
             return ResponseEntity.ok(new ApiResponse<>(
                 true, 
@@ -320,7 +320,7 @@ public class SalePriceController {
                 null
             ));
         } catch (Exception e) {
-            log.error("❌ Error deleting sale price {}", id, e);
+            log.error("Error deleting sale price {}", id, e);
             return ResponseEntity.badRequest().body(new ApiResponse<>(
                 false, 
                 "Failed to delete sale price: " + e.getMessage(), 

@@ -35,7 +35,7 @@ public class AuthService {
      * Xác thực username / password, sinh JWT và trả về DTO đầy đủ.
      */
     public LoginResponse login(LoginRequest request) {
-        // 1️⃣ Xác thực bằng Spring AuthenticationManager
+        //  Xác thực bằng Spring AuthenticationManager
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(),

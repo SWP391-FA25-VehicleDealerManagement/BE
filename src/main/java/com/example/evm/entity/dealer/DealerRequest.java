@@ -35,12 +35,12 @@ public class DealerRequest {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dealer_id", nullable = false)
-    @JsonIgnore  // ✅ Tránh circular reference và lazy loading issues
+    @JsonIgnore  // Tránh circular reference và lazy loading issues
     private Dealer dealer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnore  // ✅ Tránh expose password và lazy loading issues
+    @JsonIgnore  // Tránh expose password và lazy loading issues
     private User createdBy;
 
     @Column(name = "request_date")
@@ -65,18 +65,18 @@ public class DealerRequest {
     private String approvedBy;
 
     @Column(name = "shipped_date")
-    private LocalDateTime shippedDate;  // ✅ Ngày giao hàng cho đại lý
+    private LocalDateTime shippedDate;  // Ngày giao hàng cho đại lý
 
     @Column(name = "delivery_date")
     private LocalDateTime deliveryDate;
 
-    // ✅ Dùng BigDecimal thay vì Double
+    // Dùng BigDecimal thay vì Double
     @Column(name = "total_amount", precision = 18, scale = 2)
     private BigDecimal totalAmount;
 
     // Quan hệ 1-nhiều với chi tiết yêu cầu
     @OneToMany(mappedBy = "dealerRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore  // ✅ Dùng DTO để trả về, tránh lazy loading
+    @JsonIgnore  // Dùng DTO để trả về, tránh lazy loading
     private List<DealerRequestDetail> requestDetails = new ArrayList<>();
 
     @PrePersist
@@ -97,7 +97,7 @@ public class DealerRequest {
         detail.setDealerRequest(null);
     }
 
-    // ✅ Return BigDecimal
+    // Return BigDecimal
     public BigDecimal calculateTotalAmount() {
         return requestDetails.stream()
                 .map(DealerRequestDetail::getLineTotal)

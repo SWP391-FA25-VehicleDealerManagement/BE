@@ -51,7 +51,7 @@ public class DebtController {
     }
 
     /**
-     * ✅ API thanh toán nợ - Đơn giản hóa, KHÔNG CẦN ORDER_ID
+     * API thanh toán nợ - Đơn giản hóa, KHÔNG CẦN ORDER_ID
      * URL: POST /api/debts/{debtId}/payments
      * Quyền: ADMIN, EVM_STAFF, DEALER_STAFF, DEALER_MANAGER
      * 
@@ -95,7 +95,7 @@ public class DebtController {
     }
 
     /**
-     * 🆕 API LẤY NỢ CỦA DEALER (dealer nợ hãng VinFast)
+     * API LẤY NỢ CỦA DEALER (dealer nợ hãng VinFast)
      * URL: GET /api/debts/dealer-debts
      * Quyền: ADMIN, EVM_STAFF (chỉ hãng xe mới xem được)
      * Mô tả: Hiển thị danh sách các dealer đang nợ tiền hãng
@@ -105,16 +105,16 @@ public class DebtController {
     public ResponseEntity<ApiResponse<List<DebtResponse>>> getDealerDebts() {
         try {
             List<DebtResponse> debts = debtService.getDealerDebtsWithFullInfo();
-            log.info("✅ Retrieved {} dealer debts", debts.size());
+            log.info("Retrieved {} dealer debts", debts.size());
             return ResponseEntity.ok(new ApiResponse<>(true, "Dealer debts retrieved successfully", debts));
         } catch (Exception e) {
-            log.error("❌ Error retrieving dealer debts", e);
+            log.error("Error retrieving dealer debts", e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Failed to retrieve dealer debts", null));
         }
     }
 
     /**
-     * 🆕 API LẤY NỢ CỦA DEALER theo dealerId (dealer nợ hãng)
+     * API LẤY NỢ CỦA DEALER theo dealerId (dealer nợ hãng)
      * URL: GET /api/debts/dealer-debts/{dealerId}
      * Quyền: ADMIN, EVM_STAFF
      * Mô tả: Xem chi tiết nợ của 1 dealer với hãng
@@ -124,16 +124,16 @@ public class DebtController {
     public ResponseEntity<ApiResponse<List<DebtResponse>>> getDealerDebtsByDealerId(@PathVariable Long dealerId) {
         try {
             List<DebtResponse> debts = debtService.getDealerDebtsByDealerIdWithFullInfo(dealerId);
-            log.info("✅ Retrieved {} debts for dealer {}", debts.size(), dealerId);
+            log.info("Retrieved {} debts for dealer {}", debts.size(), dealerId);
             return ResponseEntity.ok(new ApiResponse<>(true, "Dealer debts retrieved successfully", debts));
         } catch (Exception e) {
-            log.error("❌ Error retrieving debts for dealer {}", dealerId, e);
+            log.error("Error retrieving debts for dealer {}", dealerId, e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Failed to retrieve dealer debts", null));
         }
     }
 
     /**
-     * 🆕 API LẤY NỢ CỦA CUSTOMER (customer nợ dealer)
+     * API LẤY NỢ CỦA CUSTOMER (customer nợ dealer)
      * URL: GET /api/debts/customer-debts/{dealerId}
      * Quyền: ADMIN, EVM_STAFF, DEALER_STAFF, DEALER_MANAGER
      * Mô tả: Dealer xem danh sách khách hàng đang nợ tiền mua xe
@@ -143,10 +143,10 @@ public class DebtController {
     public ResponseEntity<ApiResponse<List<DebtResponse>>> getCustomerDebts(@PathVariable Long dealerId) {
         try {
             List<DebtResponse> debts = debtService.getCustomerDebtsWithFullInfo(dealerId);
-            log.info("✅ Retrieved {} customer debts for dealer {}", debts.size(), dealerId);
+            log.info("Retrieved {} customer debts for dealer {}", debts.size(), dealerId);
             return ResponseEntity.ok(new ApiResponse<>(true, "Customer debts retrieved successfully", debts));
         } catch (Exception e) {
-            log.error("❌ Error retrieving customer debts for dealer {}", dealerId, e);
+            log.error("Error retrieving customer debts for dealer {}", dealerId, e);
             return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Failed to retrieve customer debts", null));
         }
     }
@@ -325,7 +325,7 @@ public class DebtController {
     // ==========================================================
 
     /**
-     * ✅ EVM Staff xác nhận thanh toán
+     * EVM Staff xác nhận thanh toán
      * URL: PUT /api/debts/{debtId}/payments/{paymentId}/confirm
      * Quyền: ADMIN, EVM_STAFF
      */
@@ -346,7 +346,7 @@ public class DebtController {
     }
 
     /**
-     * ✅ EVM Staff từ chối thanh toán
+     * EVM Staff từ chối thanh toán
      * URL: PUT /api/debts/{debtId}/payments/{paymentId}/reject
      * Quyền: ADMIN, EVM_STAFF
      */

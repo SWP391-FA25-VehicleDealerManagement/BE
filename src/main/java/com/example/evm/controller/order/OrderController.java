@@ -98,7 +98,7 @@ public class OrderController {
 
 
     /**
-     * ✅ Tạo order mới - Chỉ cần truyền IDs, backend sẽ mock hết thông tin
+     *  Tạo order mới - Chỉ cần truyền IDs, backend sẽ mock hết thông tin
      * Request body:
      * {
      *   "customerId": 1,
@@ -119,7 +119,7 @@ public class OrderController {
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF', 'DEALER_STAFF', 'DEALER_MANAGER')")
     public ResponseEntity<ApiResponse<Order>> createOrderFromDto(@Valid @RequestBody OrderRequestDto dto) {
         try {
-            // ✅ Backend tự lookup entities từ IDs và trả về đầy đủ thông tin
+            //  Backend tự lookup entities từ IDs và trả về đầy đủ thông tin
             Order createdOrder = orderService.createOrderFromDto(dto);
             log.info("Order created successfully with ID: {}", createdOrder.getOrderId());
             
@@ -146,7 +146,7 @@ public class OrderController {
     }
 
     /**
-     * ⚠️ API cũ - Deprecated
+     *  API cũ - Deprecated
      * Dùng POST /api/orders thay thế
      */
     @PostMapping("/create")
@@ -154,7 +154,7 @@ public class OrderController {
     @Deprecated
     public ResponseEntity<ApiResponse<Order>> createOrder(@RequestBody Order order) {
         try {
-            // ✅ Backend validates và tự generate IDs
+            //  Backend validates và tự generate IDs
             Order createdOrder = orderService.createOrder(order);
             log.info("Order created successfully with ID: {}", createdOrder.getOrderId());
             

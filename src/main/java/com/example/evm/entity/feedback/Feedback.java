@@ -26,7 +26,7 @@ public class Feedback {
     @Column(name = "feedback_id")
     private Long feedbackId;
 
-    @JsonBackReference // ✅ Prevent lazy loading serialization error
+    @JsonBackReference // Prevent lazy loading serialization error
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "testdrive_id", nullable = true)
     private TestDrive testDrive;

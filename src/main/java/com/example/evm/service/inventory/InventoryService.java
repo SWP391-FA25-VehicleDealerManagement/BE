@@ -104,7 +104,7 @@ public class InventoryService {
         
         // Nếu có bất kỳ item nào thiếu xe, throw exception với thông tin đầy đủ
         if (!shortageMessages.isEmpty()) {
-            String errorMessage = "❌ Không đủ xe để phân bổ!\n\n" + String.join("\n", shortageMessages);
+            String errorMessage = "Không đủ xe để phân bổ!\n\n" + String.join("\n", shortageMessages);
             log.error(errorMessage);
             throw new IllegalStateException(errorMessage);
         }
@@ -151,14 +151,14 @@ public class InventoryService {
         request.setNotes(newNotes);
         dealerRequestRepository.save(request);
         
-        log.info("✅ Saved {} vehicle IDs to request {} notes: {}", allVehicleIds.size(), requestId, vehicleIdsStr);
+        log.info("Saved {} vehicle IDs to request {} notes: {}", allVehicleIds.size(), requestId, vehicleIdsStr);
 
         // 6. Update DealerRequest status
         updateDealerRequestStatus(requestId, dealerId, null, null);
 
         // 6. Build tổng hợp response
         return AllocationResponse.builder()
-                .message(String.format("✅ Đã phân bổ tổng cộng %d xe cho %s", 
+                .message(String.format("Đã phân bổ tổng cộng %d xe cho %s", 
                         totalAllocated, dealer.getDealerName()))
                 .quantity(totalAllocated)
                 .vehicleIds(allVehicleIds)
@@ -211,11 +211,11 @@ public class InventoryService {
         if (availableCount < quantity) {
             int shortage = quantity - availableCount;
             String errorMessage = String.format(
-                    "❌ Không đủ xe để phân bổ!\n" +
-                            "🚗 Xe yêu cầu: %s\n" +
-                            "📦 Số lượng yêu cầu: %d xe\n" +
-                            "📊 Số lượng trong kho: %d xe\n" +
-                            "⚠️ Thiếu: %d xe",
+                    "Không đủ xe để phân bổ!\n" +
+                            "Xe yêu cầu: %s\n" +
+                            "Số lượng yêu cầu: %d xe\n" +
+                            "Số lượng trong kho: %d xe\n" +
+                            " Thiếu: %d xe",
                     variantInfo, quantity, availableCount, shortage);
 
             log.error(errorMessage);
@@ -233,14 +233,14 @@ public class InventoryService {
                 .toList();
 
         vehicleRepository.saveAll(allocatedVehicles);
-        log.info("✅ Allocated {} vehicles to dealer {}", allocatedVehicles.size(), dealer.getDealerName());
+        log.info("Allocated {} vehicles to dealer {}", allocatedVehicles.size(), dealer.getDealerName());
 
         // 4. Build response
         List<Long> vehicleIds = allocatedVehicles.stream()
                 .map(Vehicle::getVehicleId)
                 .toList();
 
-        String message = String.format("✅ Đã phân bổ %d xe %s cho %s",
+        String message = String.format("Đã phân bổ %d xe %s cho %s",
                 allocatedVehicles.size(), variantInfo, dealer.getDealerName());
 
         return AllocationResponse.builder()
@@ -256,7 +256,7 @@ public class InventoryService {
 
     /**
      * Thu hồi xe từ dealer về kho tổng
-     * ✅ FIX: Recall đúng những xe đã được allocate từ request này (dựa trên vehicleIds lưu trong notes)
+     *  FIX: Recall đúng những xe đã được allocate từ request này (dựa trên vehicleIds lưu trong notes)
      * 
      * @param requestId ID request cần thu hồi
      * @param dealerId  ID dealer
@@ -291,9 +291,9 @@ public class InventoryService {
                         log.warn("Invalid vehicle ID in notes: {}", idStr);
                     }
                 }
-                log.info("✅ Found {} allocated vehicle IDs from request notes: {}", allocatedVehicleIds.size(), allocatedVehicleIds);
+                log.info("Found {} allocated vehicle IDs from request notes: {}", allocatedVehicleIds.size(), allocatedVehicleIds);
             } catch (Exception e) {
-                log.warn("⚠️ Failed to parse vehicle IDs from notes: {}", e.getMessage());
+                log.warn("Failed to parse vehicle IDs from notes: {}", e.getMessage());
             }
         }
 
@@ -301,7 +301,7 @@ public class InventoryService {
         List<Vehicle> dealerVehicles;
         
         if (!allocatedVehicleIds.isEmpty()) {
-            // ✅ FIX: Tìm đúng những xe đã được allocate từ request này
+            //  FIX: Tìm đúng những xe đã được allocate từ request này
             dealerVehicles = allocatedVehicleIds.stream()
                     .map(vehicleId -> vehicleRepository.findById(vehicleId).orElse(null))
                     .filter(vehicle -> vehicle != null
@@ -311,10 +311,10 @@ public class InventoryService {
                             && !"SOLD".equalsIgnoreCase(vehicle.getStatus()))
                     .collect(java.util.stream.Collectors.toList());
             
-            log.info("✅ Found {} vehicles to recall from allocated vehicle IDs", dealerVehicles.size());
+            log.info("Found {} vehicles to recall from allocated vehicle IDs", dealerVehicles.size());
         } else {
             // Fallback: Tìm xe theo variant và color (logic cũ)
-            log.warn("⚠️ No allocated vehicle IDs found in notes, falling back to variant/color matching");
+            log.warn("No allocated vehicle IDs found in notes, falling back to variant/color matching");
             dealerVehicles = request.getRequestDetails().stream()
                     .flatMap(detail -> {
                         Long variantId = detail.getVehicleVariant().getVariantId();
@@ -352,7 +352,7 @@ public class InventoryService {
         });
 
         vehicleRepository.saveAll(dealerVehicles);
-        log.info("✅ Recalled {} vehicles (IDs: {}) from dealer {} to warehouse", 
+        log.info("Recalled {} vehicles (IDs: {}) from dealer {} to warehouse", 
                 dealerVehicles.size(), 
                 dealerVehicles.stream().map(Vehicle::getVehicleId).collect(java.util.stream.Collectors.toList()),
                 dealerId);
@@ -365,7 +365,7 @@ public class InventoryService {
             }
             request.setNotes(updatedNotes);
             dealerRequestRepository.save(request);
-            log.info("✅ Removed allocated vehicle IDs from request notes");
+            log.info("Removed allocated vehicle IDs from request notes");
         }
 
         // 7. Revert DealerRequest status (SHIPPED → APPROVED)
@@ -376,7 +376,7 @@ public class InventoryService {
 
     /**
      * Update DealerRequest status: APPROVED → SHIPPED
-     * ✅ Sửa: Nếu có requestId thì update request cụ thể, nếu không thì tìm request
+     * Sử dụng: Nếu có requestId thì update request cụ thể, nếu không thì tìm request
      * mới nhất
      */
     private DealerRequest updateDealerRequestStatus(Long requestId, Long dealerId, Long variantId, String color) {
@@ -387,23 +387,23 @@ public class InventoryService {
                     .orElse(null);
 
             if (targetRequest == null) {
-                log.warn("❌ Không tìm thấy DealerRequest với ID: {}", requestId);
+                log.warn("Không tìm thấy DealerRequest với ID: {}", requestId);
                 return null;
             }
 
             // Validate logic: Phải đúng Dealer
             if (!targetRequest.getDealer().getDealerId().equals(dealerId)) {
-                log.warn("❌ Request {} không thuộc về Dealer {}", requestId, dealerId);
+                log.warn("Request {} không thuộc về Dealer {}", requestId, dealerId);
                 return null;
             }
 
             // Validate logic: Phải đang là APPROVED
             if (!"APPROVED".equals(targetRequest.getStatus())) {
-                log.warn("❌ Request {} có trạng thái '{}' (Yêu cầu: APPROVED)", requestId, targetRequest.getStatus());
+                log.warn("Request {} có trạng thái '{}' (Yêu cầu: APPROVED)", requestId, targetRequest.getStatus());
                 return null;
             }
 
-            // ✅ Nếu variantId và color là null (allocate nhiều items), bỏ qua check variant
+            // Nếu variantId và color là null (allocate nhiều items), bỏ qua check variant
             // Chỉ check khi allocate single item
             if (variantId != null) {
                 boolean hasMatchingVariant = targetRequest.getRequestDetails().stream()
@@ -412,21 +412,21 @@ public class InventoryService {
                                 (color == null || detail.getColor().equalsIgnoreCase(color)));
 
                 if (!hasMatchingVariant) {
-                    log.warn("❌ Request {} không yêu cầu variant {} màu {}", requestId, variantId, color);
+                    log.warn("Request {} không yêu cầu variant {} màu {}", requestId, variantId, color);
                     return null;
                 }
             }
 
-            // ✅ All checks passed -> Update
+            // All checks passed -> Update
             targetRequest.setStatus("SHIPPED");
             targetRequest.setShippedDate(LocalDateTime.now());
             DealerRequest saved = dealerRequestRepository.save(targetRequest);
-            log.info("✅ [STRICT UPDATE] DealerRequest {} → SHIPPED", saved.getRequestId());
+            log.info("[STRICT UPDATE] DealerRequest {} → SHIPPED", saved.getRequestId());
             return saved;
         }
 
         // CASE 2: Không có requestId -> Fallback tìm cái mới nhất (Logic cũ)
-        log.info("ℹ️ Không có requestId, tìm request APPROVED mới nhất phù hợp...");
+        log.info("Không có requestId, tìm request APPROVED mới nhất phù hợp...");
 
         List<DealerRequest> approvedRequests = dealerRequestRepository
                 .findByDealerDealerIdAndStatus(dealerId, "APPROVED");
@@ -447,17 +447,17 @@ public class InventoryService {
             latestMatchingRequest.setStatus("SHIPPED");
             latestMatchingRequest.setShippedDate(LocalDateTime.now());
             DealerRequest saved = dealerRequestRepository.save(latestMatchingRequest);
-            log.info("✅ [AUTO UPDATE] DealerRequest {} → SHIPPED", saved.getRequestId());
+            log.info("[AUTO UPDATE] DealerRequest {} → SHIPPED", saved.getRequestId());
             return saved;
         }
 
-        log.warn("⚠️ Không tìm thấy DealerRequest nào phù hợp để update.");
+        log.warn("Không tìm thấy DealerRequest nào phù hợp để update.");
         return null;
     }
 
     /**
      * Revert DealerRequest status: SHIPPED → APPROVED
-     * ✅ Chỉ revert khi có requestId cụ thể
+     * Chỉ revert khi có requestId cụ thể
      */
     private void revertDealerRequestStatus(Long requestId, Long dealerId, Long variantId, String color) {
 
@@ -467,12 +467,12 @@ public class InventoryService {
                     .orElse(null);
 
             if (targetRequest == null) {
-                log.warn("❌ [RECALL] Không tìm thấy DealerRequest ID: {}", requestId);
+                log.warn("[RECALL] Không tìm thấy DealerRequest ID: {}", requestId);
                 return;
             }
 
             if (!"SHIPPED".equals(targetRequest.getStatus())) {
-                log.warn("❌ [RECALL] Request {} đang là '{}' (Yêu cầu: SHIPPED để revert)", requestId,
+                log.warn("[RECALL] Request {} đang là '{}' (Yêu cầu: SHIPPED để revert)", requestId,
                         targetRequest.getStatus());
                 return;
             }
@@ -481,12 +481,12 @@ public class InventoryService {
             targetRequest.setStatus("APPROVED");
             targetRequest.setShippedDate(null); // Xóa ngày ship
             dealerRequestRepository.save(targetRequest);
-            log.info("✅ [STRICT REVERT] DealerRequest {} reverted to APPROVED", requestId);
+            log.info("[STRICT REVERT] DealerRequest {} reverted to APPROVED", requestId);
             return;
         }
 
         // CASE 2: Không có requestId -> Fallback logic cũ
-        log.info("ℹ️ [RECALL] Không có requestId, tìm request SHIPPED mới nhất để revert...");
+        log.info("[RECALL] Không có requestId, tìm request SHIPPED mới nhất để revert...");
 
         List<DealerRequest> shippedRequests = dealerRequestRepository
                 .findByDealerDealerIdAndStatus(dealerId, "SHIPPED");
@@ -507,9 +507,9 @@ public class InventoryService {
             latestMatchingRequest.setStatus("APPROVED");
             latestMatchingRequest.setShippedDate(null);
             dealerRequestRepository.save(latestMatchingRequest);
-            log.info("✅ [AUTO REVERT] DealerRequest {} reverted to APPROVED", latestMatchingRequest.getRequestId());
+            log.info("[AUTO REVERT] DealerRequest {} reverted to APPROVED", latestMatchingRequest.getRequestId());
         } else {
-            log.warn("⚠️ Không tìm thấy DealerRequest SHIPPED nào phù hợp để revert.");
+            log.warn("Không tìm thấy DealerRequest SHIPPED nào phù hợp để revert.");
         }
     }
 

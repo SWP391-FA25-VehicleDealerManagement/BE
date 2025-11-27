@@ -64,7 +64,7 @@ public class TestDriveController {
             
             // Gọi service để lưu lịch thử xe
             TestDrive scheduledTestDrive = testDriveService.scheduleTestDrive(testDrive);
-            log.info("✅ Test drive scheduled ID: {} for customer {} with vehicle {}",
+            log.info("Test drive scheduled ID: {} for customer {} with vehicle {}",
                     scheduledTestDrive.getTestDriveId(),
                     request.getCustomerId(),
                     request.getVehicleId());
@@ -73,7 +73,7 @@ public class TestDriveController {
                     "Test drive scheduled successfully",
                     scheduledTestDrive));
         } catch (Exception e) {
-            log.error("❌ Error scheduling test drive", e);
+            log.error("Error scheduling test drive", e);
             return ResponseEntity.badRequest().body(new ApiResponse<>(false,
                     "Failed to schedule test drive: " + e.getMessage(),
                     null));

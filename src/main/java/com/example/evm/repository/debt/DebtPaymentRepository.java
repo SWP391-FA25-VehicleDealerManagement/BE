@@ -18,21 +18,21 @@ import com.example.evm.entity.debt.DebtPayment;
 public interface DebtPaymentRepository extends JpaRepository<DebtPayment, Long> {
 
     /**
-     * 🔍 Tìm tất cả các khoản thanh toán (DebtPayment) thuộc về một khoản nợ (Debt) cụ thể.
+     *  Tìm tất cả các khoản thanh toán (DebtPayment) thuộc về một khoản nợ (Debt) cụ thể.
      * @param debtId ID của khoản nợ.
      * @return Danh sách các DebtPayment tương ứng với Debt ID.
      */
     List<DebtPayment> findByDebtDebtId(Long debtId);
 
     /**
-     * 🔍 Tìm tất cả các khoản thanh toán theo lịch thanh toán (Schedule) cụ thể.
+     *  Tìm tất cả các khoản thanh toán theo lịch thanh toán (Schedule) cụ thể.
      * @param scheduleId ID của lịch thanh toán.
      * @return Danh sách các DebtPayment tương ứng với Schedule ID.
      */
     List<DebtPayment> findByDebtScheduleScheduleId(Long scheduleId);
 
     /**
-     * 🔍 Lấy tất cả các khoản thanh toán của một đại lý (dealer) trong khoảng thời gian chỉ định.
+     *  Lấy tất cả các khoản thanh toán của một đại lý (dealer) trong khoảng thời gian chỉ định.
      * Sử dụng truy vấn JPQL để join bảng Debt -> Dealer -> DebtPayment.
      *
      * @param dealerId ID của đại lý.
@@ -48,7 +48,7 @@ public interface DebtPaymentRepository extends JpaRepository<DebtPayment, Long> 
     );
 
     /**
-     * 💰 Tính tổng số tiền mà một đại lý đã thanh toán trong khoảng thời gian chỉ định.
+     *  Tính tổng số tiền mà một đại lý đã thanh toán trong khoảng thời gian chỉ định.
      * Dùng hàm SUM trong JPQL để cộng tất cả các `dp.amount`.
      *
      * @param dealerId ID của đại lý.
@@ -64,7 +64,7 @@ public interface DebtPaymentRepository extends JpaRepository<DebtPayment, Long> 
     );
 
     /**
-     * 🔍 Tìm tất cả các khoản thanh toán theo debt ID và status.
+     *  Tìm tất cả các khoản thanh toán theo debt ID và status.
      * @param debtId ID của khoản nợ.
      * @param status Trạng thái thanh toán (PENDING, CONFIRMED, REJECTED).
      * @return Danh sách các DebtPayment tương ứng.

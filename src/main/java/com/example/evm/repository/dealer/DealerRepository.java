@@ -24,11 +24,11 @@ public interface DealerRepository extends JpaRepository<Dealer, Long> {
     @Query("SELECT d FROM Dealer d WHERE d.status = 'INACTIVE' ORDER BY d.dealerId")
     List<Dealer> findAllInactiveDealers();
 
-    // ✅ Tìm ID lớn nhất hiện tại
+    //  Tìm ID lớn nhất hiện tại
     @Query("SELECT MAX(d.dealerId) FROM Dealer d WHERE d.status = 'ACTIVE'")
     Optional<Long> findMaxActiveId();
 
-    // ✅ Tìm tất cả dealer có ID > deletedId để shift xuống
+    //  Tìm tất cả dealer có ID > deletedId để shift xuống
     @Query("SELECT d FROM Dealer d WHERE d.status = 'ACTIVE' AND d.dealerId > :deletedId ORDER BY d.dealerId")
     List<Dealer> findDealersToShift(@Param("deletedId") Long deletedId);
 

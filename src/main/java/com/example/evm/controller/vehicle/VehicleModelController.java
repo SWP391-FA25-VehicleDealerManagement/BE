@@ -48,7 +48,7 @@ public class VehicleModelController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Model updated successfully", updatedModel));
     }
 
-    // ❌ DEACTIVE một dòng xe
+    //  DEACTIVE một dòng xe
     @PutMapping("/deactivate/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<Void>> deactivateModel(@PathVariable Long id) {
@@ -56,7 +56,7 @@ public class VehicleModelController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Model deactivated successfully", null));
     }
 
-    // ✅ ACTIVATE một dòng xe
+    //  ACTIVATE một dòng xe
     @PutMapping("/activate/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<Void>> activateModel(@PathVariable Long id) {
@@ -64,7 +64,7 @@ public class VehicleModelController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Model activated successfully", null));
     }
 
-    // ❌ XÓA một dòng xe
+    //  XÓA một dòng xe
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteModel(@PathVariable Long id) {

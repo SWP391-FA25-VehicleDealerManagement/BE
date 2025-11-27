@@ -12,7 +12,7 @@ public class ManufacturerStockResponse {
 
     @JsonProperty("manufacturerStockId")
     private Long id;
-    private Long variantId;  // ✅ Thêm variant_id
+    private Long variantId;  //  Thêm variant_id
     private Integer quantity;
     private String status;
     private String color;

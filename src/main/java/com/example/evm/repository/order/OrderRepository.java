@@ -42,7 +42,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     """)
     List<Order> findOrdersWithoutContractByDealer(@Param("dealerId") Long dealerId);
 
-    // 📈 Báo cáo doanh số theo nhân viên (dealer side)
+    //  Báo cáo doanh số theo nhân viên (dealer side)
     @Query("""
         SELECT new com.example.evm.dto.report.SalesByStaffDto(
             o.user.userId,
@@ -154,7 +154,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     );
                           
 
-    // 📉 Tốc độ tiêu thụ
+    //  Tốc độ tiêu thụ
     @Query("""
         SELECT new com.example.evm.dto.report.DealerTurnoverReportDto(
             o.dealer.dealerId,

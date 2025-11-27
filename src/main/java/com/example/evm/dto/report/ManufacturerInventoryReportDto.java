@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "📦 Báo cáo tồn kho của hãng sản xuất")
+@Schema(description = " Báo cáo tồn kho của hãng sản xuất")
 public class ManufacturerInventoryReportDto {
 
     private Long manufacturerId;

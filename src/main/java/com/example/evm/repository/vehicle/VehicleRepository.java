@@ -160,7 +160,7 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
                                         
     boolean existsByVariantVariantId(Long variantId); 
 
-    // 📦 Báo cáo tồn kho theo đại lý
+    //  Báo cáo tồn kho theo đại lý
     @Query("""
         SELECT new com.example.evm.dto.report.DealerInventoryReportDto(
             d.dealerId,
@@ -178,7 +178,7 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     """)
     List<DealerInventoryReportDto> getDealerInventoryReport();
 
-    // 📦 Báo cáo tồn kho ở kho của hãng sản xuất
+    //  Báo cáo tồn kho ở kho của hãng sản xuất
      @Query("""
        SELECT new com.example.evm.dto.report.ManufacturerInventoryReportDto(
               ms.manufacturerStockId,

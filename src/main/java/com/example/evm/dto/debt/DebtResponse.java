@@ -15,13 +15,13 @@ public class DebtResponse {
     private Long debtId;
     private String debtType; // DEALER_DEBT, CUSTOMER_DEBT
     
-    // ✅ Thông tin User đầy đủ
+    // Thông tin User đầy đủ
     private UserInfo user;
     
-    // ✅ Thông tin Dealer đầy đủ
+    // Thông tin Dealer đầy đủ
     private DealerInfo dealer;
     
-    // ✅ Thông tin Customer đầy đủ
+    // Thông tin Customer đầy đủ
     private CustomerInfo customer;
     
     private BigDecimal amountDue;

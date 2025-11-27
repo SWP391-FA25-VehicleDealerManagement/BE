@@ -80,7 +80,7 @@ public class VehicleVariantController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Variant deactivated successfully", null));
     }
 
-    // ✅ ACTIVATE a variant
+    //  ACTIVATE a variant
     @PutMapping("/activate/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<Void>> activateVariant(@PathVariable Long id) {
@@ -115,7 +115,7 @@ public class VehicleVariantController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Vehicle details updated successfully", updatedDetails));
     }
 
-    // ❌ XÓA HẲN một biến thể xe
+    //  XÓA HẲN một biến thể xe
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'EVM_STAFF')")
     public ResponseEntity<ApiResponse<Void>> deleteVariant(

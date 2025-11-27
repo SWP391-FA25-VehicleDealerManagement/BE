@@ -44,7 +44,7 @@ public class UserAccountService {
             if (!isValidEmail(request.getEmail())) {
                 throw new IllegalArgumentException("Invalid email format: " + request.getEmail());
             }
-            // ✅ Kiểm tra email đã tồn tại chưa
+            //  Kiểm tra email đã tồn tại chưa
             if (userRepository.existsByEmail(request.getEmail())) {
                 throw new IllegalArgumentException("Email already exists: " + request.getEmail());
             }
@@ -88,14 +88,14 @@ public class UserAccountService {
             User savedUser = userRepository.save(user);
             log.info("Created user: {} with role: {}", savedUser.getUserName(), savedUser.getRole());
 
-            // Tạo response - ✅ KHÔNG bao gồm password
+            // Tạo response -  KHÔNG bao gồm password
             CreateUserAccountResponse response = new CreateUserAccountResponse();
             response.setUserId(savedUser.getUserId());
             response.setUsername(savedUser.getUserName());
             response.setRole(savedUser.getRole());
             response.setFullName(savedUser.getFullName());
             response.setEmail(savedUser.getEmail());
-            response.setPhone(savedUser.getPhone());  // ✅ Thêm phone
+            response.setPhone(savedUser.getPhone());  //  Thêm phone
 
             if (savedUser.getDealer() != null) {
                 response.setDealerId(savedUser.getDealer().getDealerId());

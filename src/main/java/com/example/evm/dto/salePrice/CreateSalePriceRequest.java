@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * Request DTO để tạo sale price mới
- * ✅ KHÔNG bao gồm salepriceId - để database tự động tạo
+ *  KHÔNG bao gồm salepriceId - để database tự động tạo
  */
 @Data
 @NoArgsConstructor
